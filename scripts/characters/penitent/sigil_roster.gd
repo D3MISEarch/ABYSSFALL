@@ -30,7 +30,9 @@ func register(sigil: Node) -> Node:
 
 func remove(sigil: Node) -> void:
 	_prune_invalid()
-	if active_sigils.erase(sigil):
+	var previous_count := active_sigils.size()
+	active_sigils.erase(sigil)
+	if active_sigils.size() != previous_count:
 		changed.emit(active_sigils.size(), maximum_count)
 
 
