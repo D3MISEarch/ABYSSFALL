@@ -95,6 +95,14 @@ jobs:
           cd "$PROJECT_DIR"
           godot --headless --path . --script res://tests/test_rite_mark_component.gd 2>&1 | tee "$GITHUB_WORKSPACE/rite-mark-tests.log"
 
+      - name: Seal of Binding tests
+        shell: bash
+        run: |
+          set -o pipefail
+          PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
+          cd "$PROJECT_DIR"
+          godot --headless --path . --script res://tests/test_seal_of_binding.gd 2>&1 | tee "$GITHUB_WORKSPACE/seal-of-binding-tests.log"
+
       - name: Class selection screen smoke test
         shell: bash
         run: |
@@ -208,6 +216,7 @@ jobs:
             fervor-tests.log
             fervor-seal-tests.log
             rite-mark-tests.log
+            seal-of-binding-tests.log
             runtime-class-select.log
             runtime-warlock.log
             runtime-penitent.log
