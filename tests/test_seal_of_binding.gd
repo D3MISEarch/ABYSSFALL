@@ -80,6 +80,7 @@ func _test_three_sigil_replacement_order() -> void:
 func _test_stack_safe_control_sources() -> void:
 	var enemy := DummyEnemy.new()
 	root.add_child(enemy)
+	enemy.set_physics_process(true)
 	var control := CONTROL_SCRIPT.new() as RitualControlComponent
 	enemy.add_child(control)
 	control.bind_to(enemy)
