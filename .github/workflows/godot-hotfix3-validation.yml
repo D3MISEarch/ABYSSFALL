@@ -1,0 +1,95 @@
+name: Validate AbyssFall Hotfix 3
+
+on:
+  push:
+    branches:
+      - import-v0.4-hotfix3
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Godot 4.4.1 headless validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.4.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_VERSION="4.4.1"
+          GODOT_ARCHIVE="Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_ARCHIVE}"
+          mkdir -p "$HOME/godot"
+          curl --fail --location --retry 3 "$GODOT_URL" --output /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          GODOT_BIN="$(find "$HOME/godot" -maxdepth 1 -type f -name 'Godot_v*-stable_linux.x86_64' | head -n 1)"
+          chmod +x "$GODOT_BIN"
+          ln -s "$GODOT_BIN" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          "$HOME/godot/godot" --version
+
+      - name: Unpack Hotfix 3 source archive
+        id: unpack
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="abyssfall_void_warlock_v0_4_hotfix3.zip"
+          test -f "$ARCHIVE"
+          rm -rf /tmp/abyssfall-source
+          mkdir -p /tmp/abyssfall-source
+          unzip -q "$ARCHIVE" -d /tmp/abyssfall-source
+          PROJECT_FILE="$(find /tmp/abyssfall-source -type f -name project.godot | head -n 1)"
+          test -n "$PROJECT_FILE"
+          PROJECT_DIR="$(dirname "$PROJECT_FILE")"
+          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+          echo "Godot project: $PROJECT_DIR"
+          find "$PROJECT_DIR" -maxdepth 2 -type f | sort
+
+      - name: Parse, import, and load the editor
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path "${{ steps.unpack.outputs.project_dir }}" --editor --quit 2>&1 | tee editor-validation.log
+
+      - name: Runtime smoke test
+        shell: bash
+        run: |
+          set -uo pipefail
+          PROJECT_DIR="${{ steps.unpack.outputs.project_dir }}"
+          set +e
+          timeout 20s godot --headless --path "$PROJECT_DIR" > runtime-smoke.log 2>&1
+          STATUS=$?
+          set -e
+          cat runtime-smoke.log
+
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' runtime-smoke.log; then
+            echo "Godot reported a parser or runtime error."
+            exit 1
+          fi
+
+          if [[ "$STATUS" -ne 0 && "$STATUS" -ne 124 ]]; then
+            echo "Godot exited unexpectedly with status $STATUS."
+            exit "$STATUS"
+          fi
+
+          echo "Runtime smoke test completed with acceptable status $STATUS."
+
+      - name: Upload validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-hotfix3-validation-logs
+          path: |
+            editor-validation.log
+            runtime-smoke.log
+          if-no-files-found: warn
