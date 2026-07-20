@@ -40,12 +40,26 @@
 - [ ] Overlapping seals do not permanently alter enemy movement.
 - [ ] The seal expires after roughly seven seconds.
 
+## Martyr's Chain
+
+- [ ] Pressing C or left-stick click spends 14 Fervor and targets the best enemy in front of the Penitent.
+- [ ] Rite-marked targets receive a small targeting preference.
+- [ ] Reavers and Archers are dragged to melee distance from the Penitent.
+- [ ] Dragged enemies can be pulled into an active Seal of Binding.
+- [ ] Brutes and the Hollow King act as anchors and pull the Penitent toward them instead.
+- [ ] The Penitent receives a brief protected travel window while being pulled to an anchor.
+- [ ] The chain remains visibly connected throughout either pull direction.
+- [ ] A Complete Rite adds impact damage and refunds a small amount of Fervor.
+- [ ] Targets beyond roughly ten meters or behind the Penitent are rejected.
+- [ ] Chain cooldown and insufficient-Fervor messages are readable during combat.
+- [ ] Pulling does not permanently disable enemy or player movement.
+
 ## Capacity and replacement
 
 - [ ] The Fervor HUD pips update from 0 / 3 through 3 / 3.
 - [ ] Placing a fourth seal removes the oldest seal.
 - [ ] Replacing or expiring a seal restores affected enemies correctly.
-- [ ] Death clears all active seals and the active Brand.
+- [ ] Death clears all active seals, the active Brand, and any chain pull.
 
 ## Regression
 
@@ -64,7 +78,10 @@ Record:
 - Seal placement distance
 - Circle readability
 - Slow strength
-- Chain readability
+- Seal-chain readability
+- Martyr's Chain targeting confidence
+- Pull speed and stopping distance
+- Whether anchor travel feels reckless or empowering
 - Fervor cost pressure
 - Whether seven seconds feels too short or too long
 - Whether the three-sigil limit creates meaningful choices
