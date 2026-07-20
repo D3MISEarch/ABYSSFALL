@@ -127,6 +127,14 @@ jobs:
           cd "$PROJECT_DIR"
           godot --headless --path . --script res://tests/test_ashen_procession.gd 2>&1 | tee "$GITHUB_WORKSPACE/ashen-procession-tests.log"
 
+      - name: Sacrament tests
+        shell: bash
+        run: |
+          set -o pipefail
+          PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
+          cd "$PROJECT_DIR"
+          godot --headless --path . --script res://tests/test_sacrament.gd 2>&1 | tee "$GITHUB_WORKSPACE/sacrament-tests.log"
+
       - name: Class selection screen smoke test
         shell: bash
         run: |
@@ -244,6 +252,7 @@ jobs:
             brand-of-ruin-tests.log
             martyrs-chain-tests.log
             ashen-procession-tests.log
+            sacrament-tests.log
             runtime-class-select.log
             runtime-warlock.log
             runtime-penitent.log
