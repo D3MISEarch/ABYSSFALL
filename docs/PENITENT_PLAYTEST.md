@@ -14,6 +14,20 @@
 - [ ] Completing a new Rite grants Fervor.
 - [ ] Marks are readable above Reavers, Archers, Brutes, and the Hollow King.
 
+## Brand of Ruin
+
+- [ ] Pressing F or right-stick click spends 12 Fervor and Brands the best living target in front of the Penitent.
+- [ ] Targets behind the Penitent and targets beyond roughly eight meters are ignored.
+- [ ] Recasting Brand removes it from the previous primary target.
+- [ ] The Brand ring remains visually distinct from Partial and Complete Rite geometry.
+- [ ] Hitting the Branded target with Ritual Blade echoes damage into nearby enemies that already have a Rite Mark.
+- [ ] Unmarked nearby enemies do not receive echo damage.
+- [ ] Echoes never jump back into the primary target or recursively trigger additional echoes.
+- [ ] No more than five secondary targets are struck by one Brand echo.
+- [ ] Successful echoes grant a small, capped amount of Fervor.
+- [ ] Brand expires after roughly ten seconds.
+- [ ] Brand cooldown and insufficient-Fervor messages are readable without interrupting combat.
+
 ## Seal of Binding
 
 - [ ] Pressing Q, right mouse, or left bumper spends 18 Fervor and places a seal ahead of the Penitent.
@@ -31,7 +45,7 @@
 - [ ] The Fervor HUD pips update from 0 / 3 through 3 / 3.
 - [ ] Placing a fourth seal removes the oldest seal.
 - [ ] Replacing or expiring a seal restores affected enemies correctly.
-- [ ] Death clears all active seals.
+- [ ] Death clears all active seals and the active Brand.
 
 ## Regression
 
@@ -44,6 +58,9 @@
 
 Record:
 
+- Brand targeting confidence
+- Brand and Rite Mark readability
+- Echo radius and damage feedback
 - Seal placement distance
 - Circle readability
 - Slow strength
