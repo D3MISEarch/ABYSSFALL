@@ -3,9 +3,11 @@ class_name PenitentPlayable
 
 const MARTYRS_CHAIN_CONTROLLER_SCRIPT = preload("res://scripts/characters/penitent/martyrs_chain_controller.gd")
 const ASHEN_PROCESSION_CONTROLLER_SCRIPT = preload("res://scripts/characters/penitent/ashen_procession_controller.gd")
+const SACRAMENT_CONTROLLER_SCRIPT = preload("res://scripts/characters/penitent/sacrament_controller.gd")
 
 var martyrs_chain_controller: MartyrsChainController
 var ashen_procession_controller: AshenProcessionController
+var sacrament_controller: SacramentController
 
 
 func _ready() -> void:
@@ -19,3 +21,8 @@ func _ready() -> void:
 	ashen_procession_controller.name = "AshenProcessionController"
 	add_child(ashen_procession_controller)
 	ashen_procession_controller.bind_to(self)
+
+	sacrament_controller = SACRAMENT_CONTROLLER_SCRIPT.new() as SacramentController
+	sacrament_controller.name = "SacramentController"
+	add_child(sacrament_controller)
+	sacrament_controller.bind_to(self)
