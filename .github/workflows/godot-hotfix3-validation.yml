@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Godot 4.4.1
         shell: bash
@@ -201,6 +203,86 @@ jobs:
           fi
 
           echo "Penitent placeholder smoke test completed with acceptable status $STATUS."
+
+      - name: Build independent-verifier handoff package
+        if: success() && github.event_name == 'pull_request'
+        id: handoff
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${GITHUB_SHA::7}"
+          PACKAGE_NAME="abyssfall-verifier-pr${PR_NUMBER}-${SHORT_SHA}"
+          PACKAGE_DIR="/tmp/${PACKAGE_NAME}"
+          PACKAGE_ZIP="$GITHUB_WORKSPACE/${PACKAGE_NAME}.zip"
+
+          rm -rf "$PACKAGE_DIR" "$PACKAGE_ZIP"
+          mkdir -p "$PACKAGE_DIR"
+          git archive HEAD | tar -x -C "$PACKAGE_DIR"
+
+          git diff --name-only "origin/${BASE_REF}...HEAD" | sort > "$PACKAGE_DIR/VERIFIER_CHANGED_FILES.txt"
+
+          cat > "$PACKAGE_DIR/VERIFIER_HANDOFF.md" <<EOF
+          # AbyssFall Independent Verification Handoff
+
+          ## Change
+
+          ${PR_TITLE}
+
+          ## Exact build
+
+          - Repository: ${GITHUB_REPOSITORY}
+          - Pull request: #${PR_NUMBER}
+          - Branch: ${HEAD_REF}
+          - Base: ${BASE_REF}
+          - Commit: ${GITHUB_SHA}
+          - CI run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          ## Pull-request notes
+
+          ${PR_BODY}
+
+          ## Package authority
+
+          This ZIP is a frozen archive of the exact commit validated by the CI run above. Use this package, not a later synced branch, for the formal pass/fail verdict.
+
+          ## Required independent checks
+
+          1. Import the project with Godot 4.4.1.
+          2. Run editor/parser/import validation.
+          3. Re-run all tests under `tests/`, including the newly changed suite.
+          4. Run class selection, Void Warlock, and Penitent headless paths.
+          5. Read `AGENTS.md`, especially the standing bug-pattern log.
+          6. Manually trace changed code for lifecycle ordering, transforms, input routing, physics math, timing, cleanup, replacement, and overlapping effects.
+          7. Report PASS, PASS WITH FOLLOW-UP, FAIL, or NEEDS GRAPHICAL PLAYTEST using `docs/VERIFICATION_REPORT_TEMPLATE.md`.
+
+          ## Files changed
+
+          See `VERIFIER_CHANGED_FILES.txt` in this package.
+          EOF
+
+          (
+            cd /tmp
+            zip -qr "$PACKAGE_ZIP" "$PACKAGE_NAME"
+          )
+
+          echo "package_path=$PACKAGE_ZIP" >> "$GITHUB_OUTPUT"
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          ls -lh "$PACKAGE_ZIP"
+
+      - name: Upload independent-verifier handoff package
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.handoff.outputs.package_name }}
+          path: ${{ steps.handoff.outputs.package_path }}
+          retention-days: 30
+          if-no-files-found: error
 
       - name: Promote validated source into repository root
         if: github.event_name == 'push' && steps.source.outputs.source_mode == 'archive'
