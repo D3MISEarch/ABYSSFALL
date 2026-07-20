@@ -54,12 +54,28 @@
 - [ ] Chain cooldown and insufficient-Fervor messages are readable during combat.
 - [ ] Pulling does not permanently disable enemy or player movement.
 
+## Ashen Procession
+
+- [ ] Pressing Space or controller A performs the normal protected dodge and writes a blood scripture along the traveled path.
+- [ ] The trail begins dim and becomes clearly armed after the Penitent moves away from it.
+- [ ] Remaining on the dodge endpoint does not instantly complete the trail.
+- [ ] Walking or dodging back across the armed scripture completes it.
+- [ ] Fast crossings are detected even when the Penitent moves entirely through the line between frames.
+- [ ] Enemies standing on the completed line take ritual damage.
+- [ ] Unmarked enemies struck by the line receive a Partial Rite.
+- [ ] Partially marked enemies take increased damage and gain another mark step.
+- [ ] Complete Rite enemies take the strongest judgment damage and flash venom green.
+- [ ] Crossing an empty trail grants no Fervor.
+- [ ] Hitting enemies grants a capped Fervor reward, with a small bonus for Complete Rites.
+- [ ] An unfinished trail expires after roughly five seconds.
+- [ ] Creating a new trail replaces the previous unfinished trail without leaving visual debris.
+
 ## Capacity and replacement
 
 - [ ] The Fervor HUD pips update from 0 / 3 through 3 / 3.
 - [ ] Placing a fourth seal removes the oldest seal.
 - [ ] Replacing or expiring a seal restores affected enemies correctly.
-- [ ] Death clears all active seals, the active Brand, and any chain pull.
+- [ ] Death clears all active seals, the active Brand, any chain pull, and the Ashen Procession trail.
 
 ## Regression
 
@@ -82,6 +98,10 @@ Record:
 - Martyr's Chain targeting confidence
 - Pull speed and stopping distance
 - Whether anchor travel feels reckless or empowering
+- Ashen Procession trail width and readability
+- Whether leaving and recrossing the line feels natural during a horde fight
+- Whether five seconds is enough time to route back through the trail
+- Ashen damage and Fervor payoff
 - Fervor cost pressure
 - Whether seven seconds feels too short or too long
 - Whether the three-sigil limit creates meaningful choices
