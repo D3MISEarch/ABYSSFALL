@@ -71,6 +71,14 @@ jobs:
           set -o pipefail
           godot --headless --path "${{ steps.source.outputs.project_dir }}" --editor --quit 2>&1 | tee editor-validation.log
 
+      - name: Fervor resource unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
+          cd "$PROJECT_DIR"
+          godot --headless --path . --script res://tests/test_fervor_resource.gd 2>&1 | tee "$GITHUB_WORKSPACE/fervor-tests.log"
+
       - name: Void Warlock runtime smoke test
         shell: bash
         run: |
@@ -160,6 +168,7 @@ jobs:
           name: godot-validation-logs
           path: |
             editor-validation.log
+            fervor-tests.log
             runtime-warlock.log
             runtime-penitent.log
           if-no-files-found: warn
