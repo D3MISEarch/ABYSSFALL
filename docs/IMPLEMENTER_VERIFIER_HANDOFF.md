@@ -40,6 +40,26 @@ Responsibilities:
 - Report pass or fail with concrete findings.
 - Do not write implementation code or update the shared baseline ledger unless the project owner explicitly requests it.
 
+## Automatic frozen package
+
+Every successful pull-request validation run creates a GitHub Actions artifact named:
+
+```text
+abyssfall-verifier-pr<PR_NUMBER>-<SHORT_SHA>
+```
+
+The workflow explicitly checks out and validates the pull request's real head commit rather than GitHub's temporary merge ref. The downloaded artifact is a ZIP containing:
+
+- the complete tracked source tree archived from that exact tested head commit
+- `VERIFIER_HANDOFF.md` with branch, full commit, pull request, CI run, and review instructions
+- `VERIFIER_CHANGED_FILES.txt` with the exact diff file list
+- `AGENTS.md` and its standing bug-pattern log
+- `docs/VERIFICATION_REPORT_TEMPLATE.md`
+
+The downloaded artifact ZIP is the authority for the independent verdict. A GitHub-connected repository may be used for convenient navigation, but it must not replace the exact package because the live branch can move after review begins.
+
+Artifacts are retained for 30 days. A refreshed commit produces a new artifact and invalidates any unfinished verdict on the previous package unless the project owner explicitly accepts the older scope.
+
 ## Handoff packet
 
 Every implementation handoff should contain:
@@ -51,7 +71,7 @@ Every implementation handoff should contain:
 5. **Automated validation:** the CI run and which suites passed.
 6. **Known unverified areas:** graphical feel, readability, controller interaction, or other items requiring manual play.
 7. **Bug-pattern check:** which standing patterns were relevant and how they were prevented or tested.
-8. **Build access:** a repository branch ZIP, source archive, or exact branch link.
+8. **Build access:** the successful workflow's `abyssfall-verifier-*` artifact.
 
 Example:
 
@@ -59,7 +79,20 @@ Example:
 >
 > Review: `agent/cathedral-of-flesh` at `<commit-sha>`.
 >
+> Artifact: `abyssfall-verifier-pr17-<short-sha>`.
+>
 > Bug-pattern check: All spawned ritual nodes receive configuration and local transforms before entering the scene tree.
+
+## Verifier report
+
+The verifier returns `docs/VERIFICATION_REPORT_TEMPLATE.md` completed with one verdict:
+
+- **PASS**
+- **PASS WITH FOLLOW-UP**
+- **FAIL**
+- **NEEDS GRAPHICAL PLAYTEST**
+
+Every report names the full commit SHA and downloaded artifact name. Findings include concrete code paths and reproduction steps rather than general impressions.
 
 ## Merge gate
 

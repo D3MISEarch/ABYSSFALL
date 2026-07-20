@@ -19,8 +19,11 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Check out repository
+      - name: Check out exact review commit
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Install Godot 4.4.1
         shell: bash
@@ -61,8 +64,10 @@ jobs:
 
           echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
           echo "source_mode=$SOURCE_MODE" >> "$GITHUB_OUTPUT"
+          echo "review_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "Godot project: $PROJECT_DIR"
           echo "Source mode: $SOURCE_MODE"
+          echo "Exact review commit: $(git rev-parse HEAD)"
           find "$PROJECT_DIR" -maxdepth 3 -type f | sort
 
       - name: Parse, import, and load the editor
@@ -201,6 +206,89 @@ jobs:
           fi
 
           echo "Penitent placeholder smoke test completed with acceptable status $STATUS."
+
+      - name: Build independent-verifier handoff package
+        if: success() && github.event_name == 'pull_request'
+        id: handoff
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+          REVIEW_SHA: ${{ steps.source.outputs.review_sha }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${REVIEW_SHA:0:7}"
+          PACKAGE_NAME="abyssfall-verifier-pr${PR_NUMBER}-${SHORT_SHA}"
+          PACKAGE_DIR="$GITHUB_WORKSPACE/.verifier-package/${PACKAGE_NAME}"
+
+          rm -rf "$GITHUB_WORKSPACE/.verifier-package"
+          mkdir -p "$PACKAGE_DIR"
+          git archive "$REVIEW_SHA" | tar -x -C "$PACKAGE_DIR"
+          git diff --name-only "origin/${BASE_REF}...${REVIEW_SHA}" | sort > "$PACKAGE_DIR/VERIFIER_CHANGED_FILES.txt"
+
+          export PACKAGE_DIR
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          package_dir = Path(os.environ["PACKAGE_DIR"])
+          pr_body = os.environ.get("PR_BODY", "").strip() or "_No pull-request notes were provided._"
+          handoff = f"""# AbyssFall Independent Verification Handoff
+
+          ## Change
+
+          {os.environ['PR_TITLE']}
+
+          ## Exact build
+
+          - Repository: {os.environ['GITHUB_REPOSITORY']}
+          - Pull request: #{os.environ['PR_NUMBER']}
+          - Branch: {os.environ['HEAD_REF']}
+          - Base: {os.environ['BASE_REF']}
+          - Commit: {os.environ['REVIEW_SHA']}
+          - CI run: https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}
+
+          ## Pull-request notes
+
+          {pr_body}
+
+          ## Package authority
+
+          This artifact is a frozen archive of the exact commit validated by the CI run above. Use this package, not a later synced branch, for the formal pass/fail verdict.
+
+          ## Required independent checks
+
+          1. Import the project with Godot 4.4.1.
+          2. Run editor/parser/import validation.
+          3. Re-run all tests under `tests/`, including the newly changed suite.
+          4. Run class selection, Void Warlock, and Penitent headless paths.
+          5. Read `AGENTS.md`, especially the standing bug-pattern log.
+          6. Manually trace changed code for lifecycle ordering, transforms, input routing, physics math, timing, cleanup, replacement, and overlapping effects.
+          7. Report PASS, PASS WITH FOLLOW-UP, FAIL, or NEEDS GRAPHICAL PLAYTEST using `docs/VERIFICATION_REPORT_TEMPLATE.md`.
+
+          ## Files changed
+
+          See `VERIFIER_CHANGED_FILES.txt` in this package.
+          """
+          (package_dir / "VERIFIER_HANDOFF.md").write_text(handoff, encoding="utf-8")
+          PY
+
+          echo "package_path=$PACKAGE_DIR" >> "$GITHUB_OUTPUT"
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "Packaged exact review commit $REVIEW_SHA"
+          find "$PACKAGE_DIR" -maxdepth 2 -type f | sort | head -n 80
+
+      - name: Upload independent-verifier handoff package
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.handoff.outputs.package_name }}
+          path: ${{ steps.handoff.outputs.package_path }}
+          retention-days: 30
+          if-no-files-found: error
 
       - name: Promote validated source into repository root
         if: github.event_name == 'push' && steps.source.outputs.source_mode == 'archive'

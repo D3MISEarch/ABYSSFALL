@@ -21,12 +21,14 @@ AbyssFall separates implementation from independent verification.
 - Add or update deterministic tests for new behavior.
 - Run the Godot 4.4.1 CI pipeline before handoff.
 - Provide the verifier with an exact branch or commit plus a one-line change summary.
+- Use the successful PR workflow's frozen `abyssfall-verifier-*` artifact for formal review; do not substitute an untracked local ZIP.
 - Check the standing bug-pattern log before handoff and again after any failed review.
 - Respond to verification findings with focused fixes.
 
 ### Independent verifier — QA and reviewer/integrator
 
 - Verify the exact handed-off branch or commit in an independent environment.
+- Use the frozen verifier ZIP as the authority for the verdict even when GitHub-connected source is available.
 - Re-run import, headless runtime, and relevant unit tests rather than trusting implementation claims or CI summaries.
 - Manually trace new code for lifecycle ordering, input wiring, physics/coordinate math, timing, cleanup, replacement, and overlap bugs.
 - Report pass/fail with concrete findings and reproduction details.
