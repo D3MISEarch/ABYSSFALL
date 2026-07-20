@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -38,34 +38,44 @@ jobs:
           echo "$HOME/godot" >> "$GITHUB_PATH"
           "$HOME/godot/godot" --version
 
-      - name: Unpack Hotfix 3 source archive
-        id: unpack
+      - name: Locate project source
+        id: source
         shell: bash
         run: |
           set -euo pipefail
-          ARCHIVE="abyssfall_void_warlock_v0_4_hotfix3.zip"
-          test -f "$ARCHIVE"
-          rm -rf /tmp/abyssfall-source
-          mkdir -p /tmp/abyssfall-source
-          unzip -q "$ARCHIVE" -d /tmp/abyssfall-source
-          PROJECT_FILE="$(find /tmp/abyssfall-source -type f -name project.godot | head -n 1)"
-          test -n "$PROJECT_FILE"
-          PROJECT_DIR="$(dirname "$PROJECT_FILE")"
+
+          if [[ -f "project.godot" ]]; then
+            PROJECT_DIR="$GITHUB_WORKSPACE"
+            SOURCE_MODE="root"
+          else
+            ARCHIVE="abyssfall_void_warlock_v0_4_hotfix3.zip"
+            test -f "$ARCHIVE"
+            rm -rf /tmp/abyssfall-source
+            mkdir -p /tmp/abyssfall-source
+            unzip -q "$ARCHIVE" -d /tmp/abyssfall-source
+            PROJECT_FILE="$(find /tmp/abyssfall-source -type f -name project.godot | head -n 1)"
+            test -n "$PROJECT_FILE"
+            PROJECT_DIR="$(dirname "$PROJECT_FILE")"
+            SOURCE_MODE="archive"
+          fi
+
           echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+          echo "source_mode=$SOURCE_MODE" >> "$GITHUB_OUTPUT"
           echo "Godot project: $PROJECT_DIR"
+          echo "Source mode: $SOURCE_MODE"
           find "$PROJECT_DIR" -maxdepth 2 -type f | sort
 
       - name: Parse, import, and load the editor
         shell: bash
         run: |
           set -o pipefail
-          godot --headless --path "${{ steps.unpack.outputs.project_dir }}" --editor --quit 2>&1 | tee editor-validation.log
+          godot --headless --path "${{ steps.source.outputs.project_dir }}" --editor --quit 2>&1 | tee editor-validation.log
 
       - name: Runtime smoke test
         shell: bash
         run: |
           set -uo pipefail
-          PROJECT_DIR="${{ steps.unpack.outputs.project_dir }}"
+          PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
           set +e
           timeout 20s godot --headless --path "$PROJECT_DIR" > runtime-smoke.log 2>&1
           STATUS=$?
@@ -83,6 +93,42 @@ jobs:
           fi
 
           echo "Runtime smoke test completed with acceptable status $STATUS."
+
+      - name: Promote validated source into repository root
+        if: github.event_name == 'push' && steps.source.outputs.source_mode == 'archive'
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE="${{ steps.source.outputs.project_dir }}"
+
+          cp "$SOURCE/project.godot" ./project.godot
+          cp "$SOURCE/main.tscn" ./main.tscn
+          [[ -f "$SOURCE/gdlintrc" ]] && cp "$SOURCE/gdlintrc" ./gdlintrc
+
+          rm -rf scripts concept
+          cp -R "$SOURCE/scripts" ./scripts
+          [[ -d "$SOURCE/concept" ]] && cp -R "$SOURCE/concept" ./concept
+
+          mkdir -p docs/v0.4-hotfix3
+          for FILE in HOTFIX3_NOTES.md NEXT_STEPS.md PLAYTEST_CHECKLIST.md PROJECT_ROADMAP.md README.md V0_4_SYSTEMS.md; do
+            if [[ -f "$SOURCE/$FILE" ]]; then
+              cp "$SOURCE/$FILE" "docs/v0.4-hotfix3/$FILE"
+            fi
+          done
+
+          rm -f abyssfall_void_warlock_v0_4_hotfix3.zip
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add project.godot main.tscn gdlintrc scripts concept docs/v0.4-hotfix3 abyssfall_void_warlock_v0_4_hotfix3.zip
+
+          if git diff --cached --quiet; then
+            echo "No source promotion changes were required."
+            exit 0
+          fi
+
+          git commit -m "Import validated AbyssFall v0.4 Hotfix 3 source"
+          git push origin HEAD:import-v0.4-hotfix3
 
       - name: Upload validation logs
         if: always()
