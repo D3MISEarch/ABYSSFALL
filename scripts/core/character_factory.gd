@@ -3,7 +3,7 @@ class_name CharacterFactory
 
 const CHARACTER_CONTRACT = preload("res://scripts/core/character_contract.gd")
 const VOID_WARLOCK_SCRIPT = preload("res://scripts/characters/void_warlock.gd")
-const PENITENT_SCRIPT = preload("res://scripts/characters/penitent_character.gd")
+const PENITENT_SCRIPT = preload("res://scripts/characters/penitent_playable.gd")
 
 const DEFAULT_CLASS_ID := "void_warlock"
 
@@ -46,7 +46,7 @@ const CLASS_DEFINITIONS := {
 		"tags": ["Hybrid", "Setup", "Area Control", "Risk/Reward"],
 		"difficulty": "High",
 		"skill_branches": ["Brands", "Circles", "Sacrifice"],
-		"abilities": ["Ritual Blade", "Brand of Ruin", "Seal of Binding", "Sacrament"],
+		"abilities": ["Ritual Blade", "Brand of Ruin", "Seal of Binding", "Martyr's Chain"],
 		"fantasy": "Carve laws into flesh and force reality to obey the completed rite.",
 		"strengths": "Explosive ritual networks, battlefield control, chain reactions.",
 		"risks": "Requires setup and may pay for power with blood.",
