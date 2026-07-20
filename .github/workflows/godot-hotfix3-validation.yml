@@ -1,4 +1,4 @@
-name: Validate AbyssFall Hotfix 3
+name: Validate AbyssFall
 
 on:
   push:
@@ -63,7 +63,7 @@ jobs:
           echo "source_mode=$SOURCE_MODE" >> "$GITHUB_OUTPUT"
           echo "Godot project: $PROJECT_DIR"
           echo "Source mode: $SOURCE_MODE"
-          find "$PROJECT_DIR" -maxdepth 2 -type f | sort
+          find "$PROJECT_DIR" -maxdepth 3 -type f | sort
 
       - name: Parse, import, and load the editor
         shell: bash
@@ -71,28 +71,51 @@ jobs:
           set -o pipefail
           godot --headless --path "${{ steps.source.outputs.project_dir }}" --editor --quit 2>&1 | tee editor-validation.log
 
-      - name: Runtime smoke test
+      - name: Void Warlock runtime smoke test
         shell: bash
         run: |
           set -uo pipefail
           PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
           set +e
-          timeout 20s godot --headless --path "$PROJECT_DIR" > runtime-smoke.log 2>&1
+          timeout 20s godot --headless --path "$PROJECT_DIR" > runtime-warlock.log 2>&1
           STATUS=$?
           set -e
-          cat runtime-smoke.log
+          cat runtime-warlock.log
 
-          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' runtime-smoke.log; then
-            echo "Godot reported a parser or runtime error."
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' runtime-warlock.log; then
+            echo "Godot reported a parser or runtime error in the Void Warlock path."
             exit 1
           fi
 
           if [[ "$STATUS" -ne 0 && "$STATUS" -ne 124 ]]; then
-            echo "Godot exited unexpectedly with status $STATUS."
+            echo "Void Warlock runtime exited unexpectedly with status $STATUS."
             exit "$STATUS"
           fi
 
-          echo "Runtime smoke test completed with acceptable status $STATUS."
+          echo "Void Warlock smoke test completed with acceptable status $STATUS."
+
+      - name: Penitent placeholder runtime smoke test
+        shell: bash
+        run: |
+          set -uo pipefail
+          PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
+          set +e
+          timeout 20s godot --headless --path "$PROJECT_DIR" -- --class=penitent_placeholder > runtime-penitent.log 2>&1
+          STATUS=$?
+          set -e
+          cat runtime-penitent.log
+
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' runtime-penitent.log; then
+            echo "Godot reported a parser or runtime error in the Penitent placeholder path."
+            exit 1
+          fi
+
+          if [[ "$STATUS" -ne 0 && "$STATUS" -ne 124 ]]; then
+            echo "Penitent placeholder runtime exited unexpectedly with status $STATUS."
+            exit "$STATUS"
+          fi
+
+          echo "Penitent placeholder smoke test completed with acceptable status $STATUS."
 
       - name: Promote validated source into repository root
         if: github.event_name == 'push' && steps.source.outputs.source_mode == 'archive'
@@ -134,8 +157,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: godot-hotfix3-validation-logs
+          name: godot-validation-logs
           path: |
             editor-validation.log
-            runtime-smoke.log
+            runtime-warlock.log
+            runtime-penitent.log
           if-no-files-found: warn
