@@ -1,0 +1,10 @@
+.godot/
+.import/
+builds/
+exports/
+*.log
+*.tmp
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
