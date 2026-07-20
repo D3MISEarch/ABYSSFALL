@@ -11,6 +11,28 @@
 - Placeholder geometry is acceptable until mechanics are validated.
 - Update the relevant systems document and playtest checklist when behavior changes.
 
+## Role separation
+
+AbyssFall separates implementation from independent verification.
+
+### Implementer — architecture, gameplay, and UI
+
+- Own feature branches and implementation files.
+- Add or update deterministic tests for new behavior.
+- Run the Godot 4.4.1 CI pipeline before handoff.
+- Provide the verifier with an exact branch or commit plus a one-line change summary.
+- Respond to verification findings with focused fixes.
+
+### Independent verifier — QA and reviewer/integrator
+
+- Verify the exact handed-off branch or commit in an independent environment.
+- Re-run import, headless runtime, and relevant unit tests rather than trusting implementation claims or CI summaries.
+- Manually trace new code for lifecycle ordering, input wiring, physics/coordinate math, timing, cleanup, replacement, and overlap bugs.
+- Report pass/fail with concrete findings and reproduction details.
+- Do not modify implementation code unless the project owner explicitly requests it.
+
+The implementer and verifier must not co-author the same implementation files at the same time. See `docs/IMPLEMENTER_VERIFIER_HANDOFF.md` for the full handoff packet and merge gate.
+
 ## Required validation
 
 Run these commands from the repository root:
