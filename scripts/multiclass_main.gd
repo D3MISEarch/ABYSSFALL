@@ -2,6 +2,7 @@ extends "res://scripts/main.gd"
 
 const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
 
+var requested_class_id := ""
 var selected_class_id := CHARACTER_FACTORY.DEFAULT_CLASS_ID
 
 
@@ -53,6 +54,9 @@ func _spawn_player() -> void:
 
 
 func _resolve_selected_class_id() -> String:
+	if CHARACTER_FACTORY.has_class(requested_class_id):
+		return requested_class_id
+
 	var resolved_id := CHARACTER_FACTORY.DEFAULT_CLASS_ID
 	for argument in OS.get_cmdline_user_args():
 		if not argument.begins_with("--class="):
