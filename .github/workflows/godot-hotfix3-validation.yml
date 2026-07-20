@@ -103,6 +103,14 @@ jobs:
           cd "$PROJECT_DIR"
           godot --headless --path . --script res://tests/test_seal_of_binding.gd 2>&1 | tee "$GITHUB_WORKSPACE/seal-of-binding-tests.log"
 
+      - name: Brand of Ruin tests
+        shell: bash
+        run: |
+          set -o pipefail
+          PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
+          cd "$PROJECT_DIR"
+          godot --headless --path . --script res://tests/test_brand_of_ruin.gd 2>&1 | tee "$GITHUB_WORKSPACE/brand-of-ruin-tests.log"
+
       - name: Class selection screen smoke test
         shell: bash
         run: |
@@ -217,6 +225,7 @@ jobs:
             fervor-seal-tests.log
             rite-mark-tests.log
             seal-of-binding-tests.log
+            brand-of-ruin-tests.log
             runtime-class-select.log
             runtime-warlock.log
             runtime-penitent.log
