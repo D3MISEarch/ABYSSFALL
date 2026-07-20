@@ -58,6 +58,24 @@ Regression expectation:
 - Include a decoy at world origin and a target at the intended spawn point when testing immediate area effects.
 - Assert that the first frame or first pulse affects only the intended location.
 
+### Artifact staging and uploaded-package completeness
+
+Observed failures:
+
+- A staging directory contained the complete Git archive, but `actions/upload-artifact` omitted dotfiles and dot-directories from the downloaded artifact.
+- A changed-file manifest could therefore claim files that the formal review package did not actually contain.
+
+Prevention:
+
+- Set `include-hidden-files: true` whenever a complete source tree is uploaded.
+- Record the exact Git tree and blob SHA for every tracked file inside the package.
+- Download the finished artifact inside CI and verify every uploaded file against the exact commit before declaring the workflow successful.
+
+Regression expectation:
+
+- Assert that representative hidden paths such as `.github/workflows/` survive upload and download.
+- Fail CI on any missing tracked path or blob-hash mismatch between Git and the downloaded verifier artifact.
+
 ## Documentation ownership
 
 - The implementer owns `docs/BASELINE_TEST_RESULTS.md` and keeps it current after accepted milestones and verification-changing fixes.
