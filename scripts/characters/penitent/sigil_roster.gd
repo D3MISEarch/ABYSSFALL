@@ -44,6 +44,11 @@ func clear() -> Array[Node]:
 	return removed
 
 
+func get_active_sigils() -> Array[Node]:
+	_prune_invalid()
+	return active_sigils.duplicate()
+
+
 func get_snapshot() -> Dictionary:
 	_prune_invalid()
 	return {
