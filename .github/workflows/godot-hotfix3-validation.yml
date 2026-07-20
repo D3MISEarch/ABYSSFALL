@@ -79,13 +79,34 @@ jobs:
           cd "$PROJECT_DIR"
           godot --headless --path . --script res://tests/test_fervor_resource.gd 2>&1 | tee "$GITHUB_WORKSPACE/fervor-tests.log"
 
+      - name: Class selection screen smoke test
+        shell: bash
+        run: |
+          set -uo pipefail
+          PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
+          set +e
+          timeout 6s godot --headless --path "$PROJECT_DIR" > runtime-class-select.log 2>&1
+          STATUS=$?
+          set -e
+          cat runtime-class-select.log
+
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' runtime-class-select.log; then
+            echo "Godot reported an error while displaying class selection."
+            exit 1
+          fi
+
+          if [[ "$STATUS" -ne 0 && "$STATUS" -ne 124 ]]; then
+            echo "Class selection exited unexpectedly with status $STATUS."
+            exit "$STATUS"
+          fi
+
       - name: Void Warlock runtime smoke test
         shell: bash
         run: |
           set -uo pipefail
           PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
           set +e
-          timeout 20s godot --headless --path "$PROJECT_DIR" > runtime-warlock.log 2>&1
+          timeout 20s godot --headless --path "$PROJECT_DIR" -- --class=void_warlock > runtime-warlock.log 2>&1
           STATUS=$?
           set -e
           cat runtime-warlock.log
@@ -169,6 +190,7 @@ jobs:
           path: |
             editor-validation.log
             fervor-tests.log
+            runtime-class-select.log
             runtime-warlock.log
             runtime-penitent.log
           if-no-files-found: warn
