@@ -3,13 +3,13 @@ class_name CharacterFactory
 
 const CHARACTER_CONTRACT = preload("res://scripts/core/character_contract.gd")
 const VOID_WARLOCK_SCRIPT = preload("res://scripts/characters/void_warlock.gd")
-const PENITENT_PLACEHOLDER_SCRIPT = preload("res://scripts/characters/penitent_placeholder.gd")
+const PENITENT_SCRIPT = preload("res://scripts/characters/penitent_character.gd")
 
 const DEFAULT_CLASS_ID := "void_warlock"
 
 const CLASS_REGISTRY := {
 	"void_warlock": VOID_WARLOCK_SCRIPT,
-	"penitent_placeholder": PENITENT_PLACEHOLDER_SCRIPT,
+	"penitent_placeholder": PENITENT_SCRIPT,
 }
 
 
