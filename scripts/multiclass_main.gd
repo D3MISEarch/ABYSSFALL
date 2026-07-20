@@ -88,10 +88,10 @@ func _on_player_died() -> void:
 	game_finished = true
 	game_state = "defeat"
 	objective_label.text = "THE CRYPTS CLAIMED YOU"
-	var class_name := "THE WANDERER"
+	var fallen_name := "THE WANDERER"
 	if is_instance_valid(player) and player.has_method("get_class_display_name"):
-		class_name = str(player.get_class_display_name()).to_upper()
-	_show_message("%s HAS FALLEN\nPress R to restart" % class_name, 999.0)
+		fallen_name = str(player.get_class_display_name()).to_upper()
+	_show_message("%s HAS FALLEN\nPress R to restart" % fallen_name, 999.0)
 
 
 func _refresh_skill_tree() -> void:
