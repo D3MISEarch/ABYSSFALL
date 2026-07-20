@@ -228,6 +228,7 @@ jobs:
           mkdir -p "$PACKAGE_DIR"
           git archive "$REVIEW_SHA" | tar -x -C "$PACKAGE_DIR"
           git diff --name-only "origin/${BASE_REF}...${REVIEW_SHA}" | sort > "$PACKAGE_DIR/VERIFIER_CHANGED_FILES.txt"
+          git ls-tree -r "$REVIEW_SHA" > "$PACKAGE_DIR/VERIFIER_GIT_TREE.txt"
 
           export PACKAGE_DIR
           python3 - <<'PY'
@@ -269,6 +270,10 @@ jobs:
           6. Manually trace changed code for lifecycle ordering, transforms, input routing, physics math, timing, cleanup, replacement, and overlapping effects.
           7. Report PASS, PASS WITH FOLLOW-UP, FAIL, or NEEDS GRAPHICAL PLAYTEST using `docs/VERIFICATION_REPORT_TEMPLATE.md`.
 
+          ## Integrity manifest
+
+          `VERIFIER_GIT_TREE.txt` records the exact Git blob SHA for every tracked file. CI verifies the staged package and the downloaded artifact against that manifest.
+
           ## Files changed
 
           See `VERIFIER_CHANGED_FILES.txt` in this package.
@@ -276,10 +281,56 @@ jobs:
           (package_dir / "VERIFIER_HANDOFF.md").write_text(handoff, encoding="utf-8")
           PY
 
+          python3 - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          package_dir = Path(os.environ["PACKAGE_DIR"])
+          manifest = package_dir / "VERIFIER_GIT_TREE.txt"
+          failures = []
+
+          for line in manifest.read_text(encoding="utf-8").splitlines():
+              metadata, relative_path = line.split("\t", 1)
+              mode, object_type, expected_sha = metadata.split()
+              if object_type != "blob":
+                  continue
+              target = package_dir / relative_path
+              if not os.path.lexists(target):
+                  failures.append(f"missing: {relative_path}")
+                  continue
+              if mode == "120000":
+                  actual_sha = subprocess.check_output(
+                      ["git", "hash-object", "--stdin"],
+                      input=os.readlink(target).encode("utf-8"),
+                  ).decode().strip()
+              else:
+                  actual_sha = subprocess.check_output(
+                      ["git", "hash-object", "--no-filters", str(target)]
+                  ).decode().strip()
+              if actual_sha != expected_sha:
+                  failures.append(
+                      f"hash mismatch: {relative_path} expected {expected_sha} got {actual_sha}"
+                  )
+
+          for required in (
+              "VERIFIER_HANDOFF.md",
+              "VERIFIER_CHANGED_FILES.txt",
+              "VERIFIER_GIT_TREE.txt",
+          ):
+              if not (package_dir / required).is_file():
+                  failures.append(f"missing generated metadata: {required}")
+
+          if failures:
+              raise SystemExit("Staged verifier package failed integrity audit:\n" + "\n".join(failures))
+
+          print("Staged verifier package matches every tracked Git blob.")
+          PY
+
           echo "package_path=$PACKAGE_DIR" >> "$GITHUB_OUTPUT"
           echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
           echo "Packaged exact review commit $REVIEW_SHA"
-          find "$PACKAGE_DIR" -maxdepth 2 -type f | sort | head -n 80
+          find "$PACKAGE_DIR" -maxdepth 3 -type f | sort | head -n 120
 
       - name: Upload independent-verifier handoff package
         if: success() && github.event_name == 'pull_request'
@@ -287,8 +338,72 @@ jobs:
         with:
           name: ${{ steps.handoff.outputs.package_name }}
           path: ${{ steps.handoff.outputs.package_path }}
+          include-hidden-files: true
           retention-days: 30
           if-no-files-found: error
+
+      - name: Download uploaded verifier package for audit
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.handoff.outputs.package_name }}
+          path: ${{ runner.temp }}/verifier-artifact-audit
+
+      - name: Audit downloaded verifier package
+        if: success() && github.event_name == 'pull_request'
+        shell: bash
+        env:
+          AUDIT_DIR: ${{ runner.temp }}/verifier-artifact-audit
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          audit_dir = Path(os.environ["AUDIT_DIR"])
+          manifest = audit_dir / "VERIFIER_GIT_TREE.txt"
+          failures = []
+
+          if not manifest.is_file():
+              raise SystemExit("Downloaded verifier artifact is missing VERIFIER_GIT_TREE.txt")
+
+          for line in manifest.read_text(encoding="utf-8").splitlines():
+              metadata, relative_path = line.split("\t", 1)
+              mode, object_type, expected_sha = metadata.split()
+              if object_type != "blob":
+                  continue
+              target = audit_dir / relative_path
+              if not os.path.lexists(target):
+                  failures.append(f"missing after upload: {relative_path}")
+                  continue
+              if mode == "120000":
+                  actual_sha = subprocess.check_output(
+                      ["git", "hash-object", "--stdin"],
+                      input=os.readlink(target).encode("utf-8"),
+                  ).decode().strip()
+              else:
+                  actual_sha = subprocess.check_output(
+                      ["git", "hash-object", "--no-filters", str(target)]
+                  ).decode().strip()
+              if actual_sha != expected_sha:
+                  failures.append(
+                      f"hash mismatch after upload: {relative_path} expected {expected_sha} got {actual_sha}"
+                  )
+
+          for required in (
+              "VERIFIER_HANDOFF.md",
+              "VERIFIER_CHANGED_FILES.txt",
+              "VERIFIER_GIT_TREE.txt",
+          ):
+              if not (audit_dir / required).is_file():
+                  failures.append(f"missing generated metadata after upload: {required}")
+
+          if failures:
+              raise SystemExit("Uploaded verifier artifact failed integrity audit:\n" + "\n".join(failures))
+
+          print("Downloaded verifier artifact matches every tracked Git blob.")
+          PY
 
       - name: Promote validated source into repository root
         if: github.event_name == 'push' && steps.source.outputs.source_mode == 'archive'
@@ -344,4 +459,5 @@ jobs:
             runtime-class-select.log
             runtime-warlock.log
             runtime-penitent.log
+          include-hidden-files: true
           if-no-files-found: warn
