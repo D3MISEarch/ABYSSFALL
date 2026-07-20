@@ -4,6 +4,7 @@ class_name SealOfBinding
 signal expired(seal: Node, reason: String)
 
 const BINDING_RULES = preload("res://scripts/characters/penitent/seal_binding_rules.gd")
+const RITUAL_CONTROL_SCRIPT = preload("res://scripts/characters/penitent/ritual_control_component.gd")
 
 var caster: Node3D
 var radius := 3.4
@@ -13,6 +14,7 @@ var pulse_timer := 0.0
 var active := true
 var visual_root: Node3D
 var binding_markers: Dictionary = {}
+var affected_targets: Dictionary = {}
 
 
 func configure(source: Node3D, new_radius: float = 3.4, new_lifetime: float = 7.0) -> void:
@@ -47,6 +49,7 @@ func dismiss(reason: String = "dismissed") -> void:
 	if not active:
 		return
 	active = false
+	_clear_control_sources()
 	_clear_binding_markers()
 	expired.emit(self, reason)
 	queue_free()
@@ -57,6 +60,7 @@ func get_snapshot() -> Dictionary:
 		"active": active,
 		"radius": radius,
 		"lifetime": lifetime,
+		"affected_targets": affected_targets.size(),
 		"bound_visuals": binding_markers.size(),
 	}
 
@@ -64,7 +68,10 @@ func get_snapshot() -> Dictionary:
 func _apply_binding_pulse() -> void:
 	if not is_inside_tree():
 		return
+	var source_id: int = get_instance_id()
+	var affected_this_pulse: Dictionary = {}
 	var chained_this_pulse: Dictionary = {}
+
 	for candidate in get_tree().get_nodes_in_group("enemies"):
 		var enemy := candidate as Node3D
 		if not is_instance_valid(enemy):
@@ -77,21 +84,45 @@ func _apply_binding_pulse() -> void:
 		var has_complete_rite := _has_complete_rite(enemy)
 		var target_kind := _resolve_target_kind(enemy)
 		var profile: Dictionary = BINDING_RULES.get_control_profile(target_kind, has_complete_rite)
-		if enemy.has_method("apply_ritual_control"):
-			enemy.apply_ritual_control(
+		var control := _get_or_create_control(enemy)
+		if is_instance_valid(control):
+			control.apply_source(
+				source_id,
 				float(profile.get("movement_multiplier", 1.0)),
 				float(profile.get("control_duration", 0.0)),
 				float(profile.get("bind_duration", 0.0))
 			)
-		if bool(profile.get("show_chains", false)):
 			var instance_id: int = enemy.get_instance_id()
-			chained_this_pulse[instance_id] = true
-			_ensure_binding_marker(enemy, target_kind)
+			affected_this_pulse[instance_id] = control
+			affected_targets[instance_id] = control
+			if bool(profile.get("show_chains", false)):
+				chained_this_pulse[instance_id] = true
+				_ensure_binding_marker(enemy, target_kind)
+
+	for key in affected_targets.keys():
+		var target_id := int(key)
+		if affected_this_pulse.has(target_id):
+			continue
+		var previous_control := affected_targets.get(target_id) as RitualControlComponent
+		if is_instance_valid(previous_control):
+			previous_control.remove_source(source_id)
+		affected_targets.erase(target_id)
 
 	for key in binding_markers.keys():
 		var marker_id := int(key)
 		if not chained_this_pulse.has(marker_id):
 			_remove_binding_marker(marker_id)
+
+
+func _get_or_create_control(enemy: Node3D) -> RitualControlComponent:
+	var existing := enemy.get_node_or_null("RitualControl") as RitualControlComponent
+	if is_instance_valid(existing):
+		return existing
+	var control := RITUAL_CONTROL_SCRIPT.new() as RitualControlComponent
+	control.name = "RitualControl"
+	enemy.add_child(control)
+	control.bind_to(enemy)
+	return control
 
 
 func _has_complete_rite(enemy: Node3D) -> bool:
@@ -165,6 +196,15 @@ func _clear_binding_markers() -> void:
 	for key in binding_markers.keys():
 		_remove_binding_marker(int(key))
 	binding_markers.clear()
+
+
+func _clear_control_sources() -> void:
+	var source_id: int = get_instance_id()
+	for control_value in affected_targets.values():
+		var control := control_value as RitualControlComponent
+		if is_instance_valid(control):
+			control.remove_source(source_id)
+	affected_targets.clear()
 
 
 func _build_visual() -> void:
