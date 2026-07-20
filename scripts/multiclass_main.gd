@@ -219,7 +219,7 @@ func _update_class_specific_copy() -> void:
 func _install_penitent_resource_hud() -> void:
 	if penitent_hud_installed or not is_instance_valid(corruption_meter):
 		return
-	var canvas := corruption_meter.get_parent()
+	var canvas: Node = corruption_meter.get_parent()
 	if canvas == null:
 		return
 
