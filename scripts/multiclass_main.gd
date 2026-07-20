@@ -221,7 +221,7 @@ func _update_class_specific_copy() -> void:
 		if selected_class_id == "void_warlock":
 			menu_hint_label.text = "I / Y: INVENTORY   T / X: SKILL TREE   E / B: INTERACT   LMB / RB: VOID BOLT   RMB / Q / LB: RIFT   SPACE / A: SHADOW STEP"
 		else:
-			menu_hint_label.text = "PENITENT   LMB / RB: RITUAL BLADE   F / R3: BRAND (12)   RMB / Q / LB: SEAL (18)   SPACE / A: ASHEN PROCESSION   RESOURCE: %s" % resource_name.to_upper()
+			menu_hint_label.text = "PENITENT   ATTACK: LMB/RB   BRAND: F/R3 (12)   SEAL: Q/LB (18)   CHAIN: C/L3 (14)   SACRAMENT: V/DOWN (40+)   DODGE: SPACE/A   %s" % resource_name.to_upper()
 
 
 func _install_penitent_resource_hud() -> void:
