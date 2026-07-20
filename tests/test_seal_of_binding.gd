@@ -3,12 +3,18 @@ extends SceneTree
 const RULES = preload("res://scripts/characters/penitent/seal_binding_rules.gd")
 const ROSTER_SCRIPT = preload("res://scripts/characters/penitent/sigil_roster.gd")
 const CONTROL_SCRIPT = preload("res://scripts/characters/penitent/ritual_control_component.gd")
+const PENITENT_PLAYABLE_SCRIPT = preload("res://scripts/characters/penitent_playable.gd")
 
 var failures := 0
 
 
 class DummyEnemy extends Node:
 	var move_speed := 10.0
+
+
+class DummyWorldEnemy extends Node3D:
+	var move_speed := 10.0
+	var alive := true
 
 
 func _init() -> void:
@@ -21,6 +27,7 @@ func _run_tests() -> void:
 	_test_radius_math()
 	_test_three_sigil_replacement_order()
 	_test_stack_safe_control_sources()
+	_test_initial_pulse_uses_placed_position()
 
 	if failures > 0:
 		printerr("Seal of Binding tests failed: %d" % failures)
@@ -96,6 +103,53 @@ func _test_stack_safe_control_sources() -> void:
 	control.remove_source(22)
 	_assert_float(enemy.move_speed, 10.0, "Removing all seals restores original movement")
 	enemy.queue_free()
+
+
+func _test_initial_pulse_uses_placed_position() -> void:
+	var previous_scene := current_scene
+	var world := Node3D.new()
+	world.name = "SealSpawnOrderWorld"
+	root.add_child(world)
+	current_scene = world
+
+	var origin_decoy := DummyWorldEnemy.new()
+	origin_decoy.name = "OriginDecoy"
+	origin_decoy.position = Vector3.ZERO
+	world.add_child(origin_decoy)
+	origin_decoy.add_to_group("enemies")
+
+	var placed_target := DummyWorldEnemy.new()
+	placed_target.name = "PlacedTarget"
+	placed_target.position = Vector3(23.0, 0.0, 20.0)
+	world.add_child(placed_target)
+	placed_target.add_to_group("enemies")
+
+	var penitent := PENITENT_PLAYABLE_SCRIPT.new() as PenitentPlayable
+	penitent.position = Vector3(20.0, 0.9, 20.0)
+	penitent.facing = Vector3.RIGHT
+	world.add_child(penitent)
+	penitent.facing = Vector3.RIGHT
+	penitent.fervor_component.configure(100.0, 100.0)
+	penitent._place_seal_of_binding()
+
+	var seal := world.get_node_or_null("SealOfBinding") as Node3D
+	_assert_true(is_instance_valid(seal), "Seal is added to the active scene")
+	if is_instance_valid(seal):
+		_assert_true(
+			seal.global_position.distance_to(Vector3(23.0, 0.07, 20.0)) < 0.01,
+			"Seal enters the tree at its intended world position"
+		)
+	_assert_true(
+		is_instance_valid(placed_target.get_node_or_null("RitualControl")),
+		"First binding pulse affects the enemy at the placed seal"
+	)
+	_assert_true(
+		not is_instance_valid(origin_decoy.get_node_or_null("RitualControl")),
+		"First binding pulse never flickers at world origin"
+	)
+
+	current_scene = previous_scene
+	world.free()
 
 
 func _assert_true(condition: bool, label: String) -> void:
