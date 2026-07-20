@@ -18,28 +18,28 @@ The repository connection is for navigation, code reading, and awareness of the 
 
 ## Formal review authority
 
-For every feature review, use the GitHub Actions artifact named like:
+For every feature review, download the GitHub Actions artifact named like:
 
 ```text
 abyssfall-verifier-pr<PR_NUMBER>-<SHORT_SHA>
 ```
 
-The artifact contains a ZIP with:
+GitHub supplies the artifact as a ZIP. After extraction it contains:
 
-- the complete source tree from the exact tested commit
+- the complete source tree from the exact tested pull-request head commit
 - `VERIFIER_HANDOFF.md`
 - `VERIFIER_CHANGED_FILES.txt`
 - the current bug-pattern log and verification report template
 
-The ZIP is the frozen build Claude certifies. The branch connection may be used to browse surrounding history or current files, but the verdict must name the ZIP's full commit SHA.
+That downloaded artifact ZIP is the frozen build Claude certifies. The branch connection may be used to browse surrounding context or current files, but the verdict must name the package's full commit SHA.
 
 ## Before each review
 
-1. Read `VERIFIER_HANDOFF.md` inside the ZIP.
-2. Confirm the requested branch and full commit SHA.
-3. Read `VERIFIER_CHANGED_FILES.txt` to focus the manual trace.
-4. Read the standing bug-pattern log in `AGENTS.md`.
-5. Extract the ZIP into a clean folder rather than overwriting a previous review folder.
+1. Extract the downloaded artifact ZIP into a clean folder rather than overwriting a previous review folder.
+2. Read `VERIFIER_HANDOFF.md`.
+3. Confirm the requested branch and full commit SHA.
+4. Read `VERIFIER_CHANGED_FILES.txt` to focus the manual trace.
+5. Read the standing bug-pattern log in `AGENTS.md`.
 6. Use Godot 4.4.1 for import, tests, and runtime checks.
 
 ## Independent verification duties
