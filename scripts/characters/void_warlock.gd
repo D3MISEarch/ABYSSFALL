@@ -42,6 +42,14 @@ func get_class_definition() -> Dictionary:
 	}
 
 
+func get_health_snapshot() -> Dictionary:
+	return {
+		"current": health,
+		"maximum": max_health,
+		"alive": alive,
+	}
+
+
 func get_resource_snapshot() -> Dictionary:
 	return {
 		"id": RESOURCE_ID,
@@ -49,6 +57,15 @@ func get_resource_snapshot() -> Dictionary:
 		"current": corruption,
 		"maximum": max_corruption,
 		"normalized": corruption / maxf(max_corruption, 1.0),
+	}
+
+
+func get_progression_snapshot() -> Dictionary:
+	return {
+		"level": level,
+		"experience": experience,
+		"required_experience": experience_required,
+		"pending_level_ups": pending_level_ups,
 	}
 
 
