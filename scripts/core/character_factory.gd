@@ -46,7 +46,7 @@ const CLASS_DEFINITIONS := {
 		"tags": ["Hybrid", "Setup", "Area Control", "Risk/Reward"],
 		"difficulty": "High",
 		"skill_branches": ["Brands", "Circles", "Sacrifice"],
-		"abilities": ["Ritual Blade", "Brand of Ruin", "Seal of Binding", "Martyr's Chain", "Ashen Procession"],
+		"abilities": ["Ritual Blade", "Brand of Ruin", "Seal of Binding", "Martyr's Chain", "Ashen Procession", "Sacrament"],
 		"fantasy": "Carve laws into flesh and force reality to obey the completed rite.",
 		"strengths": "Explosive ritual networks, battlefield control, chain reactions.",
 		"risks": "Requires setup and may pay for power with blood.",

@@ -70,11 +70,31 @@
 - [ ] An unfinished trail expires after roughly five seconds.
 - [ ] Creating a new trail replaces the previous unfinished trail without leaving visual debris.
 
+## Sacrament
+
+- [ ] Pressing V or D-pad Down casts Sacrament only when a marked enemy or relevant active seal exists.
+- [ ] The base price is 40 Fervor.
+- [ ] Missing Fervor converts into blood at two missing Fervor per one percent maximum health.
+- [ ] Sacrament refuses to cast when the blood payment would reduce the Penitent below one health.
+- [ ] The health bar and Fervor seal update immediately after payment.
+- [ ] Partial Rite enemies within roughly 6.5 meters are forced to Complete Rite before judgment.
+- [ ] Complete Rites detonate for the strongest base damage and are consumed afterward.
+- [ ] Branded targets receive one additional damage bonus without recursive Brand echoes.
+- [ ] Enemies inside an active Seal of Binding receive the seal-collapse bonus.
+- [ ] Unmarked enemies caught only inside a collapsing seal survive with a new Partial Rite when applicable.
+- [ ] Every relevant active Seal of Binding visibly collapses and disappears from the 0 / 3 HUD pips.
+- [ ] Paying blood increases Sacrament damage, capped at the twenty-percent-health contribution.
+- [ ] The Hollow King receives reduced boss-safe damage and is never hard-locked.
+- [ ] The cathedral rings, vertical judgment beams, Brand-red feedback, and Complete-Rite green feedback remain readable from normal camera distance.
+- [ ] Sacrament enters an eight-second cooldown after a successful cast.
+- [ ] Failed or empty casts do not spend Fervor or health.
+
 ## Capacity and replacement
 
 - [ ] The Fervor HUD pips update from 0 / 3 through 3 / 3.
 - [ ] Placing a fourth seal removes the oldest seal.
 - [ ] Replacing or expiring a seal restores affected enemies correctly.
+- [ ] Sacrament collapse removes each affected seal from the roster once.
 - [ ] Death clears all active seals, the active Brand, any chain pull, and the Ashen Procession trail.
 
 ## Regression
@@ -102,6 +122,11 @@ Record:
 - Whether leaving and recrossing the line feels natural during a horde fight
 - Whether five seconds is enough time to route back through the trail
 - Ashen damage and Fervor payoff
+- Sacrament cast-radius readability
+- Sacrament blood-payment pressure
+- Whether consuming Complete Rites feels satisfying rather than punitive
+- Cathedral and seal-collapse readability during a crowded fight
+- Sacrament cooldown and damage payoff
 - Fervor cost pressure
 - Whether seven seconds feels too short or too long
 - Whether the three-sigil limit creates meaningful choices
