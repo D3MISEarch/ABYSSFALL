@@ -111,6 +111,14 @@ jobs:
           cd "$PROJECT_DIR"
           godot --headless --path . --script res://tests/test_brand_of_ruin.gd 2>&1 | tee "$GITHUB_WORKSPACE/brand-of-ruin-tests.log"
 
+      - name: Martyr's Chain tests
+        shell: bash
+        run: |
+          set -o pipefail
+          PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
+          cd "$PROJECT_DIR"
+          godot --headless --path . --script res://tests/test_martyrs_chain.gd 2>&1 | tee "$GITHUB_WORKSPACE/martyrs-chain-tests.log"
+
       - name: Class selection screen smoke test
         shell: bash
         run: |
@@ -226,6 +234,7 @@ jobs:
             rite-mark-tests.log
             seal-of-binding-tests.log
             brand-of-ruin-tests.log
+            martyrs-chain-tests.log
             runtime-class-select.log
             runtime-warlock.log
             runtime-penitent.log
