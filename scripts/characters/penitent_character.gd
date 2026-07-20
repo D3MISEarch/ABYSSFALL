@@ -1,11 +1,20 @@
 extends "res://scripts/characters/penitent_placeholder.gd"
 class_name PenitentCharacter
 
+signal sigil_capacity_changed(active_count: int, maximum_count: int)
+
 const FERVOR_RESOURCE_SCRIPT = preload("res://scripts/characters/penitent/fervor_resource.gd")
 const RITE_MARK_SCRIPT = preload("res://scripts/characters/penitent/rite_mark_component.gd")
 const RITE_MARK_MARKER_SCRIPT = preload("res://scripts/characters/penitent/rite_mark_marker.gd")
+const SEAL_OF_BINDING_SCRIPT = preload("res://scripts/characters/penitent/seal_of_binding.gd")
+const SIGIL_ROSTER_SCRIPT = preload("res://scripts/characters/penitent/sigil_roster.gd")
+
+const SEAL_OF_BINDING_COST := 18.0
+const SEAL_OF_BINDING_RADIUS := 3.4
+const SEAL_OF_BINDING_LIFETIME := 7.0
 
 var fervor_component: FervorResource
+var sigil_roster: SigilRoster
 var ritual_blade_combo_step := 0
 var ritual_blade_combo_time := 0.0
 
@@ -17,14 +26,61 @@ func _ready() -> void:
 	fervor_component.value_changed.connect(_on_fervor_value_changed)
 	fervor_component.revelation_ready.connect(_on_revelation_ready)
 	fervor_component.configure(fervor, max_fervor)
+
+	sigil_roster = SIGIL_ROSTER_SCRIPT.new()
+	sigil_roster.changed.connect(_on_sigil_roster_changed)
+	sigil_roster.configure(3)
+
 	super._ready()
+	died.connect(_on_penitent_died_cleanup)
 
 
 func _physics_process(delta: float) -> void:
+	if not alive:
+		velocity = Vector3.ZERO
+		return
+
 	ritual_blade_combo_time = maxf(ritual_blade_combo_time - delta, 0.0)
 	if ritual_blade_combo_time <= 0.0:
 		ritual_blade_combo_step = 0
-	super._physics_process(delta)
+
+	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
+	dodge_cooldown = maxf(dodge_cooldown - delta, 0.0)
+	invulnerability_time = maxf(invulnerability_time - delta, 0.0)
+
+	var move_input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var move_direction := Vector3(move_input.x, 0.0, move_input.y)
+	if move_direction.length_squared() > 1.0:
+		move_direction = move_direction.normalized()
+	if move_direction.length_squared() > 0.01:
+		facing = move_direction.normalized()
+		rotation.y = atan2(-facing.x, -facing.z)
+
+	if dodge_time > 0.0:
+		dodge_time -= delta
+		velocity = dodge_direction * 18.0
+		move_and_slide()
+		return
+
+	if Input.is_action_just_pressed("dodge") and dodge_cooldown <= 0.0:
+		dodge_direction = move_direction if move_direction.length_squared() > 0.01 else facing
+		dodge_direction = dodge_direction.normalized()
+		dodge_time = 0.15
+		dodge_cooldown = 0.9
+		invulnerability_time = 0.22
+		velocity = dodge_direction * 18.0
+		move_and_slide()
+		return
+
+	velocity = move_direction * move_speed
+	move_and_slide()
+
+	if Input.is_action_pressed("attack") and attack_cooldown <= 0.0:
+		_perform_ritual_blade_attack()
+		attack_cooldown = 0.46
+
+	if Input.is_action_just_pressed("rift"):
+		_place_seal_of_binding()
 
 
 func get_health_snapshot() -> Dictionary:
@@ -48,6 +104,12 @@ func get_progression_snapshot() -> Dictionary:
 		"required_experience": experience_required,
 		"pending_level_ups": pending_level_ups,
 	}
+
+
+func get_sigil_capacity_snapshot() -> Dictionary:
+	if sigil_roster == null:
+		return {"active": 0, "maximum": 3}
+	return sigil_roster.get_snapshot()
 
 
 func add_class_resource(amount: float) -> void:
@@ -132,7 +194,7 @@ func get_or_create_rite_mark(target: Node3D) -> RiteMarkComponent:
 	return mark
 
 
-func _debug_ritual_blade() -> void:
+func _perform_ritual_blade_attack() -> void:
 	ritual_blade_combo_step = ritual_blade_combo_step % 3 + 1
 	ritual_blade_combo_time = 1.05
 	var hit_count := 0
@@ -176,6 +238,46 @@ func _debug_ritual_blade() -> void:
 		var attack_scale := Vector3(1.24, 0.86, 1.24) if ritual_blade_combo_step == 3 else Vector3(1.14, 0.92, 1.14)
 		tween.tween_property(visual_root, "scale", attack_scale, 0.055)
 		tween.tween_property(visual_root, "scale", Vector3.ONE, 0.13)
+
+
+func _place_seal_of_binding() -> void:
+	if not spend_fervor(SEAL_OF_BINDING_COST):
+		ability_message.emit("SEAL OF BINDING REQUIRES %d FERVOR" % int(SEAL_OF_BINDING_COST))
+		return
+
+	var seal := SEAL_OF_BINDING_SCRIPT.new() as SealOfBinding
+	seal.name = "SealOfBinding"
+	seal.configure(self, SEAL_OF_BINDING_RADIUS, SEAL_OF_BINDING_LIFETIME)
+	seal.expired.connect(_on_seal_expired)
+	var scene_root := get_tree().current_scene
+	if not is_instance_valid(scene_root):
+		scene_root = get_parent()
+	scene_root.add_child(seal)
+	seal.global_position = global_position + facing * 3.0
+	seal.global_position.y = 0.07
+
+	var evicted := sigil_roster.register(seal)
+	if is_instance_valid(evicted) and evicted.has_method("dismiss"):
+		evicted.dismiss("replaced")
+	set_combat_active(true)
+	ability_message.emit("SEAL OF BINDING CARVED")
+
+
+func _on_seal_expired(seal: Node, _reason: String) -> void:
+	if sigil_roster != null:
+		sigil_roster.remove(seal)
+
+
+func _on_sigil_roster_changed(active_count: int, maximum_count: int) -> void:
+	sigil_capacity_changed.emit(active_count, maximum_count)
+
+
+func _on_penitent_died_cleanup() -> void:
+	if sigil_roster == null:
+		return
+	for sigil in sigil_roster.clear():
+		if is_instance_valid(sigil) and sigil.has_method("dismiss"):
+			sigil.dismiss("caster_fallen")
 
 
 func _on_fervor_value_changed(current_value: float, maximum_value: float) -> void:
