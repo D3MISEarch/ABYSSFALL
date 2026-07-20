@@ -1,9 +1,11 @@
 extends "res://scripts/main.gd"
 
 const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
+const FERVOR_SEAL_SCRIPT = preload("res://scripts/ui/fervor_seal.gd")
 
 var requested_class_id := ""
 var selected_class_id := CHARACTER_FACTORY.DEFAULT_CLASS_ID
+var penitent_hud_installed := false
 
 
 func _spawn_player() -> void:
@@ -76,7 +78,10 @@ func _on_player_resource_changed(
 	maximum_value: float
 ) -> void:
 	if is_instance_valid(corruption_meter):
-		corruption_meter.set_corruption(current_value, maximum_value)
+		if corruption_meter.has_method("set_resource"):
+			corruption_meter.set_resource(current_value, maximum_value)
+		else:
+			corruption_meter.set_corruption(current_value, maximum_value)
 	if is_instance_valid(corruption_label):
 		corruption_label.text = (
 			"%s  %d / %d"
@@ -86,6 +91,32 @@ func _on_player_resource_changed(
 
 func _on_player_corruption_changed(current_value: float, maximum_value: float) -> void:
 	_on_player_resource_changed("corruption", "Corruption", current_value, maximum_value)
+
+
+func preview_penitent_sacrament(cost: float = 40.0) -> Dictionary:
+	if (
+		selected_class_id != "penitent_placeholder"
+		or not is_instance_valid(player)
+		or not player.has_method("quote_sacrament_cost")
+	):
+		return {"can_cast": false}
+	var quote: Dictionary = player.quote_sacrament_cost(cost)
+	if is_instance_valid(corruption_meter) and corruption_meter.has_method("set_cost_preview"):
+		corruption_meter.set_cost_preview(
+			float(quote.get("fervor_spent", 0.0)),
+			int(quote.get("health_percent", 0))
+		)
+	return quote
+
+
+func clear_penitent_cost_preview() -> void:
+	if is_instance_valid(corruption_meter) and corruption_meter.has_method("clear_cost_preview"):
+		corruption_meter.clear_cost_preview()
+
+
+func set_penitent_sigil_capacity(active_count: int, maximum_count: int = 3) -> void:
+	if is_instance_valid(corruption_meter) and corruption_meter.has_method("set_sigil_capacity"):
+		corruption_meter.set_sigil_capacity(active_count, maximum_count)
 
 
 func _on_player_died() -> void:
@@ -175,8 +206,42 @@ func _update_class_specific_copy() -> void:
 		if label.text.begins_with("VOID WARLOCK INVENTORY"):
 			label.text = "%s INVENTORY     —     I / ESC TO CLOSE" % display_name.to_upper()
 
+	if selected_class_id == "penitent_placeholder":
+		_install_penitent_resource_hud()
+
 	if is_instance_valid(menu_hint_label):
 		if selected_class_id == "void_warlock":
 			menu_hint_label.text = "I / Y: INVENTORY   T / X: SKILL TREE   E / B: INTERACT   LMB / RB: VOID BOLT   RMB / Q / LB: RIFT   SPACE / A: SHADOW STEP"
 		else:
-			menu_hint_label.text = "PENITENT ARCHITECTURE PLACEHOLDER   ATTACK: RITUAL BLADE TEST   Q / LB: SEAL MESSAGE   SPACE / A: DODGE   RESOURCE: %s" % resource_name.to_upper()
+			menu_hint_label.text = "PENITENT PLACEHOLDER   ATTACK: RITUAL BLADE   Q / LB: SEAL MESSAGE   SPACE / A: DODGE   RESOURCE: %s" % resource_name.to_upper()
+
+
+func _install_penitent_resource_hud() -> void:
+	if penitent_hud_installed or not is_instance_valid(corruption_meter):
+		return
+	var canvas: Node = corruption_meter.get_parent()
+	if canvas == null:
+		return
+
+	corruption_meter.queue_free()
+	corruption_meter = FERVOR_SEAL_SCRIPT.new()
+	corruption_meter.name = "FervorSeal"
+	corruption_meter.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	corruption_meter.position = Vector2(-224.0, -238.0)
+	corruption_meter.size = Vector2(196.0, 196.0)
+	canvas.add_child(corruption_meter)
+	corruption_meter.set_sigil_capacity(0, 3)
+
+	if is_instance_valid(corruption_label):
+		corruption_label.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		corruption_label.position = Vector2(-245.0, -258.0)
+		corruption_label.size = Vector2(238.0, 26.0)
+		corruption_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		corruption_label.modulate = Color(0.82, 0.18, 0.19)
+
+	var resource_snapshot: Dictionary = player.get_resource_snapshot()
+	corruption_meter.set_resource(
+		float(resource_snapshot.get("current", 0.0)),
+		float(resource_snapshot.get("maximum", 100.0))
+	)
+	penitent_hud_installed = true

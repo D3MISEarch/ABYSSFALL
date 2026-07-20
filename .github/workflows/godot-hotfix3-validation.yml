@@ -79,6 +79,14 @@ jobs:
           cd "$PROJECT_DIR"
           godot --headless --path . --script res://tests/test_fervor_resource.gd 2>&1 | tee "$GITHUB_WORKSPACE/fervor-tests.log"
 
+      - name: Fervor seal state tests
+        shell: bash
+        run: |
+          set -o pipefail
+          PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
+          cd "$PROJECT_DIR"
+          godot --headless --path . --script res://tests/test_fervor_seal.gd 2>&1 | tee "$GITHUB_WORKSPACE/fervor-seal-tests.log"
+
       - name: Class selection screen smoke test
         shell: bash
         run: |
@@ -190,6 +198,7 @@ jobs:
           path: |
             editor-validation.log
             fervor-tests.log
+            fervor-seal-tests.log
             runtime-class-select.log
             runtime-warlock.log
             runtime-penitent.log
