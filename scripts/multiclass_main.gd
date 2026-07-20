@@ -28,6 +28,8 @@ func _spawn_player() -> void:
 	player.ability_message.connect(_on_ability_message)
 	player.loot_message.connect(_on_loot_message)
 	player.died.connect(_on_player_died)
+	if player.has_signal("sigil_capacity_changed"):
+		player.connect("sigil_capacity_changed", Callable(self, "set_penitent_sigil_capacity"))
 
 	var health_snapshot: Dictionary = player.get_health_snapshot()
 	_on_player_health_changed(
@@ -53,6 +55,12 @@ func _spawn_player() -> void:
 	_refresh_inventory()
 	_refresh_skill_tree()
 	_update_class_specific_copy()
+	if player.has_method("get_sigil_capacity_snapshot"):
+		var sigil_snapshot: Dictionary = player.get_sigil_capacity_snapshot()
+		set_penitent_sigil_capacity(
+			int(sigil_snapshot.get("active", 0)),
+			int(sigil_snapshot.get("maximum", 3))
+		)
 
 
 func _resolve_selected_class_id() -> String:
@@ -213,7 +221,7 @@ func _update_class_specific_copy() -> void:
 		if selected_class_id == "void_warlock":
 			menu_hint_label.text = "I / Y: INVENTORY   T / X: SKILL TREE   E / B: INTERACT   LMB / RB: VOID BOLT   RMB / Q / LB: RIFT   SPACE / A: SHADOW STEP"
 		else:
-			menu_hint_label.text = "PENITENT PLACEHOLDER   ATTACK: RITUAL BLADE   Q / LB: SEAL MESSAGE   SPACE / A: DODGE   RESOURCE: %s" % resource_name.to_upper()
+			menu_hint_label.text = "PENITENT   LMB / RB: RITUAL BLADE   RMB / Q / LB: SEAL OF BINDING (18 FERVOR)   SPACE / A: DODGE   RESOURCE: %s" % resource_name.to_upper()
 
 
 func _install_penitent_resource_hud() -> void:
@@ -244,4 +252,10 @@ func _install_penitent_resource_hud() -> void:
 		float(resource_snapshot.get("current", 0.0)),
 		float(resource_snapshot.get("maximum", 100.0))
 	)
+	if player.has_method("get_sigil_capacity_snapshot"):
+		var sigil_snapshot: Dictionary = player.get_sigil_capacity_snapshot()
+		corruption_meter.set_sigil_capacity(
+			int(sigil_snapshot.get("active", 0)),
+			int(sigil_snapshot.get("maximum", 3))
+		)
 	penitent_hud_installed = true
