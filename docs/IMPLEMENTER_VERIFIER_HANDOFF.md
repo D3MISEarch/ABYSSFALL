@@ -48,15 +48,15 @@ Every successful pull-request validation run creates a GitHub Actions artifact n
 abyssfall-verifier-pr<PR_NUMBER>-<SHORT_SHA>
 ```
 
-The artifact contains one ZIP built from `git archive` at the exact tested commit. It includes:
+The workflow explicitly checks out and validates the pull request's real head commit rather than GitHub's temporary merge ref. The downloaded artifact is a ZIP containing:
 
-- the complete tracked source tree
-- `VERIFIER_HANDOFF.md` with branch, commit, pull request, CI run, and review instructions
+- the complete tracked source tree archived from that exact tested head commit
+- `VERIFIER_HANDOFF.md` with branch, full commit, pull request, CI run, and review instructions
 - `VERIFIER_CHANGED_FILES.txt` with the exact diff file list
 - `AGENTS.md` and its standing bug-pattern log
 - `docs/VERIFICATION_REPORT_TEMPLATE.md`
 
-The frozen ZIP is the authority for the independent verdict. A GitHub-connected repository may be used for convenient navigation, but it must not replace the exact package because the live branch can move after review begins.
+The downloaded artifact ZIP is the authority for the independent verdict. A GitHub-connected repository may be used for convenient navigation, but it must not replace the exact package because the live branch can move after review begins.
 
 Artifacts are retained for 30 days. A refreshed commit produces a new artifact and invalidates any unfinished verdict on the previous package unless the project owner explicitly accepts the older scope.
 
@@ -92,7 +92,7 @@ The verifier returns `docs/VERIFICATION_REPORT_TEMPLATE.md` completed with one v
 - **FAIL**
 - **NEEDS GRAPHICAL PLAYTEST**
 
-Every report names the full commit SHA and ZIP artifact. Findings include concrete code paths and reproduction steps rather than general impressions.
+Every report names the full commit SHA and downloaded artifact name. Findings include concrete code paths and reproduction steps rather than general impressions.
 
 ## Merge gate
 
