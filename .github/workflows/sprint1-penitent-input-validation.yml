@@ -1,0 +1,77 @@
+name: Validate Penitent Combat UX
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  penitent-combat-ux:
+    name: Ritual Blade and prompt validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Check out exact review commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot 4.4.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_VERSION="4.4.1"
+          ARCHIVE="Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl --fail --location --retry 3 \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${ARCHIVE}" \
+            --output /tmp/godot.zip
+          mkdir -p "$HOME/godot"
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          GODOT_BIN="$(find "$HOME/godot" -maxdepth 1 -type f -name 'Godot_v*-stable_linux.x86_64' | head -n 1)"
+          chmod +x "$GODOT_BIN"
+          ln -s "$GODOT_BIN" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --quit 2>&1 | tee editor-validation.log
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' editor-validation.log; then
+            echo "Godot reported an error while importing the project."
+            exit 1
+          fi
+
+      - name: Ritual Blade combat tests
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_ritual_blade.gd 2>&1 | tee ritual-blade-tests.log
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' ritual-blade-tests.log; then
+            echo "Godot reported an engine or script error during Ritual Blade tests."
+            exit 1
+          fi
+
+      - name: Input prompt profile tests
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_input_prompt_profile.gd 2>&1 | tee input-prompt-tests.log
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' input-prompt-tests.log; then
+            echo "Godot reported an engine or script error during input prompt tests."
+            exit 1
+          fi
+
+      - name: Upload focused validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: penitent-combat-ux-logs
+          path: |
+            editor-validation.log
+            ritual-blade-tests.log
+            input-prompt-tests.log
+          if-no-files-found: ignore
+          retention-days: 7

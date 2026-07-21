@@ -76,6 +76,26 @@ Regression expectation:
 - Assert that representative hidden paths such as `.github/workflows/` survive upload and download.
 - Fail CI on any missing tracked path or blob-hash mismatch between Git and the downloaded verifier artifact.
 
+
+### 3D material fades and invalid CanvasItem properties
+
+Observed failures:
+
+- Tweening `modulate` or `modulate:a` on `MeshInstance3D`. Those properties belong to `CanvasItem`/2D nodes, so Godot logs a runtime error and drops the tween track.
+- Assertion-only test scripts can still print `passed` and exit zero while Godot has emitted an engine-level runtime error.
+
+Prevention:
+
+- Fade a unique `StandardMaterial3D` resource through `albedo_color` alpha, with material transparency enabled.
+- Do not apply CanvasItem-only visual properties to Node3D-derived objects.
+- Avoid tweening a shared material unless every mesh using it is intended to fade together.
+- Capture headless test output and fail CI on Godot parser, script, runtime, invalid-property, or engine error lines.
+
+Regression expectation:
+
+- Spawn the real 3D feedback effect under test and assert that its material alpha decreases before cleanup.
+- A test suite is not considered passing when assertion counts are green but the Godot log contains runtime errors.
+
 ## Documentation ownership
 
 - The implementer owns `docs/BASELINE_TEST_RESULTS.md` and keeps it current after accepted milestones and verification-changing fixes.

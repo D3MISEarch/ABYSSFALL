@@ -2,10 +2,12 @@ extends "res://scripts/main.gd"
 
 const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
 const FERVOR_SEAL_SCRIPT = preload("res://scripts/ui/fervor_seal.gd")
+const INPUT_PROMPT_PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
 
 var requested_class_id := ""
 var selected_class_id := CHARACTER_FACTORY.DEFAULT_CLASS_ID
 var penitent_hud_installed := false
+var active_prompt_profile := INPUT_PROMPT_PROFILE.KEYBOARD_MOUSE
 
 
 func _spawn_player() -> void:
@@ -54,6 +56,7 @@ func _spawn_player() -> void:
 
 	_refresh_inventory()
 	_refresh_skill_tree()
+	active_prompt_profile = INPUT_PROMPT_PROFILE.connected_profile()
 	_update_class_specific_copy()
 	if player.has_method("get_sigil_capacity_snapshot"):
 		var sigil_snapshot: Dictionary = player.get_sigil_capacity_snapshot()
@@ -61,6 +64,14 @@ func _spawn_player() -> void:
 			int(sigil_snapshot.get("active", 0)),
 			int(sigil_snapshot.get("maximum", 3))
 		)
+
+
+func _input(event: InputEvent) -> void:
+	var requested_profile := INPUT_PROMPT_PROFILE.profile_for_event(event)
+	if requested_profile.is_empty() or requested_profile == active_prompt_profile:
+		return
+	active_prompt_profile = requested_profile
+	_refresh_control_hint()
 
 
 func _resolve_selected_class_id() -> String:
@@ -168,8 +179,8 @@ func _refresh_skill_tree() -> void:
 			node_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			var prefix := (
 				"✓"
-				if skill_index < current_tier
-				else ("▶" if skill_index == current_tier else "◇")
+					if skill_index < current_tier
+					else ("▶" if skill_index == current_tier else "◇")
 			)
 			node_label.text = (
 				"%s  T%d  %s\n%s"
@@ -217,11 +228,21 @@ func _update_class_specific_copy() -> void:
 	if selected_class_id == "penitent_placeholder":
 		_install_penitent_resource_hud()
 
-	if is_instance_valid(menu_hint_label):
-		if selected_class_id == "void_warlock":
-			menu_hint_label.text = "I / Y: INVENTORY   T / X: SKILL TREE   E / B: INTERACT   LMB / RB: VOID BOLT   RMB / Q / LB: RIFT   SPACE / A: SHADOW STEP"
-		else:
-			menu_hint_label.text = "PENITENT   ATTACK: LMB/RB   BRAND: F/R3 (12)   SEAL: Q/LB (18)   CHAIN: C/L3 (14)   SACRAMENT: V/DOWN (40+)   DODGE: SPACE/A   %s" % resource_name.to_upper()
+	_refresh_control_hint(resource_name)
+
+
+func _refresh_control_hint(resource_name: String = "") -> void:
+	if not is_instance_valid(menu_hint_label):
+		return
+	var resolved_resource := resource_name
+	if resolved_resource.is_empty() and is_instance_valid(player):
+		var definition: Dictionary = player.get_class_definition()
+		resolved_resource = str(definition.get("resource_name", "Resource"))
+	menu_hint_label.text = INPUT_PROMPT_PROFILE.build_hint(
+		selected_class_id,
+		active_prompt_profile,
+		resolved_resource
+	)
 
 
 func _install_penitent_resource_hud() -> void:
