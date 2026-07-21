@@ -3,22 +3,29 @@ extends RefCounted
 
 
 static func roll(entries: Array, seed: int) -> Array[ItemInstance]:
+	if seed == 0:
+		return []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var drops: Array[ItemInstance] = []
+	var entry_index := 0
 	for raw_entry: Variant in entries:
 		if not raw_entry is Dictionary:
+			entry_index += 1
 			continue
 		var definition_id := StringName(str(raw_entry.get("definition_id", "")))
 		if definition_id == &"":
+			entry_index += 1
 			continue
 		var chance := clampf(float(raw_entry.get("chance", 1.0)), 0.0, 1.0)
 		if rng.randf() > chance:
+			entry_index += 1
 			continue
 		var minimum := maxi(1, int(raw_entry.get("minimum", 1)))
 		var maximum := maxi(minimum, int(raw_entry.get("maximum", minimum)))
 		var quantity := rng.randi_range(minimum, maximum)
 		var item := ItemInstance.new(definition_id, quantity)
-		item.instance_id = "%s:%s:%s" % [seed, String(definition_id), drops.size()]
+		item.instance_id = "loot:%s:%s:%s:%s" % [seed, entry_index, String(definition_id), drops.size()]
 		drops.append(item)
+		entry_index += 1
 	return drops
