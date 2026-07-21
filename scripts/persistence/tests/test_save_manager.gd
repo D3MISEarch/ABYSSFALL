@@ -1,5 +1,7 @@
 extends SceneTree
 
+const SaveManager = preload("res://scripts/persistence/save_manager.gd")
+
 var failures: Array[String] = []
 
 
