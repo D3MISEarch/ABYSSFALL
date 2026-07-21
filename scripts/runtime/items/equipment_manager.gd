@@ -47,8 +47,8 @@ func unequip(slot_id: StringName) -> ItemInstance:
 	if not equipped.has(slot_id):
 		return null
 	var previous: ItemInstance = equipped[slot_id]
-	equipped.erase(slot_id)
 	_remove_item_modifiers(previous)
+	equipped.erase(slot_id)
 	equipment_changed.emit(slot_id, null, previous)
 	return previous
 
