@@ -6,11 +6,13 @@ const INPUT_PROMPT_PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
 
 var panel: PanelContainer
 var details: Label
+var active_input_profile := INPUT_PROMPT_PROFILE.KEYBOARD_MOUSE
 
 
 func _ready() -> void:
 	layer = 1000
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	active_input_profile = INPUT_PROMPT_PROFILE.connected_profile()
 	_build_ui()
 	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 	_refresh()
@@ -22,6 +24,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		if panel.visible:
 			_refresh()
 		get_viewport().set_input_as_handled()
+		return
+
+	_update_active_profile(event)
+
+
+func _update_active_profile(event: InputEvent) -> void:
+	var detected_profile := INPUT_PROMPT_PROFILE.profile_for_event(event)
+	if detected_profile.is_empty() or detected_profile == active_input_profile:
+		return
+	active_input_profile = detected_profile
+	if is_instance_valid(panel) and panel.visible:
+		_refresh()
 
 
 func _build_ui() -> void:
@@ -54,17 +68,18 @@ func _refresh() -> void:
 	var joypads := Input.get_connected_joypads()
 	var device_lines: Array[String] = []
 	for device_id in joypads:
-		device_lines.append("%d: %s" % [device_id, Input.get_joy_name(device_id)])
+		var joy_name := Input.get_joy_name(device_id)
+		var hardware_profile := INPUT_PROMPT_PROFILE.profile_for_joy_name(joy_name)
+		device_lines.append("%d: %s [%s]" % [device_id, joy_name, hardware_profile])
 	if device_lines.is_empty():
 		device_lines.append("none")
 
-	var profile := INPUT_PROMPT_PROFILE.connected_profile()
-	details.text = "PLAYTEST DIAGNOSTICS (F3)\nBuild: %s\nCommit: %s\nBranch: %s\nWorkflow: %s\nInput profile: %s\nConnected controllers:\n- %s" % [
+	details.text = "PLAYTEST DIAGNOSTICS (F3)\nBuild: %s\nCommit: %s\nBranch: %s\nWorkflow: %s\nActive input profile: %s\nConnected controllers:\n- %s" % [
 		BUILD_IDENTITY.display_line(identity),
 		str(identity.get("commit", "unknown")),
 		str(identity.get("branch", "unknown")),
 		str(identity.get("workflow_run", "unknown")),
-		profile,
+		active_input_profile,
 		"\n- ".join(device_lines),
 	]
 
