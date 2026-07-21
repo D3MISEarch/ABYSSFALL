@@ -69,6 +69,12 @@ jobs:
           set -o pipefail
           godot --headless --path . --script res://scripts/runtime/tests/test_ability_execution.gd 2>&1 | tee ability-execution-test.log
 
+      - name: Run Stage 3-4 catalog and inventory tests
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://scripts/runtime/tests/test_stage34_catalog_inventory.gd 2>&1 | tee stage34-catalog-inventory-test.log
+
       - name: Upload runtime test logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -78,5 +84,6 @@ jobs:
             runtime-foundation-test.log
             runtime-session-test.log
             ability-execution-test.log
+            stage34-catalog-inventory-test.log
           if-no-files-found: warn
           retention-days: 7
