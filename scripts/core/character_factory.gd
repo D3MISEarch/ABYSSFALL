@@ -2,26 +2,27 @@ extends RefCounted
 class_name CharacterFactory
 
 const CHARACTER_CONTRACT = preload("res://scripts/core/character_contract.gd")
+const CLASS_IDS = preload("res://scripts/shared/class_ids.gd")
 const VOID_WARLOCK_SCRIPT = preload("res://scripts/characters/void_warlock.gd")
 const PENITENT_SCRIPT = preload("res://scripts/characters/penitent_playable.gd")
 
-const DEFAULT_CLASS_ID := "void_warlock"
+const DEFAULT_CLASS_ID := CLASS_IDS.VOID_WARLOCK
 
 const CLASS_REGISTRY := {
-	"void_warlock": VOID_WARLOCK_SCRIPT,
-	"penitent_placeholder": PENITENT_SCRIPT,
+	CLASS_IDS.VOID_WARLOCK: VOID_WARLOCK_SCRIPT,
+	CLASS_IDS.PENITENT: PENITENT_SCRIPT,
 }
 
 const CLASS_SELECTION_ORDER := [
-	"void_warlock",
-	"penitent_placeholder",
+	CLASS_IDS.VOID_WARLOCK,
+	CLASS_IDS.PENITENT,
 	"unknown_path_1",
 	"unknown_path_2",
 ]
 
 const CLASS_DEFINITIONS := {
-	"void_warlock": {
-		"id": "void_warlock",
+	CLASS_IDS.VOID_WARLOCK: {
+		"id": CLASS_IDS.VOID_WARLOCK,
 		"display_name": "Void Warlock",
 		"title": "Master of the Hungry Rift",
 		"resource_id": "corruption",
@@ -37,8 +38,8 @@ const CLASS_DEFINITIONS := {
 		"secondary_accent": Color(0.30, 0.82, 0.06),
 		"locked": false,
 	},
-	"penitent_placeholder": {
-		"id": "penitent_placeholder",
+	CLASS_IDS.PENITENT: {
+		"id": CLASS_IDS.PENITENT,
 		"display_name": "The Penitent",
 		"title": "Saint of the Last Rite",
 		"resource_id": "fervor",
@@ -93,7 +94,7 @@ const CLASS_DEFINITIONS := {
 
 
 static func create_character(class_id: String = DEFAULT_CLASS_ID) -> CharacterBody3D:
-	var resolved_id := class_id if CLASS_REGISTRY.has(class_id) else DEFAULT_CLASS_ID
+	var resolved_id := class_id if has_class(class_id) else DEFAULT_CLASS_ID
 	var character_script: Script = CLASS_REGISTRY[resolved_id]
 	var character = character_script.new()
 	var problems := CHARACTER_CONTRACT.validate_character(character)
@@ -125,7 +126,8 @@ static func get_class_definition(class_id: String) -> Dictionary:
 
 
 static func has_class(class_id: String) -> bool:
-	return CLASS_REGISTRY.has(class_id)
+	var clean_class_id := class_id.strip_edges()
+	return CLASS_IDS.is_valid(clean_class_id) and CLASS_REGISTRY.has(clean_class_id)
 
 
 static func is_locked(class_id: String) -> bool:
