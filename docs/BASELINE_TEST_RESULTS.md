@@ -44,9 +44,33 @@ An independent verifier:
 - Ran the maintained scene/runtime paths headlessly under Godot 4.4.1.
 - Traced ability-to-input wiring and scene-tree behavior.
 - Identified the Seal of Binding lifecycle-order bug where `_ready()` could pulse at world origin before final positioning.
-- Confirmed the corrected project imports cleanly and the full automated gameplay suite remains green.
+- Confirmed the corrected player-facing project imports cleanly and the full automated gameplay suite remains green.
 
-The Seal finding was fixed by assigning the seal's local transform before attaching it to the scene tree. An exact origin-decoy regression test permanently covers that failure pattern.
+The player-facing Seal finding was fixed by assigning the seal's local transform before attaching it to the scene tree. An exact origin-decoy regression test covers that failure pattern.
+
+## Full-project independent audit
+
+- Review pull request: `#19` — Freeze complete project for independent audit
+- Reviewed commit: `d3b4568a03930758b24e179de7b23e0d6c5d60b8`
+- Successful validation run: `29788549420`
+- Independent verdict: **PASS WITH FOLLOW-UP**
+- Package integrity: all **102 tracked files** present and byte-identical to the reviewed commit
+
+### Confirmed project-wide results
+
+- Godot 4.4.1 import completed cleanly.
+- All eight deterministic suites passed independently.
+- Maintained scenes idled headlessly without errors or warnings.
+- Independent SHA-256 comparison found zero mismatches across all 102 tracked files.
+- Independent `git hash-object` results matched `VERIFIER_GIT_TREE.txt` for all 102 files.
+- No blocking gameplay or tooling defects were found.
+
+### Follow-up findings
+
+1. **Shadowed Seal implementation debt:** `penitent_character.gd` still contains the original add-before-position implementation, while `penitent_playable.gd` overrides it with the corrected position-before-attach implementation. Gameplay is currently safe because `character_factory.gd` instantiates the leaf class, but removing that override during a future refactor could silently restore the original bug. A focused cleanup should leave one canonical safe implementation and test it directly.
+2. **Stale Penitent documentation:** `docs/PENITENT_CLASS.md` still calls Ritual Blade a placeholder despite the implemented three-hit 10/12/18 damage sequence and Rite-mark completion behavior.
+
+PR #19 is review-only and should be closed after these findings are recorded rather than merged.
 
 ## Independent verifier artifact pipeline
 
@@ -118,15 +142,3 @@ A timeout exit status of `124` is acceptable for the bounded runtime when startu
 - Build: Void Warlock v0.4 Hotfix 3 — The Sunken Crypts
 - Repository branch: `import-v0.4-hotfix3`
 - Successful validation run: `29767727869`
-
-Original baseline results:
-
-- Godot 4.4.1 installation: **passed**
-- Repository checkout: **passed**
-- Project discovery at repository root: **passed**
-- Editor/parser/import validation: **passed**
-- Runtime smoke test: **passed**
-- Validation-log upload: **passed**
-- Overall GitHub Actions conclusion: **success**
-
-The original archive was promoted into normal repository files with `project.godot`, `main.tscn`, scripts, required UID/import metadata, documentation, and concept assets at their maintained repository locations.
