@@ -6,6 +6,7 @@ on:
       - "scripts/runtime/**"
       - "scripts/persistence/**"
       - "scripts/shared/**"
+      - "Docs/ADR/**"
       - "project.godot"
       - ".github/workflows/runtime-foundation-tests.yml"
   push:
@@ -15,6 +16,7 @@ on:
       - "scripts/runtime/**"
       - "scripts/persistence/**"
       - "scripts/shared/**"
+      - "Docs/ADR/**"
       - "project.godot"
       - ".github/workflows/runtime-foundation-tests.yml"
   workflow_dispatch:
@@ -55,11 +57,19 @@ jobs:
           set -o pipefail
           godot --headless --path . --script res://scripts/runtime/tests/test_runtime_foundation.gd 2>&1 | tee runtime-foundation-test.log
 
-      - name: Upload runtime test log
+      - name: Run runtime session isolation tests
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://scripts/runtime/tests/test_runtime_session.gd 2>&1 | tee runtime-session-test.log
+
+      - name: Upload runtime test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: runtime-foundation-test-log
-          path: runtime-foundation-test.log
+          name: runtime-foundation-test-logs
+          path: |
+            runtime-foundation-test.log
+            runtime-session-test.log
           if-no-files-found: warn
           retention-days: 7
