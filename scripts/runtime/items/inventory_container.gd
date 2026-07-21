@@ -52,7 +52,7 @@ func remove_instance(instance_id: String, quantity: int = 1) -> ItemInstance:
 			item_removed.emit(existing)
 			return existing
 		var removed := ItemInstance.from_dict(existing.to_dict())
-		removed.instance_id = "%s:split:%s" % [existing.instance_id, existing.quantity - quantity]
+		removed.instance_id = _new_split_instance_id(existing.instance_id)
 		removed.quantity = quantity
 		existing.quantity -= quantity
 		item_removed.emit(removed)
@@ -93,3 +93,12 @@ func restore(serialized_items: Array) -> bool:
 		restored.append(item)
 	items = restored
 	return true
+
+
+func _new_split_instance_id(source_instance_id: String) -> String:
+	return "%s:split:%s:%s:%s" % [
+		source_instance_id,
+		Time.get_ticks_usec(),
+		Time.get_unix_time_from_system(),
+		randi(),
+	]
