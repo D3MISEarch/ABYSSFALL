@@ -9,6 +9,7 @@ const RITE_MARK_MARKER_SCRIPT = preload("res://scripts/characters/penitent/rite_
 const SEAL_OF_BINDING_SCRIPT = preload("res://scripts/characters/penitent/seal_of_binding.gd")
 const SIGIL_ROSTER_SCRIPT = preload("res://scripts/characters/penitent/sigil_roster.gd")
 const BRAND_OF_RUIN_RULES = preload("res://scripts/characters/penitent/brand_of_ruin_rules.gd")
+const RITUAL_BLADE_RULES = preload("res://scripts/characters/penitent/ritual_blade_rules.gd")
 
 const SEAL_OF_BINDING_COST := 18.0
 const SEAL_OF_BINDING_RADIUS := 3.4
@@ -23,6 +24,7 @@ var ritual_blade_combo_step := 0
 var ritual_blade_combo_time := 0.0
 var brand_of_ruin_cooldown := 0.0
 var active_brand_target: Node3D
+var last_ritual_blade_result: Dictionary = {}
 
 
 func _ready() -> void:
@@ -224,26 +226,29 @@ func get_or_create_rite_mark(target: Node3D) -> RiteMarkComponent:
 func _perform_ritual_blade_attack() -> void:
 	ritual_blade_combo_step = ritual_blade_combo_step % 3 + 1
 	ritual_blade_combo_time = 1.05
+	var step_distance := _apply_ritual_blade_step_in()
 	var hit_count := 0
 	var completed_count := 0
 	var echo_count := 0
-	var strike_center := global_position + facing * 1.25
-	var damage := 18 if ritual_blade_combo_step == 3 else (12 if ritual_blade_combo_step == 2 else 10)
+	var damage: int = RITUAL_BLADE_RULES.get_damage(ritual_blade_combo_step)
 
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
 			continue
 		if enemy.get("alive") != null and not bool(enemy.get("alive")):
 			continue
-		var offset: Vector3 = enemy.global_position - strike_center
-		offset.y = 0.0
-		if offset.length() > 1.55:
+		if not RITUAL_BLADE_RULES.is_target_in_arc(
+			global_position,
+			facing,
+			enemy.global_position
+		):
 			continue
 
 		var mark_before := enemy.get_node_or_null("RiteMark") as RiteMarkComponent
 		var was_branded := is_instance_valid(mark_before) and mark_before.branded
 		enemy.take_damage(damage)
 		hit_count += 1
+		_spawn_ritual_blade_hit(enemy)
 		var mark := get_or_create_rite_mark(enemy)
 		if not is_instance_valid(mark):
 			continue
@@ -262,19 +267,174 @@ func _perform_ritual_blade_attack() -> void:
 		if was_branded:
 			echo_count += _echo_brand_damage(enemy, damage)
 
+	set_combat_active(true)
+	_spawn_ritual_blade_arc(hit_count)
+	last_ritual_blade_result = {
+		"combo_step": ritual_blade_combo_step,
+		"hits": hit_count,
+		"completed_rites": completed_count,
+		"echoes": echo_count,
+		"damage": damage,
+		"step_distance": step_distance,
+		"reach": RITUAL_BLADE_RULES.REACH,
+	}
+
 	if completed_count > 0:
 		add_fervor(minf(float(completed_count) * 6.0, 18.0))
 		ability_message.emit("RITE COMPLETE" if completed_count == 1 else "%d RITES COMPLETE" % completed_count)
 	elif echo_count > 0:
 		ability_message.emit("BRAND OF RUIN ECHOES THROUGH %d MARKS" % echo_count)
 	elif hit_count > 0 and ritual_blade_combo_step == 3:
-		ability_message.emit("THE FINISHER CARVES NO NEW CONFESSION")
+		ability_message.emit("RITUAL BLADE — THIRD CONFESSION")
 
 	if is_instance_valid(visual_root):
 		var tween := create_tween()
 		var attack_scale := Vector3(1.24, 0.86, 1.24) if ritual_blade_combo_step == 3 else Vector3(1.14, 0.92, 1.14)
 		tween.tween_property(visual_root, "scale", attack_scale, 0.055)
 		tween.tween_property(visual_root, "scale", Vector3.ONE, 0.13)
+
+
+func get_ritual_blade_snapshot() -> Dictionary:
+	return last_ritual_blade_result.duplicate(true)
+
+
+func _apply_ritual_blade_step_in() -> float:
+	var target := _select_ritual_blade_step_target()
+	if not is_instance_valid(target):
+		return 0.0
+	var step_distance: float = RITUAL_BLADE_RULES.get_step_in_distance(
+		global_position,
+		facing,
+		target.global_position
+	)
+	if step_distance <= 0.0:
+		return 0.0
+	var flat_facing := facing
+	flat_facing.y = 0.0
+	if flat_facing.length_squared() <= 0.001:
+		return 0.0
+	flat_facing = flat_facing.normalized()
+	var starting_position := global_position
+	move_and_collide(flat_facing * step_distance)
+	var travelled := global_position - starting_position
+	travelled.y = 0.0
+	return travelled.length()
+
+
+func _select_ritual_blade_step_target() -> Node3D:
+	var best_target: Node3D
+	var best_distance := INF
+	for candidate in get_tree().get_nodes_in_group("enemies"):
+		var enemy := candidate as Node3D
+		if not is_instance_valid(enemy):
+			continue
+		if enemy.get("alive") != null and not bool(enemy.get("alive")):
+			continue
+		if not RITUAL_BLADE_RULES.is_target_in_arc(
+			global_position,
+			facing,
+			enemy.global_position,
+			RITUAL_BLADE_RULES.REACH + RITUAL_BLADE_RULES.STEP_IN_DISTANCE,
+			RITUAL_BLADE_RULES.HALF_ANGLE_DEGREES
+		):
+			continue
+		var flat_offset := enemy.global_position - global_position
+		flat_offset.y = 0.0
+		var distance := flat_offset.length()
+		if distance < best_distance:
+			best_distance = distance
+			best_target = enemy
+	return best_target
+
+
+func _spawn_ritual_blade_arc(hit_count: int) -> void:
+	var scene_root := get_tree().current_scene as Node3D
+	if not is_instance_valid(scene_root):
+		scene_root = get_parent() as Node3D
+	if not is_instance_valid(scene_root):
+		return
+
+	var arc_root := Node3D.new()
+	arc_root.name = "RitualBladeArc"
+	var spawn_global := global_position + Vector3(0.0, 0.16, 0.0)
+	arc_root.position = scene_root.to_local(spawn_global)
+	arc_root.rotation.y = atan2(-facing.x, -facing.z)
+	arc_root.scale = Vector3(0.72, 0.72, 0.72)
+
+	var color := Color(0.82, 0.025, 0.045)
+	if ritual_blade_combo_step == 2:
+		color = Color(0.98, 0.13, 0.035)
+	elif ritual_blade_combo_step == 3:
+		color = Color(0.34, 0.92, 0.055)
+	if hit_count <= 0:
+		color = color.darkened(0.18)
+
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(color.r, color.g, color.b, 0.72)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.emission_enabled = true
+	material.emission = color * 3.0
+	material.emission_energy_multiplier = 2.6
+
+	var segment_count := 11
+	var half_angle := deg_to_rad(RITUAL_BLADE_RULES.HALF_ANGLE_DEGREES)
+	var arc_radius := 2.55 if ritual_blade_combo_step == 3 else 2.30
+	for index in range(segment_count):
+		var ratio := float(index) / float(segment_count - 1)
+		var angle := lerpf(-half_angle, half_angle, ratio)
+		var segment := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.58 if ritual_blade_combo_step == 3 else 0.48, 0.045, 0.15)
+		segment.mesh = mesh
+		segment.position = Vector3(sin(angle) * arc_radius, 0.0, -cos(angle) * arc_radius)
+		segment.rotation.y = -angle
+		segment.material_override = material
+		arc_root.add_child(segment)
+
+	var light := OmniLight3D.new()
+	light.position = Vector3(0.0, 0.55, -1.7)
+	light.light_color = color
+	light.light_energy = 1.25 if hit_count > 0 else 0.72
+	light.omni_range = 4.2
+	arc_root.add_child(light)
+
+	# The arc has no _ready() gameplay work, but its transform is still assigned
+	# before attachment to preserve the project's scene-tree ordering rule.
+	scene_root.add_child(arc_root)
+	var tween := arc_root.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(arc_root, "scale", Vector3(1.08, 1.0, 1.08), 0.16)
+	tween.tween_property(arc_root, "rotation:y", arc_root.rotation.y + 0.18, 0.16)
+	tween.chain().tween_callback(arc_root.queue_free)
+
+
+func _spawn_ritual_blade_hit(target: Node3D) -> void:
+	if not is_instance_valid(target):
+		return
+	var pulse := MeshInstance3D.new()
+	pulse.name = "RitualBladeHit"
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.38 if ritual_blade_combo_step < 3 else 0.52
+	sphere.height = sphere.radius * 2.0
+	pulse.mesh = sphere
+	pulse.position = Vector3(0.0, 0.62, 0.0)
+	pulse.scale = Vector3.ONE * 0.35
+	var color := Color(0.90, 0.035, 0.055) if ritual_blade_combo_step < 3 else Color(0.34, 0.94, 0.055)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(color.r, color.g, color.b, 0.62)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.emission_enabled = true
+	material.emission = color * 3.2
+	material.emission_energy_multiplier = 2.8
+	pulse.material_override = material
+	target.add_child(pulse)
+	var tween := pulse.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(pulse, "scale", Vector3.ONE * 1.35, 0.18)
+	tween.tween_property(pulse, "modulate:a", 0.0, 0.18)
+	tween.chain().tween_callback(pulse.queue_free)
 
 
 func _cast_brand_of_ruin() -> void:
