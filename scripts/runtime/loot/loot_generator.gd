@@ -74,9 +74,8 @@ static func _generate_entry(
 	var rarity_value := int(entry.get("rarity", LootRarity.Tier.MAGIC))
 	if not LootRarity.is_valid(rarity_value):
 		return null
-	var rarity: LootRarity.Tier = rarity_value as LootRarity.Tier
 	var item_level := maxi(1, int(entry.get("item_level", default_item_level)))
 	var generation_seed := int(rng.randi())
 	if generation_seed == 0:
 		generation_seed = loot_seed + entry_index + 1
-	return ItemGenerator.generate(definition, item_level, rarity, generation_seed, affix_catalog)
+	return ItemGenerator.generate(definition, item_level, rarity_value, generation_seed, affix_catalog)
