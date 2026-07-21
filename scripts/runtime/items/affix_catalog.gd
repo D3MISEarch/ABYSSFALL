@@ -28,7 +28,7 @@ func eligible_definitions(
 		var stored: AffixDefinition = _definitions[affix_id]
 		if stored.kind == kind and stored.is_eligible(item_tags, item_level):
 			result.append(stored.duplicate_definition())
-	result.sort_custom(func(a: AffixDefinition, b: AffixDefinition) -> bool: return a.affix_id < b.affix_id)
+	result.sort_custom(func(a: AffixDefinition, b: AffixDefinition) -> bool: return String(a.affix_id) < String(b.affix_id))
 	return result
 
 
