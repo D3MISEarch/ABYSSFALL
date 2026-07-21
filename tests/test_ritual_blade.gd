@@ -118,10 +118,8 @@ func _test_canonical_attack_hits_readable_range_and_fades() -> void:
 		var hit_material := hit_visual.material_override as StandardMaterial3D
 		_assert_true(is_instance_valid(hit_material), "Impact pulse owns a 3D fade material")
 		if is_instance_valid(hit_material):
-			var starting_alpha := hit_material.albedo_color.a
-			await create_timer(0.08).timeout
-			_assert_true(
-				hit_material.albedo_color.a < starting_alpha,
+			await _assert_material_alpha_fades(
+				hit_material,
 				"Impact pulse fades its material alpha before cleanup"
 			)
 
@@ -149,10 +147,8 @@ func _test_brand_pulse_material_fades() -> void:
 		var brand_material := brand_visual.material_override as StandardMaterial3D
 		_assert_true(is_instance_valid(brand_material), "Brand pulse owns a 3D fade material")
 		if is_instance_valid(brand_material):
-			var starting_alpha := brand_material.albedo_color.a
-			await create_timer(0.10).timeout
-			_assert_true(
-				brand_material.albedo_color.a < starting_alpha,
+			await _assert_material_alpha_fades(
+				brand_material,
 				"Brand pulse fades its material alpha before cleanup"
 			)
 
@@ -182,6 +178,24 @@ func _test_attack_visual_exists_on_miss() -> void:
 
 	current_scene = previous_scene
 	world.free()
+
+
+func _assert_material_alpha_fades(
+	material: StandardMaterial3D,
+	label: String,
+	timeout_msec: int = 1000
+) -> void:
+	var starting_alpha := material.albedo_color.a
+	var deadline := Time.get_ticks_msec() + timeout_msec
+	while Time.get_ticks_msec() <= deadline:
+		await process_frame
+		if material.albedo_color.a <= 0.05:
+			return
+	failures += 1
+	printerr(
+		"FAIL: %s — alpha remained %.3f from %.3f after %d ms"
+		% [label, material.albedo_color.a, starting_alpha, timeout_msec]
+	)
 
 
 func _assert_true(condition: bool, label: String) -> void:
