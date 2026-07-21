@@ -3,7 +3,7 @@ extends SceneTree
 const RULES = preload("res://scripts/characters/penitent/seal_binding_rules.gd")
 const ROSTER_SCRIPT = preload("res://scripts/characters/penitent/sigil_roster.gd")
 const CONTROL_SCRIPT = preload("res://scripts/characters/penitent/ritual_control_component.gd")
-const PENITENT_PLAYABLE_SCRIPT = preload("res://scripts/characters/penitent_playable.gd")
+const PENITENT_CHARACTER_SCRIPT = preload("res://scripts/characters/penitent_character.gd")
 
 var failures := 0
 
@@ -124,7 +124,7 @@ func _test_initial_pulse_uses_placed_position() -> void:
 	world.add_child(placed_target)
 	placed_target.add_to_group("enemies")
 
-	var penitent := PENITENT_PLAYABLE_SCRIPT.new() as PenitentPlayable
+	var penitent := PENITENT_CHARACTER_SCRIPT.new() as PenitentCharacter
 	penitent.position = Vector3(20.0, 0.9, 20.0)
 	penitent.facing = Vector3.RIGHT
 	world.add_child(penitent)
@@ -137,7 +137,7 @@ func _test_initial_pulse_uses_placed_position() -> void:
 	if is_instance_valid(seal):
 		_assert_true(
 			seal.global_position.distance_to(Vector3(23.0, 0.07, 20.0)) < 0.01,
-			"Seal enters the tree at its intended world position"
+			"Canonical Penitent seal enters the tree at its intended world position"
 		)
 	_assert_true(
 		is_instance_valid(placed_target.get_node_or_null("RitualControl")),
