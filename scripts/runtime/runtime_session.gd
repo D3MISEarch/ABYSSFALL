@@ -4,6 +4,7 @@ extends Node
 var event_bus: RuntimeEventBus
 var ability_executor: AbilityExecutor
 var item_catalog: ItemCatalog
+var affix_catalog: AffixCatalog
 var inventory: InventoryContainer
 var equipment: EquipmentManager
 var reward_service: EnemyRewardService
@@ -16,6 +17,7 @@ func _init() -> void:
 	add_child(event_bus)
 	ability_executor = AbilityExecutor.new(event_bus)
 	item_catalog = ItemCatalog.new()
+	affix_catalog = AffixCatalog.new()
 	reward_service = EnemyRewardService.new()
 
 
@@ -54,7 +56,7 @@ func execute_ability(definition: AbilityDefinition) -> Dictionary:
 func grant_enemy_rewards(enemy: EnemyRuntime) -> Dictionary:
 	if character == null or inventory == null:
 		return {"granted": false, "experience": 0, "levels": 0, "loot": [], "rejected_loot": []}
-	var result := reward_service.grant(enemy, character, inventory, item_catalog)
+	var result := reward_service.grant(enemy, character, inventory, item_catalog, affix_catalog)
 	if bool(result.get("granted", false)):
 		event_bus.enemy_killed.emit(enemy.enemy_id, character.build_id)
 		event_bus.experience_gained.emit(character.build_id, int(result.get("experience", 0)))
