@@ -1,6 +1,8 @@
 extends SceneTree
 
-const SaveManager = preload("res://scripts/persistence/save_manager.gd")
+const SAVE_MANAGER_SCRIPT := preload("res://scripts/persistence/save_manager.gd")
+const TEST_ROOT_DIR := "user://abyssfall"
+const TEST_PROFILE_PATH := TEST_ROOT_DIR + "/profile.json"
 
 var failures: Array[String] = []
 
@@ -28,22 +30,26 @@ func _run_tests() -> void:
 	quit(1)
 
 
+func _save_call(method: StringName, arguments: Array = []) -> Variant:
+	return SAVE_MANAGER_SCRIPT.callv(method, arguments)
+
+
 func _run_case(label: String, test_callable: Callable) -> void:
 	print("TEST: %s" % label)
-	var failure_count_before := failures.size()
+	var failure_count_before: int = failures.size()
 	test_callable.call()
 	if failures.size() == failure_count_before:
 		print("PASS: %s" % label)
 
 
 func _test_profile_round_trip() -> void:
-	var profile := SaveManager.create_profile("Abyss Tester")
+	var profile: Variant = _save_call(&"create_profile", ["Abyss Tester"])
 	_expect(profile != null, "Profile should be created")
 	if profile == null:
 		return
 	profile.currencies["embers"] = 25
-	_expect(SaveManager.save_profile(profile) == OK, "Profile should save")
-	var loaded := SaveManager.load_profile()
+	_expect(int(_save_call(&"save_profile", [profile])) == OK, "Profile should save")
+	var loaded: Variant = _save_call(&"load_profile")
 	_expect(loaded != null, "Profile should load")
 	if loaded != null:
 		_expect(loaded.profile_id == profile.profile_id, "Profile ID should round-trip")
@@ -51,12 +57,12 @@ func _test_profile_round_trip() -> void:
 
 
 func _test_independent_builds() -> void:
-	var profile := SaveManager.load_profile()
+	var profile: Variant = _save_call(&"load_profile")
 	if profile == null:
 		_expect(false, "Profile required for build test")
 		return
-	var penitent := SaveManager.create_build(profile, "penitent", "Ashen Vow")
-	var warlock := SaveManager.create_build(profile, "void_warlock", "Black Star")
+	var penitent: Variant = _save_call(&"create_build", [profile, "penitent", "Ashen Vow"])
+	var warlock: Variant = _save_call(&"create_build", [profile, "void_warlock", "Black Star"])
 	_expect(penitent != null and warlock != null, "Two builds should be created")
 	if penitent == null or warlock == null:
 		return
@@ -65,10 +71,10 @@ func _test_independent_builds() -> void:
 	penitent.build_specific_progress["fervor_mastery"] = 3
 	warlock.level = 5
 	warlock.build_specific_progress["corruption_mastery"] = 2
-	_expect(SaveManager.save_build(penitent) == OK, "Penitent build should save")
-	_expect(SaveManager.save_build(warlock) == OK, "Warlock build should save")
-	var loaded_penitent := SaveManager.load_build(penitent.build_id)
-	var loaded_warlock := SaveManager.load_build(warlock.build_id)
+	_expect(int(_save_call(&"save_build", [penitent])) == OK, "Penitent build should save")
+	_expect(int(_save_call(&"save_build", [warlock])) == OK, "Warlock build should save")
+	var loaded_penitent: Variant = _save_call(&"load_build", [penitent.build_id])
+	var loaded_warlock: Variant = _save_call(&"load_build", [warlock.build_id])
 	_expect(loaded_penitent != null, "Penitent build should load")
 	_expect(loaded_warlock != null, "Warlock build should load")
 	if loaded_penitent == null or loaded_warlock == null:
@@ -79,22 +85,22 @@ func _test_independent_builds() -> void:
 
 
 func _test_rename_select_delete() -> void:
-	var profile := SaveManager.load_profile()
+	var profile: Variant = _save_call(&"load_profile")
 	if profile == null or profile.build_ids.size() < 2:
 		_expect(false, "Two builds required for management test")
 		return
-	var first_id := profile.build_ids[0]
-	var second_id := profile.build_ids[1]
-	_expect(SaveManager.rename_build(profile, first_id, "Faithbreaker") == OK, "Build should rename")
-	var renamed := SaveManager.load_build(first_id)
+	var first_id: String = str(profile.build_ids[0])
+	var second_id: String = str(profile.build_ids[1])
+	_expect(int(_save_call(&"rename_build", [profile, first_id, "Faithbreaker"])) == OK, "Build should rename")
+	var renamed: Variant = _save_call(&"load_build", [first_id])
 	_expect(renamed != null, "Renamed build should load")
 	if renamed != null:
 		_expect(renamed.build_name == "Faithbreaker", "Renamed build should persist")
-	_expect(SaveManager.select_build(profile, first_id) == OK, "Build should select")
-	_expect(SaveManager.delete_build(profile, first_id) == OK, "Build should delete")
-	_expect(SaveManager.load_build(first_id) == null, "Deleted build should not load")
+	_expect(int(_save_call(&"select_build", [profile, first_id])) == OK, "Build should select")
+	_expect(int(_save_call(&"delete_build", [profile, first_id])) == OK, "Build should delete")
+	_expect(_save_call(&"load_build", [first_id]) == null, "Deleted build should not load")
 	_expect(profile.selected_build_id == second_id, "Deleting selected build should select remaining build")
-	var reloaded_profile := SaveManager.load_profile()
+	var reloaded_profile: Variant = _save_call(&"load_profile")
 	_expect(reloaded_profile != null, "Profile should reload after deletion")
 	if reloaded_profile != null:
 		_expect(reloaded_profile.selected_build_id == second_id, "Fallback selection should persist")
@@ -102,21 +108,21 @@ func _test_rename_select_delete() -> void:
 
 
 func _test_backup_recovery() -> void:
-	var profile := SaveManager.load_profile()
+	var profile: Variant = _save_call(&"load_profile")
 	if profile == null:
 		_expect(false, "Profile required for backup test")
 		return
 	profile.display_name = "Backup Seed"
-	_expect(SaveManager.save_profile(profile) == OK, "Backup seed should save")
+	_expect(int(_save_call(&"save_profile", [profile])) == OK, "Backup seed should save")
 	profile.display_name = "Current Primary"
-	_expect(SaveManager.save_profile(profile) == OK, "Current primary should save")
-	var corrupt := FileAccess.open(SaveManager.PROFILE_PATH, FileAccess.WRITE)
+	_expect(int(_save_call(&"save_profile", [profile])) == OK, "Current primary should save")
+	var corrupt := FileAccess.open(TEST_PROFILE_PATH, FileAccess.WRITE)
 	_expect(corrupt != null, "Primary profile should open for corruption test")
 	if corrupt == null:
 		return
 	corrupt.store_string("{ definitely not json")
 	corrupt.close()
-	var recovered := SaveManager.load_profile()
+	var recovered: Variant = _save_call(&"load_profile")
 	_expect(recovered != null, "Corrupted primary should recover from backup")
 	if recovered != null:
 		_expect(recovered.display_name == "Backup Seed", "Recovery should use last known backup")
@@ -129,8 +135,8 @@ func _expect(condition: bool, message: String) -> void:
 
 
 func _cleanup() -> void:
-	if DirAccess.dir_exists_absolute(SaveManager.ROOT_DIR):
-		_remove_tree(SaveManager.ROOT_DIR)
+	if DirAccess.dir_exists_absolute(TEST_ROOT_DIR):
+		_remove_tree(TEST_ROOT_DIR)
 
 
 func _remove_tree(path: String) -> void:
