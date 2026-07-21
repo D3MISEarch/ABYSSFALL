@@ -51,47 +51,33 @@ jobs:
       - name: Import project
         run: godot --headless --editor --path . --quit
 
-      - name: Run runtime foundation smoke tests
+      - name: Run runtime regression suites
         shell: bash
         run: |
-          set -o pipefail
-          godot --headless --path . --script res://scripts/runtime/tests/test_runtime_foundation.gd 2>&1 | tee runtime-foundation-test.log
+          set -euo pipefail
 
-      - name: Run runtime session isolation tests
-        shell: bash
-        run: |
-          set -o pipefail
-          godot --headless --path . --script res://scripts/runtime/tests/test_runtime_session.gd 2>&1 | tee runtime-session-test.log
+          run_suite() {
+            local script="$1"
+            local log="$2"
+            echo "Running ${script}"
+            godot --headless --path . --script "${script}" 2>&1 | tee "${log}"
+            if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' "${log}"; then
+              echo "Godot reported a script, parser, or assertion failure in ${script}."
+              exit 1
+            fi
+            if ! grep -Eq '^PASS:' "${log}"; then
+              echo "Missing explicit PASS marker for ${script}."
+              exit 1
+            fi
+          }
 
-      - name: Run ability execution tests
-        shell: bash
-        run: |
-          set -o pipefail
-          godot --headless --path . --script res://scripts/runtime/tests/test_ability_execution.gd 2>&1 | tee ability-execution-test.log
-
-      - name: Run Stage 3-4 catalog and inventory tests
-        shell: bash
-        run: |
-          set -o pipefail
-          godot --headless --path . --script res://scripts/runtime/tests/test_stage34_catalog_inventory.gd 2>&1 | tee stage34-catalog-inventory-test.log
-
-      - name: Run Stage 3-4 equipment stat tests
-        shell: bash
-        run: |
-          set -o pipefail
-          godot --headless --path . --script res://scripts/runtime/tests/test_stage34_equipment_stats.gd 2>&1 | tee stage34-equipment-stats-test.log
-
-      - name: Run Stage 3-4 reward tests
-        shell: bash
-        run: |
-          set -o pipefail
-          godot --headless --path . --script res://scripts/runtime/tests/test_stage34_rewards.gd 2>&1 | tee stage34-rewards-test.log
-
-      - name: Run Stage 3-4 durable vertical slice
-        shell: bash
-        run: |
-          set -o pipefail
-          godot --headless --path . --script res://scripts/runtime/tests/test_stage34_vertical_slice.gd 2>&1 | tee stage34-vertical-slice-test.log
+          run_suite res://scripts/runtime/tests/test_runtime_foundation.gd runtime-foundation-test.log
+          run_suite res://scripts/runtime/tests/test_runtime_session.gd runtime-session-test.log
+          run_suite res://scripts/runtime/tests/test_ability_execution.gd ability-execution-test.log
+          run_suite res://scripts/runtime/tests/test_stage34_catalog_inventory.gd stage34-catalog-inventory-test.log
+          run_suite res://scripts/runtime/tests/test_stage34_equipment_stats.gd stage34-equipment-stats-test.log
+          run_suite res://scripts/runtime/tests/test_stage34_rewards.gd stage34-rewards-test.log
+          run_suite res://scripts/runtime/tests/test_stage34_vertical_slice.gd stage34-vertical-slice-test.log
 
       - name: Upload runtime test logs
         if: always()
