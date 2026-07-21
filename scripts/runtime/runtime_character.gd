@@ -1,6 +1,8 @@
 class_name RuntimeCharacter
 extends RefCounted
 
+const CLASS_IDS = preload("res://scripts/shared/class_ids.gd")
+
 signal state_changed(reason: StringName)
 signal level_gained(new_level: int)
 
@@ -71,12 +73,8 @@ func durable_snapshot() -> Dictionary:
 		"level": level,
 		"experience": experience,
 		"equipped_gear": equipment.duplicate(true),
-		"skills": {
-			"unlocked_abilities": serialized_abilities,
-		},
-		"build_specific_progress": {
-			"inventory": inventory.duplicate(true),
-		},
+		"skills": {"unlocked_abilities": serialized_abilities},
+		"build_specific_progress": {"inventory": inventory.duplicate(true)},
 	}
 
 
@@ -84,11 +82,11 @@ func _apply_class_defaults() -> void:
 	stats.set_base(&"max_health", 100.0 + float(level - 1) * 8.0)
 	stats.set_base(&"armor", 0.0)
 	stats.set_base(&"critical_chance", 0.05)
-	match class_id:
-		&"penitent":
+	match String(class_id):
+		CLASS_IDS.PENITENT:
 			stats.set_base(&"max_health", 125.0 + float(level - 1) * 10.0)
 			class_resource.configure(&"fervor", 100.0)
-		&"void_warlock":
+		CLASS_IDS.VOID_WARLOCK:
 			stats.set_base(&"max_health", 90.0 + float(level - 1) * 7.0)
 			class_resource.configure(&"corruption", 100.0, 2.0)
 		_:
