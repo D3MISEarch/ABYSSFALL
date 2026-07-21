@@ -33,6 +33,17 @@ func allows_slot(slot_id: StringName) -> bool:
 	return slot_id in equipment_slots
 
 
+func duplicate_definition() -> ItemDefinition:
+	return ItemDefinition.new(
+		definition_id,
+		display_name,
+		equipment_slots,
+		max_stack,
+		base_modifiers,
+		tags
+	)
+
+
 func to_read_only_dict() -> Dictionary:
 	return {
 		"definition_id": String(definition_id),
