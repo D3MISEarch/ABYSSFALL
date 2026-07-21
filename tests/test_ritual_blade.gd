@@ -89,8 +89,8 @@ func _test_canonical_attack_hits_readable_range_and_fades() -> void:
 
 	var penitent := PENITENT_CHARACTER_SCRIPT.new() as PenitentCharacter
 	penitent.position = Vector3(0.0, 0.9, 0.0)
-	penitent.set_physics_process(false)
 	world.add_child(penitent)
+	penitent.set_physics_process(false)
 	penitent.facing = Vector3.FORWARD
 
 	var front_target := DummyEnemy.new()
@@ -137,8 +137,8 @@ func _test_brand_pulse_material_fades() -> void:
 	current_scene = world
 
 	var penitent := PENITENT_CHARACTER_SCRIPT.new() as PenitentCharacter
-	penitent.set_physics_process(false)
 	world.add_child(penitent)
+	penitent.set_physics_process(false)
 	var target := DummyEnemy.new()
 	world.add_child(target)
 	penitent._spawn_brand_pulse(target, Color(0.82, 0.025, 0.045), 1.65)
@@ -168,8 +168,8 @@ func _test_attack_visual_exists_on_miss() -> void:
 	current_scene = world
 
 	var penitent := PENITENT_CHARACTER_SCRIPT.new() as PenitentCharacter
-	penitent.set_physics_process(false)
 	world.add_child(penitent)
+	penitent.set_physics_process(false)
 	penitent.facing = Vector3.FORWARD
 	penitent._perform_ritual_blade_attack()
 
