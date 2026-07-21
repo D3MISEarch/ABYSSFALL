@@ -16,6 +16,9 @@ func _ready() -> void:
 	if CHARACTER_FACTORY.has_class(command_line_class):
 		call_deferred("_launch_gameplay", command_line_class)
 		return
+	if Persistence.has_active_build() and CHARACTER_FACTORY.has_class(Persistence.active_build.class_id):
+		call_deferred("_launch_gameplay", Persistence.active_build.class_id)
+		return
 	_show_class_selection()
 
 
@@ -40,7 +43,12 @@ func _on_class_confirmed(class_id: String) -> void:
 	if not CHARACTER_FACTORY.has_class(class_id):
 		push_warning("Class-selection screen requested an unavailable class: %s" % class_id)
 		return
-	_launch_gameplay(class_id)
+	var build_name := "%s Build" % class_id.replace("_", " ").capitalize()
+	var build := Persistence.create_and_select_build(class_id, build_name)
+	if build == null:
+		push_error("Could not create persistent build for class: %s" % class_id)
+		return
+	_launch_gameplay(build.class_id)
 
 
 func _launch_gameplay(class_id: String) -> void:
