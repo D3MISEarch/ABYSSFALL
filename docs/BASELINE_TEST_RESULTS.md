@@ -12,10 +12,10 @@ Status is recorded separately for:
 
 ## Current validated gameplay milestone
 
-- Milestone: Penitent vertical slice through Sacrament, including the Seal of Binding spawn-order regression fix
+- Milestone: Penitent vertical slice through Sacrament, including canonical Seal of Binding placement and the origin-pulse regression guard
 - Engine: Godot 4.4.1 stable, Linux x86_64 headless
-- Gameplay merge commit: `f9a0e5fdec1acd77e8df924d36b52b4205b04104`
-- Successful gameplay validation run: `29778284122`
+- Latest accepted merge commit: `3f699a89572a27b36fdda4d9b884e78365fd189f`
+- Latest successful validation run: `29791730406`
 - Workflow: `Validate AbyssFall`
 
 ### Automated gameplay CI — passed
@@ -25,7 +25,7 @@ Status is recorded separately for:
 - Fervor seal HUD tests
 - Rite Mark tests
 - Seal of Binding tests
-- Seal initial-position regression using an origin decoy and intended placement target
+- Canonical base-class Seal initial-position regression using an origin decoy and intended placement target
 - Brand of Ruin tests
 - Martyr's Chain tests
 - Ashen Procession tests
@@ -33,6 +33,7 @@ Status is recorded separately for:
 - Class-selection startup smoke test
 - Void Warlock runtime regression smoke test
 - Fully composed Penitent runtime smoke test
+- Verifier-package build, upload, download, and Git-blob audit
 - Validation-log artifact upload
 
 ### Independently verified gameplay behavior
@@ -43,10 +44,10 @@ An independent verifier:
 - Re-ran all eight deterministic Penitent system suites.
 - Ran the maintained scene/runtime paths headlessly under Godot 4.4.1.
 - Traced ability-to-input wiring and scene-tree behavior.
-- Identified the Seal of Binding lifecycle-order bug where `_ready()` could pulse at world origin before final positioning.
-- Confirmed the corrected player-facing project imports cleanly and the full automated gameplay suite remains green.
+- Identified the original Seal of Binding lifecycle-order bug where `_ready()` could pulse at world origin before final positioning.
+- Confirmed the corrected project imports cleanly and the full automated gameplay suite remains green.
 
-The player-facing Seal finding was fixed by assigning the seal's local transform before attaching it to the scene tree. An exact origin-decoy regression test covers that failure pattern.
+The Seal finding is now structurally closed: the safe position-before-attach implementation lives once in `PenitentCharacter`, every current and future Penitent subclass inherits it, and the origin-decoy regression test instantiates that canonical base class directly.
 
 ## Full-project independent audit
 
@@ -65,12 +66,24 @@ The player-facing Seal finding was fixed by assigning the seal's local transform
 - Independent `git hash-object` results matched `VERIFIER_GIT_TREE.txt` for all 102 files.
 - No blocking gameplay or tooling defects were found.
 
-### Follow-up findings
+### Audit follow-up resolution — passed
 
-1. **Shadowed Seal implementation debt:** `penitent_character.gd` still contains the original add-before-position implementation, while `penitent_playable.gd` overrides it with the corrected position-before-attach implementation. Gameplay is currently safe because `character_factory.gd` instantiates the leaf class, but removing that override during a future refactor could silently restore the original bug. A focused cleanup should leave one canonical safe implementation and test it directly.
-2. **Stale Penitent documentation:** `docs/PENITENT_CLASS.md` still calls Ritual Blade a placeholder despite the implemented three-hit 10/12/18 damage sequence and Rite-mark completion behavior.
+- Follow-up pull request: `#20` — Canonicalize Penitent Seal placement
+- Independently reviewed commit: `f8307f450dd40cb405e957e9dd198e0dc0becea0`
+- Merge commit: `3f699a89572a27b36fdda4d9b884e78365fd189f`
+- Successful validation run: `29791730406`
+- Independent verdict: **PASS**
+- Package integrity: all **105 tracked files** present, byte-identical, and independently matched against `VERIFIER_GIT_TREE.txt`
 
-PR #19 is review-only and should be closed after these findings are recorded rather than merged.
+The verifier confirmed that:
+
+1. `_place_seal_of_binding()` now exists exactly once, in `penitent_character.gd`.
+2. The seal's intended local position is assigned before `add_child()`, preventing the first `_ready()` pulse from occurring at world origin.
+3. The shadowing override was removed from `penitent_playable.gd`, closing the future-refactor regression risk.
+4. The regression test now instantiates `PenitentCharacter` directly, so every future Penitent subclass inherits the guarded behavior.
+5. `docs/PENITENT_CLASS.md` now describes Ritual Blade's real three-hit 10/12/18 sequence instead of calling it a placeholder.
+
+All PR #19 follow-up findings are closed. PR #19 was closed without merge as a review-only branch; PR #20 was independently approved and merged.
 
 ## Independent verifier artifact pipeline
 
@@ -96,7 +109,7 @@ PR #19 is review-only and should be closed after these findings are recorded rat
 
 The independent verifier confirmed from scratch that:
 
-- All **101 tracked files** were present in the frozen package.
+- All **101 tracked files** were present in the frozen PR #18 package.
 - `.github/pull_request_template.md` was present.
 - `.github/workflows/godot-hotfix3-validation.yml` was present.
 - `docs/IMPLEMENTER_VERIFIER_HANDOFF.md` was present.
