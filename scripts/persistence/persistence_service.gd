@@ -20,6 +20,14 @@ const SNAPSHOT_FIELDS: Array[String] = [
 	"quest_state",
 	"statistics",
 ]
+const MERGED_DICTIONARY_FIELDS: Array[String] = [
+	"skills",
+	"class_tree_state",
+	"shared_core_state",
+	"build_specific_progress",
+	"quest_state",
+	"statistics",
+]
 
 var profile: ProfileData
 var active_build: BuildData
@@ -116,10 +124,27 @@ func mutate_active_build(mutator: Callable) -> bool:
 func apply_active_build_snapshot(snapshot: Dictionary) -> bool:
 	if active_build == null:
 		return false
+	if str(snapshot.get("build_id", "")) != active_build.build_id:
+		return false
+
+	var applied_change := false
 	for property_name: Variant in snapshot:
 		var property_string := str(property_name)
-		if SNAPSHOT_FIELDS.has(property_string):
-			active_build.set(property_string, snapshot[property_name])
+		if not SNAPSHOT_FIELDS.has(property_string):
+			continue
+		var incoming: Variant = snapshot[property_name]
+		if MERGED_DICTIONARY_FIELDS.has(property_string):
+			if not incoming is Dictionary:
+				continue
+			var merged: Dictionary = active_build.get(property_string).duplicate(true)
+			merged.merge(incoming, true)
+			active_build.set(property_string, merged)
+		else:
+			active_build.set(property_string, incoming)
+		applied_change = true
+
+	if not applied_change:
+		return false
 	mark_dirty()
 	return true
 
