@@ -35,10 +35,31 @@ jobs:
           echo "$HOME/godot" >> "$GITHUB_PATH"
 
       - name: Import and parse project
-        run: godot --headless --path . --editor --quit
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --quit 2>&1 | tee editor-validation.log
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' editor-validation.log; then
+            echo "Godot reported an error while importing the project."
+            exit 1
+          fi
 
       - name: Ritual Blade combat tests
-        run: godot --headless --path . --script res://tests/test_ritual_blade.gd
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_ritual_blade.gd 2>&1 | tee ritual-blade-tests.log
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' ritual-blade-tests.log; then
+            echo "Godot reported an engine or script error during Ritual Blade tests."
+            exit 1
+          fi
 
       - name: Input prompt profile tests
-        run: godot --headless --path . --script res://tests/test_input_prompt_profile.gd
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_input_prompt_profile.gd 2>&1 | tee input-prompt-tests.log
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' input-prompt-tests.log; then
+            echo "Godot reported an engine or script error during input prompt tests."
+            exit 1
+          fi
