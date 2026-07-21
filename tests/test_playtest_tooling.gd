@@ -23,10 +23,27 @@ func _run_tests() -> void:
 
 func _test_build_identity() -> void:
 	var identity := BUILD_IDENTITY.load_current()
-	_assert_equal(identity.get("short_commit", ""), "dev", "Development build identity loads")
+	var build_name := str(identity.get("name", ""))
+	var commit := str(identity.get("commit", ""))
+	var short_commit := str(identity.get("short_commit", ""))
+	var branch := str(identity.get("branch", ""))
+	var workflow_run := str(identity.get("workflow_run", ""))
+	var built_at_utc := str(identity.get("built_at_utc", ""))
+
+	_assert_true(not build_name.is_empty(), "Build identity includes a name")
+	_assert_true(not commit.is_empty(), "Build identity includes a commit")
+	_assert_true(not short_commit.is_empty(), "Build identity includes a short commit")
+	_assert_true(not branch.is_empty(), "Build identity includes a branch")
+	_assert_true(not workflow_run.is_empty(), "Build identity includes a workflow run")
+	_assert_true(not built_at_utc.is_empty(), "Build identity includes a build timestamp")
+	_assert_true(
+		commit == "development" or commit.begins_with(short_commit),
+		"Short commit matches the full commit or local development sentinel"
+	)
+
 	var display := BUILD_IDENTITY.display_line(identity)
-	_assert_true(display.contains("AbyssFall developer build"), "Build display includes name")
-	_assert_true(display.contains("dev"), "Build display includes short commit")
+	_assert_true(display.contains(build_name), "Build display includes name")
+	_assert_true(display.contains(short_commit), "Build display includes short commit")
 
 
 func _test_overlay_toggle_and_content() -> void:
