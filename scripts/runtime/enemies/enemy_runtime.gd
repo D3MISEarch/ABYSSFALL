@@ -22,8 +22,13 @@ func configure(data: Dictionary) -> void:
 	current_health = maximum_health
 	armor = maxf(0.0, float(data.get("armor", 0.0)))
 	experience_reward = maxi(0, int(data.get("experience_reward", 10)))
-	loot_entries = Array(data.get("loot_entries", [])).duplicate(true)
-	loot_seed = int(data.get("loot_seed", hash(String(enemy_id))))
+	loot_entries.clear()
+	var raw_entries: Variant = data.get("loot_entries", [])
+	if raw_entries is Array:
+		for raw_entry: Variant in raw_entries:
+			if raw_entry is Dictionary:
+				loot_entries.append(raw_entry.duplicate(true))
+	loot_seed = int(data.get("loot_seed", 0))
 	_death_emitted = false
 	_rewards_claimed = false
 
@@ -41,6 +46,8 @@ func apply_damage(amount: float) -> float:
 
 func claim_rewards() -> bool:
 	if not is_dead() or _rewards_claimed:
+		return false
+	if not loot_entries.is_empty() and loot_seed == 0:
 		return false
 	_rewards_claimed = true
 	return true
