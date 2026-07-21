@@ -52,6 +52,8 @@ func _run() -> void:
 	_expect(mismatch.get("reason") == AbilityExecutor.REASON_RESOURCE_MISMATCH, "Abilities should require the matching class resource")
 	_expect(rejection_events.size() == 4, "Every rejected execution should emit exactly one rejection event")
 
+	_test_cooldown_key_isolation()
+
 	if failures.is_empty():
 		print("PASS: Stage 3 ability execution foundation")
 		quit(0)
@@ -59,6 +61,45 @@ func _run() -> void:
 	for failure in failures:
 		printerr("FAIL: %s" % failure)
 	quit(1)
+
+
+func _test_cooldown_key_isolation() -> void:
+	var executor := AbilityExecutor.new()
+	var shared_definition := AbilityDefinition.new(&"ashen_sigil", &"fervor", 10.0, 5.0)
+
+	var build_a := BuildData.create_new(ClassIds.PENITENT, "Cooldown Build A")
+	build_a.skills["unlocked_abilities"] = ["ashen_sigil"]
+	var character_a := RuntimeCharacter.new()
+	character_a.configure_from_build(build_a)
+	character_a.class_resource.fill()
+
+	var build_b := BuildData.create_new(ClassIds.PENITENT, "Cooldown Build B")
+	build_b.skills["unlocked_abilities"] = ["ashen_sigil"]
+	var character_b := RuntimeCharacter.new()
+	character_b.configure_from_build(build_b)
+	character_b.class_resource.fill()
+
+	var build_a_cast: Dictionary = executor.execute(character_a, shared_definition)
+	var build_b_cast: Dictionary = executor.execute(character_b, shared_definition)
+	_expect(bool(build_a_cast.get("success", false)), "First build should cast the shared ability")
+	_expect(bool(build_b_cast.get("success", false)), "One build's cooldown must not block another build")
+	_expect(executor.cooldown_remaining(character_a.build_id, &"ashen_sigil") > 0.0, "First build should retain its own cooldown")
+	_expect(executor.cooldown_remaining(character_b.build_id, &"ashen_sigil") > 0.0, "Second build should retain its own cooldown")
+
+	var multi_build := BuildData.create_new(ClassIds.PENITENT, "Cooldown Ability Pair")
+	multi_build.skills["unlocked_abilities"] = ["ashen_sigil", "brand_of_ruin"]
+	var multi_character := RuntimeCharacter.new()
+	multi_character.configure_from_build(multi_build)
+	multi_character.class_resource.fill()
+	var first_definition := AbilityDefinition.new(&"ashen_sigil", &"fervor", 10.0, 5.0)
+	var second_definition := AbilityDefinition.new(&"brand_of_ruin", &"fervor", 10.0, 5.0)
+
+	var first_ability_cast: Dictionary = executor.execute(multi_character, first_definition)
+	var second_ability_cast: Dictionary = executor.execute(multi_character, second_definition)
+	_expect(bool(first_ability_cast.get("success", false)), "First ability should begin its cooldown")
+	_expect(bool(second_ability_cast.get("success", false)), "One ability's cooldown must not block another ability on the same build")
+	_expect(executor.cooldown_remaining(multi_character.build_id, &"ashen_sigil") > 0.0, "First ability should retain its own cooldown")
+	_expect(executor.cooldown_remaining(multi_character.build_id, &"brand_of_ruin") > 0.0, "Second ability should retain its own cooldown")
 
 
 func _on_ability_cast(build_id: String, ability_id: StringName) -> void:
