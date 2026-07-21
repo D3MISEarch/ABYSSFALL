@@ -28,8 +28,7 @@ func _process(delta: float) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
-		if _dirty:
-			save_all("lifecycle")
+		flush_if_dirty("lifecycle")
 
 
 func initialize(display_name: String = "Player") -> bool:
@@ -84,8 +83,47 @@ func select_build(build_id: String) -> bool:
 	return true
 
 
+func mutate_profile(mutator: Callable) -> bool:
+	if profile == null or not mutator.is_valid():
+		return false
+	mutator.call(profile)
+	mark_dirty()
+	return true
+
+
+func mutate_active_build(mutator: Callable) -> bool:
+	if active_build == null or not mutator.is_valid():
+		return false
+	mutator.call(active_build)
+	mark_dirty()
+	return true
+
+
+func apply_active_build_snapshot(snapshot: Dictionary) -> bool:
+	if active_build == null:
+		return false
+	for property_name: Variant in snapshot:
+		var property_string := str(property_name)
+		if property_string in ["build_id", "class_id", "save_version"]:
+			continue
+		if property_string in active_build:
+			active_build.set(property_string, snapshot[property_name])
+	mark_dirty()
+	return true
+
+
 func mark_dirty() -> void:
 	_dirty = true
+
+
+func is_dirty() -> bool:
+	return _dirty
+
+
+func flush_if_dirty(context: String = "manual") -> Error:
+	if not _dirty:
+		return OK
+	return save_all(context)
 
 
 func save_all(context: String = "manual") -> Error:
