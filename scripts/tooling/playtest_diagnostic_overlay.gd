@@ -122,7 +122,12 @@ func _capture_report(filename_stem: String = "") -> Dictionary:
 	last_report_result = PLAYTEST_REPORT.save_text(report_text, filename_stem)
 	if is_instance_valid(report_status):
 		if bool(last_report_result.get("ok", false)):
-			report_status.text = "Report saved: %s" % str(last_report_result.get("absolute_path", ""))
+			var saved_path := str(last_report_result.get("absolute_path", ""))
+			if DisplayServer.get_name().to_lower() != "headless":
+				DisplayServer.clipboard_set(report_text)
+				report_status.text = "Report saved and copied to clipboard: %s" % saved_path
+			else:
+				report_status.text = "Report saved: %s" % saved_path
 		else:
 			report_status.text = "Report failed: %s" % str(last_report_result.get("error", "unknown error"))
 	if not panel.visible:
