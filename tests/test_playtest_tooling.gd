@@ -82,7 +82,30 @@ func _test_report_format_and_write() -> void:
 		if file != null:
 			_assert_equal(file.get_as_text(), report_text, "Saved report content is byte-for-byte deterministic")
 			file.close()
+
+	var second_report_text := report_text + "Second capture\n"
+	var second_save_result := PLAYTEST_REPORT.save_text(second_report_text, "automated_tooling_test")
+	_assert_true(bool(second_save_result.get("ok", false)), "A colliding report filename is saved safely")
+	var second_report_path := str(second_save_result.get("path", ""))
+	_assert_true(second_report_path != report_path, "Colliding report filenames receive unique paths")
+	_assert_true(FileAccess.file_exists(second_report_path), "Second report exists at its unique path")
+	if FileAccess.file_exists(report_path):
+		var first_file := FileAccess.open(report_path, FileAccess.READ)
+		_assert_true(first_file != null, "First report remains readable after a filename collision")
+		if first_file != null:
+			_assert_equal(first_file.get_as_text(), report_text, "Second capture does not overwrite the first report")
+			first_file.close()
+	if FileAccess.file_exists(second_report_path):
+		var second_file := FileAccess.open(second_report_path, FileAccess.READ)
+		_assert_true(second_file != null, "Second report can be reopened")
+		if second_file != null:
+			_assert_equal(second_file.get_as_text(), second_report_text, "Second report content is preserved")
+			second_file.close()
+
+	if FileAccess.file_exists(report_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(report_path))
+	if FileAccess.file_exists(second_report_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(second_report_path))
 
 
 func _test_overlay_toggle_and_content() -> void:
