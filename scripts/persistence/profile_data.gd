@@ -10,7 +10,7 @@ var currencies: Dictionary = {}
 var account_unlocks: Dictionary = {}
 var world_unlocks: Dictionary = {}
 var story_progress: Dictionary = {}
-var content_chapter_progress: Dictionary = {}
+var content_chapter_progress: Dictionary[String, ContentChapterProgress] = {}
 var seasonal_history: Dictionary = {}
 var reward_claims: Dictionary = {}
 var shared_inventory: Dictionary = {}
@@ -30,7 +30,22 @@ static func create_new(new_display_name: String = "Player") -> ProfileData:
 	return result
 
 
+func set_chapter_progress(progress: ContentChapterProgress) -> bool:
+	if progress == null or progress.chapter_id.strip_edges().is_empty():
+		return false
+	content_chapter_progress[progress.chapter_id] = progress
+	return true
+
+
+func get_chapter_progress(chapter_id: String) -> ContentChapterProgress:
+	return content_chapter_progress.get(chapter_id) as ContentChapterProgress
+
+
 func to_dict() -> Dictionary:
+	var serialized_chapters: Dictionary = {}
+	for chapter_id: String in content_chapter_progress:
+		var progress: ContentChapterProgress = content_chapter_progress[chapter_id]
+		serialized_chapters[chapter_id] = progress.to_dict()
 	return {
 		"save_version": save_version,
 		"profile_id": profile_id,
@@ -39,7 +54,7 @@ func to_dict() -> Dictionary:
 		"account_unlocks": account_unlocks.duplicate(true),
 		"world_unlocks": world_unlocks.duplicate(true),
 		"story_progress": story_progress.duplicate(true),
-		"content_chapter_progress": content_chapter_progress.duplicate(true),
+		"content_chapter_progress": serialized_chapters,
 		"seasonal_history": seasonal_history.duplicate(true),
 		"reward_claims": reward_claims.duplicate(true),
 		"shared_inventory": shared_inventory.duplicate(true),
@@ -60,7 +75,7 @@ static func from_dict(data: Dictionary) -> ProfileData:
 	result.account_unlocks = _dictionary_or_empty(data.get("account_unlocks", {}))
 	result.world_unlocks = _dictionary_or_empty(data.get("world_unlocks", {}))
 	result.story_progress = _dictionary_or_empty(data.get("story_progress", {}))
-	result.content_chapter_progress = _dictionary_or_empty(data.get("content_chapter_progress", {}))
+	result.content_chapter_progress = _chapter_progress_or_empty(data.get("content_chapter_progress", {}))
 	result.seasonal_history = _dictionary_or_empty(data.get("seasonal_history", {}))
 	result.reward_claims = _dictionary_or_empty(data.get("reward_claims", {}))
 	result.shared_inventory = _dictionary_or_empty(data.get("shared_inventory", {}))
@@ -80,6 +95,19 @@ static func _dictionary_or_empty(value: Variant) -> Dictionary:
 	if value is Dictionary:
 		return value.duplicate(true)
 	return {}
+
+
+static func _chapter_progress_or_empty(value: Variant) -> Dictionary[String, ContentChapterProgress]:
+	var result: Dictionary[String, ContentChapterProgress] = {}
+	if value is Dictionary:
+		for chapter_id: Variant in value:
+			var chapter_data: Variant = value[chapter_id]
+			if chapter_data is Dictionary:
+				var progress := ContentChapterProgress.from_dict(chapter_data)
+				if progress.chapter_id.is_empty():
+					progress.chapter_id = str(chapter_id)
+				result[str(chapter_id)] = progress
+	return result
 
 
 static func _string_array_or_empty(value: Variant) -> Array[String]:
