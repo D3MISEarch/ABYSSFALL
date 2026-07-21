@@ -1,6 +1,8 @@
 extends SceneTree
 
 const SAVE_MANAGER_SCRIPT := preload("res://scripts/persistence/save_manager.gd")
+const PERSISTENCE_SERVICE_SCRIPT := preload("res://scripts/persistence/persistence_service.gd")
+const CHAPTER_PROGRESS_SCRIPT := preload("res://scripts/persistence/content_chapter_progress.gd")
 const TEST_ROOT_DIR := "user://abyssfall"
 const TEST_PROFILE_PATH := TEST_ROOT_DIR + "/profile.json"
 
@@ -14,9 +16,11 @@ func _init() -> void:
 func _run_tests() -> void:
 	print("START: Stage 1 persistence smoke tests")
 	_cleanup()
-	_run_case("profile round-trip", _test_profile_round_trip)
+	_run_case("profile and chapter round-trip", _test_profile_round_trip)
+	_run_case("canonical class IDs", _test_class_id_validation)
 	_run_case("independent builds", _test_independent_builds)
 	_run_case("rename/select/delete", _test_rename_select_delete)
+	_run_case("dirty mutation and flush", _test_dirty_mutation_and_flush)
 	_run_case("profile backup recovery", _test_backup_recovery)
 	_cleanup()
 
@@ -34,6 +38,10 @@ func _save_call(method: StringName, arguments: Array = []) -> Variant:
 	return SAVE_MANAGER_SCRIPT.callv(method, arguments)
 
 
+func _call(target: Variant, method: StringName, arguments: Array = []) -> Variant:
+	return target.callv(method, arguments)
+
+
 func _run_case(label: String, test_callable: Callable) -> void:
 	print("TEST: %s" % label)
 	var failure_count_before: int = failures.size()
@@ -48,12 +56,31 @@ func _test_profile_round_trip() -> void:
 	if profile == null:
 		return
 	profile.currencies["embers"] = 25
+	var chapter: Variant = CHAPTER_PROGRESS_SCRIPT.new()
+	chapter.chapter_id = "chapter_01"
+	chapter.unlocked = true
+	chapter.quest_progress["first_blood"] = 2
+	_expect(bool(_call(profile, &"set_chapter_progress", [chapter])), "Chapter progress should attach to profile")
 	_expect(int(_save_call(&"save_profile", [profile])) == OK, "Profile should save")
 	var loaded: Variant = _save_call(&"load_profile")
 	_expect(loaded != null, "Profile should load")
 	if loaded != null:
 		_expect(loaded.profile_id == profile.profile_id, "Profile ID should round-trip")
 		_expect(int(loaded.currencies.get("embers", 0)) == 25, "Currency should round-trip")
+		var loaded_chapter: Variant = _call(loaded, &"get_chapter_progress", ["chapter_01"])
+		_expect(loaded_chapter != null, "Chapter progress should round-trip as a typed object")
+		if loaded_chapter != null:
+			_expect(bool(loaded_chapter.unlocked), "Chapter unlock should persist")
+			_expect(int(loaded_chapter.quest_progress.get("first_blood", 0)) == 2, "Quest progress should persist")
+
+
+func _test_class_id_validation() -> void:
+	var profile: Variant = _save_call(&"load_profile")
+	_expect(profile != null, "Profile required for class validation")
+	if profile == null:
+		return
+	var invalid: Variant = _save_call(&"create_build", [profile, "penitent_placeholder", "Invalid"])
+	_expect(invalid == null, "Unknown class IDs should be rejected")
 
 
 func _test_independent_builds() -> void:
@@ -105,6 +132,19 @@ func _test_rename_select_delete() -> void:
 	if reloaded_profile != null:
 		_expect(reloaded_profile.selected_build_id == second_id, "Fallback selection should persist")
 		_expect(not reloaded_profile.build_ids.has(first_id), "Deleted build ID should be removed from profile")
+
+
+func _test_dirty_mutation_and_flush() -> void:
+	var service: Variant = PERSISTENCE_SERVICE_SCRIPT.new()
+	_expect(bool(_call(service, &"initialize", ["Dirty Tester"])), "Persistence service should initialize")
+	_expect(bool(_call(service, &"has_active_build")), "Persistence service should resume the selected build")
+	_expect(bool(_call(service, &"mutate_active_build", [func(build: Variant) -> void: build.level = 12])), "Mutation boundary should accept active build changes")
+	_expect(bool(_call(service, &"is_dirty")), "Mutation boundary should mark persistence dirty")
+	_expect(int(_call(service, &"flush_if_dirty", ["test_flush"])) == OK, "Dirty state should flush")
+	_expect(not bool(_call(service, &"is_dirty")), "Successful flush should clear dirty state")
+	var loaded: Variant = _save_call(&"load_build", [service.active_build.build_id])
+	_expect(loaded != null and loaded.level == 12, "Flushed runtime mutation should persist")
+	service.free()
 
 
 func _test_backup_recovery() -> void:
