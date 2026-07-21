@@ -49,9 +49,10 @@ static func load_profile() -> ProfileData:
 
 
 static func create_build(profile: ProfileData, class_id: String, build_name: String = "New Build") -> BuildData:
-	if profile == null or class_id.strip_edges().is_empty():
+	var clean_class_id := class_id.strip_edges()
+	if profile == null or not ClassIds.is_valid(clean_class_id):
 		return null
-	var build := BuildData.create_new(class_id.strip_edges(), build_name)
+	var build := BuildData.create_new(clean_class_id, build_name)
 	if save_build(build) != OK:
 		return null
 	profile.build_ids.append(build.build_id)
@@ -65,7 +66,7 @@ static func create_build(profile: ProfileData, class_id: String, build_name: Str
 
 
 static func save_build(build: BuildData) -> Error:
-	if build == null or build.build_id.strip_edges().is_empty():
+	if build == null or build.build_id.strip_edges().is_empty() or not ClassIds.is_valid(build.class_id):
 		return ERR_INVALID_PARAMETER
 	var directory_error := ensure_directories()
 	if directory_error != OK:
@@ -190,7 +191,12 @@ static func _copy_file(source_path: String, destination_path: String) -> Error:
 
 
 static func _replace_file(source_path: String, destination_path: String) -> Error:
-	_remove_if_present(destination_path)
+	var rename_error := DirAccess.rename_absolute(source_path, destination_path)
+	if rename_error == OK:
+		return OK
+	var remove_error := _remove_if_present(destination_path)
+	if remove_error != OK:
+		return remove_error
 	return DirAccess.rename_absolute(source_path, destination_path)
 
 
@@ -209,13 +215,13 @@ static func _build_backup_path(build_id: String) -> String:
 
 
 static func _is_valid_profile(profile: ProfileData) -> bool:
-	return profile != null and not profile.profile_id.is_empty() and profile.save_version <= ProfileData.CURRENT_VERSION
+	return profile != null and not profile.profile_id.is_empty() and profile.save_version == ProfileData.CURRENT_VERSION
 
 
 static func _is_valid_build(build: BuildData, expected_id: String) -> bool:
 	return (
 		build != null
 		and build.build_id == expected_id
-		and not build.class_id.is_empty()
-		and build.save_version <= BuildData.CURRENT_VERSION
+		and ClassIds.is_valid(build.class_id)
+		and build.save_version == BuildData.CURRENT_VERSION
 	)
