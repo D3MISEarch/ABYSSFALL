@@ -6,6 +6,20 @@ signal build_loaded(build: BuildData)
 signal save_failed(context: String, error: Error)
 
 const AUTOSAVE_INTERVAL_SECONDS := 60.0
+const SNAPSHOT_FIELDS: Array[String] = [
+	"build_name",
+	"level",
+	"experience",
+	"equipped_gear",
+	"skills",
+	"hotbar",
+	"weapon_sets",
+	"class_tree_state",
+	"shared_core_state",
+	"build_specific_progress",
+	"quest_state",
+	"statistics",
+]
 
 var profile: ProfileData
 var active_build: BuildData
@@ -104,9 +118,7 @@ func apply_active_build_snapshot(snapshot: Dictionary) -> bool:
 		return false
 	for property_name: Variant in snapshot:
 		var property_string := str(property_name)
-		if property_string in ["build_id", "class_id", "save_version"]:
-			continue
-		if property_string in active_build:
+		if SNAPSHOT_FIELDS.has(property_string):
 			active_build.set(property_string, snapshot[property_name])
 	mark_dirty()
 	return true
