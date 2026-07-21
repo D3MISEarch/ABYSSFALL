@@ -9,7 +9,10 @@ var maximum_health: float = 50.0
 var current_health: float = 50.0
 var armor: float = 0.0
 var experience_reward: int = 10
+var loot_entries: Array[Dictionary] = []
+var loot_seed: int = 0
 var _death_emitted: bool = false
+var _rewards_claimed: bool = false
 
 
 func configure(data: Dictionary) -> void:
@@ -19,7 +22,10 @@ func configure(data: Dictionary) -> void:
 	current_health = maximum_health
 	armor = maxf(0.0, float(data.get("armor", 0.0)))
 	experience_reward = maxi(0, int(data.get("experience_reward", 10)))
+	loot_entries = Array(data.get("loot_entries", [])).duplicate(true)
+	loot_seed = int(data.get("loot_seed", hash(String(enemy_id))))
 	_death_emitted = false
+	_rewards_claimed = false
 
 
 func apply_damage(amount: float) -> float:
@@ -31,6 +37,13 @@ func apply_damage(amount: float) -> float:
 		_death_emitted = true
 		died.emit(enemy_id)
 	return applied
+
+
+func claim_rewards() -> bool:
+	if not is_dead() or _rewards_claimed:
+		return false
+	_rewards_claimed = true
+	return true
 
 
 func is_dead() -> bool:
