@@ -1,0 +1,37 @@
+name: Apply PR24 Visual Fade Follow-up
+
+on:
+  push:
+    branches:
+      - fix/penitent-combat-dualsense
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/penitent-combat-dualsense
+          fetch-depth: 0
+
+      - name: Apply independent-review follow-up
+        run: python3 tools/apply_pr24_visual_fade_followup.py
+
+      - name: Commit focused fix
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AGENTS.md scripts/characters/penitent_character.gd scripts/crypt_brute.gd tests/test_ritual_blade.gd
+          if git diff --cached --quiet; then
+            echo "Follow-up already applied."
+            exit 0
+          fi
+          git commit -m "Fix 3D material fade runtime errors"
+          git push origin HEAD:fix/penitent-combat-dualsense
