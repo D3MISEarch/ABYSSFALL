@@ -63,3 +63,15 @@ jobs:
             echo "Godot reported an engine or script error during input prompt tests."
             exit 1
           fi
+
+      - name: Upload focused validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: penitent-combat-ux-logs
+          path: |
+            editor-validation.log
+            ritual-blade-tests.log
+            input-prompt-tests.log
+          if-no-files-found: ignore
+          retention-days: 7
