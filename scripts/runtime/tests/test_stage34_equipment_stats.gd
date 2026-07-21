@@ -36,8 +36,8 @@ func _test_equip_replace_unequip() -> void:
 		1,
 		[{"stat_id": "power", "operation": StatModifier.Operation.ADDITIVE_PERCENT, "value": 0.25}]
 	)
-	_expect(catalog.register_definition(blade), "Blade definition should register")
-	_expect(catalog.register_definition(relic), "Relic definition should register")
+	_expect(catalog.register(blade), "Blade definition should register")
+	_expect(catalog.register(relic), "Relic definition should register")
 	var stats := StatBlock.new()
 	stats.set_base(&"power", 100.0)
 	var equipment := EquipmentManager.new()
@@ -58,13 +58,13 @@ func _test_equip_replace_unequip() -> void:
 
 func _test_restore_and_validation() -> void:
 	var catalog := ItemCatalog.new()
-	catalog.register_definition(ItemDefinition.new(
+	_expect(catalog.register(ItemDefinition.new(
 		&"ashen_hood",
 		"Ashen Hood",
 		[&"head"],
 		1,
 		[{"stat_id": "armor", "operation": StatModifier.Operation.FLAT, "value": 12.0}]
-	))
+	)), "Hood definition should register")
 	var stats := StatBlock.new()
 	stats.set_base(&"armor", 3.0)
 	var equipment := EquipmentManager.new()
