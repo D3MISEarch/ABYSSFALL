@@ -25,7 +25,7 @@ static func load_current() -> Dictionary:
 static func display_line(identity: Dictionary = {}) -> String:
 	var resolved := load_current() if identity.is_empty() else identity
 	return "%s | %s | %s" % [
-		str(resolved.get("name", DEFAULTS.name)),
-		str(resolved.get("short_commit", DEFAULTS.short_commit)),
-		str(resolved.get("built_at_utc", DEFAULTS.built_at_utc)),
+		str(resolved.get("name", DEFAULTS["name"])),
+		str(resolved.get("short_commit", DEFAULTS["short_commit"])),
+		str(resolved.get("built_at_utc", DEFAULTS["built_at_utc"])),
 	]
