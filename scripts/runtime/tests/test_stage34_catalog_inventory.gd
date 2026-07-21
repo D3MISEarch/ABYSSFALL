@@ -38,7 +38,10 @@ func _test_catalog_rejects_duplicates() -> void:
 	var shard: Variant = _make_definition(&"ember_shard", 20)
 	_expect(bool(catalog.register(shard)), "Catalog should register a valid definition")
 	_expect(not bool(catalog.register(shard)), "Catalog should reject duplicate definition IDs")
-	_expect(catalog.get_definition(&"ember_shard") == shard, "Catalog lookup should return the registered immutable definition")
+	var returned: Variant = catalog.get_definition(&"ember_shard")
+	_expect(returned != null, "Catalog lookup should return a definition")
+	_expect(returned != shard, "Catalog lookup should return a defensive copy")
+	_expect(returned.to_read_only_dict() == shard.to_read_only_dict(), "Catalog lookup copy should preserve registered definition values")
 
 
 func _test_inventory_stacking_and_capacity_are_atomic() -> void:
