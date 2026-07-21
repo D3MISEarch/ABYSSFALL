@@ -174,7 +174,7 @@ jobs:
           test -s "dist/$PACKAGE_NAME/AbyssFall.exe"
           test -s "dist/$PACKAGE_NAME/AbyssFall.pck"
 
-      - name: Create and audit package
+      - name: Audit extracted package contents
         shell: bash
         env:
           REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -184,13 +184,10 @@ jobs:
           sha256sum AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README.txt > SHA256SUMS.txt
           grep -F "$REVIEW_SHA" BUILD_INFO.txt
           sha256sum --check SHA256SUMS.txt
-          cd ..
-          zip -qr "$PACKAGE_NAME.zip" "$PACKAGE_NAME"
-          unzip -l "$PACKAGE_NAME.zip" | tee package-contents.log
+          find . -maxdepth 1 -type f -printf '%f\n' | sort | tee ../package-contents.log
           for required in AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README.txt SHA256SUMS.txt; do
-            grep -F "$PACKAGE_NAME/$required" package-contents.log
+            grep -Fx "$required" ../package-contents.log
           done
-          sha256sum "$PACKAGE_NAME.zip" > "$PACKAGE_NAME.zip.sha256"
 
       - name: Reject export errors
         if: always()
@@ -202,14 +199,21 @@ jobs:
             exit 1
           fi
 
-      - name: Upload one-click Windows playtest
+      - name: Upload extract-and-run Windows playtest
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PACKAGE_NAME }}
-          path: |
-            dist/${{ env.PACKAGE_NAME }}.zip
-            dist/${{ env.PACKAGE_NAME }}.zip.sha256
-            windows-export.log
-            dist/package-contents.log
+          path: dist/${{ env.PACKAGE_NAME }}/
           if-no-files-found: error
           retention-days: 30
+
+      - name: Upload Windows package audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-package-audit-logs
+          path: |
+            windows-export.log
+            dist/package-contents.log
+          if-no-files-found: warn
+          retention-days: 90
