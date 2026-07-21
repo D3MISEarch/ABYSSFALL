@@ -7,6 +7,7 @@ const TEST_ROOT_DIR := "user://abyssfall"
 const TEST_PROFILE_PATH := TEST_ROOT_DIR + "/profile.json"
 
 var failures: Array[String] = []
+var save_manager: Variant = SAVE_MANAGER_SCRIPT.new()
 
 
 func _init() -> void:
@@ -35,7 +36,7 @@ func _run_tests() -> void:
 
 
 func _save_call(method: StringName, arguments: Array = []) -> Variant:
-	return SAVE_MANAGER_SCRIPT.callv(method, arguments)
+	return save_manager.callv(method, arguments)
 
 
 func _call(target: Variant, method: StringName, arguments: Array = []) -> Variant:
