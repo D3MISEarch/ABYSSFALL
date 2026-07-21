@@ -3,6 +3,7 @@ extends SceneTree
 const BUILD_IDENTITY = preload("res://scripts/tooling/build_identity.gd")
 const OVERLAY_SCRIPT = preload("res://scripts/tooling/playtest_diagnostic_overlay.gd")
 const INPUT_PROMPT_PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
+const PLAYTEST_REPORT = preload("res://scripts/tooling/playtest_report.gd")
 
 var failures := 0
 
@@ -13,6 +14,7 @@ func _init() -> void:
 
 func _run_tests() -> void:
 	_test_build_identity()
+	_test_report_format_and_write()
 	await _test_overlay_toggle_and_content()
 	if failures > 0:
 		printerr("Playtest tooling tests failed: %d" % failures)
@@ -47,6 +49,42 @@ func _test_build_identity() -> void:
 	_assert_true(display.contains(short_commit), "Build display includes short commit")
 
 
+func _test_report_format_and_write() -> void:
+	var identity := {
+		"name": "AbyssFall-Test",
+		"commit": "1234567890abcdef",
+		"short_commit": "1234567",
+		"branch": "tooling/test",
+		"workflow_run": "42",
+		"built_at_utc": "2026-07-21T00:00:00Z",
+	}
+	var report_text := PLAYTEST_REPORT.build_text(
+		identity,
+		INPUT_PROMPT_PROFILE.PLAYSTATION,
+		["0: DualSense Wireless Controller [playstation]"],
+		"TestScene",
+		60.0,
+		"2026-07-21T01:02:03Z"
+	)
+	_assert_true(report_text.contains("ABYSSFALL PLAYTEST REPORT"), "Report has a recognizable header")
+	_assert_true(report_text.contains("Commit: 1234567890abcdef"), "Report includes exact commit identity")
+	_assert_true(report_text.contains("Active input profile: playstation"), "Report includes the active input profile")
+	_assert_true(report_text.contains("DualSense Wireless Controller"), "Report includes connected controller names")
+	_assert_true(report_text.contains("Player notes:"), "Report reserves a notes section")
+
+	var save_result := PLAYTEST_REPORT.save_text(report_text, "automated_tooling_test")
+	_assert_true(bool(save_result.get("ok", false)), "Report writer creates a text file")
+	var report_path := str(save_result.get("path", ""))
+	_assert_true(FileAccess.file_exists(report_path), "Saved report exists at the returned path")
+	if FileAccess.file_exists(report_path):
+		var file := FileAccess.open(report_path, FileAccess.READ)
+		_assert_true(file != null, "Saved report can be reopened")
+		if file != null:
+			_assert_equal(file.get_as_text(), report_text, "Saved report content is byte-for-byte deterministic")
+			file.close()
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(report_path))
+
+
 func _test_overlay_toggle_and_content() -> void:
 	var overlay := OVERLAY_SCRIPT.new() as PlaytestDiagnosticOverlay
 	root.add_child(overlay)
@@ -69,6 +107,10 @@ func _test_overlay_toggle_and_content() -> void:
 		_assert_true(label.text.contains("Commit:"), "Diagnostics expose commit identity")
 		_assert_true(label.text.contains("Active input profile:"), "Diagnostics expose active input profile")
 		_assert_true(label.text.contains("Connected controllers:"), "Diagnostics expose controller names")
+	var report_status := panel.find_child("ReportStatus", true, false) as Label
+	_assert_true(is_instance_valid(report_status), "Diagnostics explain the F8 report action")
+	if is_instance_valid(report_status):
+		_assert_true(report_status.text.contains("F8"), "Report status advertises its hotkey")
 
 	var joy_event := InputEventJoypadButton.new()
 	joy_event.device = 999
@@ -100,6 +142,15 @@ func _test_overlay_toggle_and_content() -> void:
 			label.text.contains("Active input profile: keyboard_mouse"),
 			"Visible diagnostics refresh after keyboard input"
 		)
+
+	var report_result := overlay._capture_report("overlay_automated_test")
+	_assert_true(bool(report_result.get("ok", false)), "Overlay captures an F8-style report")
+	var overlay_report_path := str(report_result.get("path", ""))
+	_assert_true(FileAccess.file_exists(overlay_report_path), "Overlay report is written to disk")
+	if is_instance_valid(report_status):
+		_assert_true(report_status.text.contains("Report saved:"), "Overlay confirms the saved report path")
+	if FileAccess.file_exists(overlay_report_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(overlay_report_path))
 
 	overlay._unhandled_input(toggle_event)
 	_assert_true(not panel.visible, "F3 closes diagnostics")
