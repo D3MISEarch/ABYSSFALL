@@ -6,7 +6,8 @@ func grant(
 	enemy: EnemyRuntime,
 	character: RuntimeCharacter,
 	inventory: InventoryContainer,
-	catalog: ItemCatalog
+	catalog: ItemCatalog,
+	affix_catalog: AffixCatalog = null
 ) -> Dictionary:
 	var result := {
 		"granted": false,
@@ -24,7 +25,13 @@ func grant(
 	var levels := character.gain_experience(experience)
 	var accepted: Array[Dictionary] = []
 	var rejected: Array[Dictionary] = []
-	for item: ItemInstance in LootGenerator.roll(enemy.loot_entries, enemy.loot_seed):
+	for item: ItemInstance in LootGenerator.roll(
+		enemy.loot_entries,
+		enemy.loot_seed,
+		catalog,
+		affix_catalog,
+		enemy.level
+	):
 		var definition := catalog.get_definition(item.definition_id)
 		if definition != null and inventory.add_item(item, definition):
 			accepted.append(item.to_dict())
