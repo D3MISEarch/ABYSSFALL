@@ -2,6 +2,7 @@ class_name RuntimeSession
 extends Node
 
 var event_bus: RuntimeEventBus
+var ability_executor: AbilityExecutor
 var character: RuntimeCharacter
 
 
@@ -9,6 +10,7 @@ func _init() -> void:
 	event_bus = RuntimeEventBus.new()
 	event_bus.name = "RuntimeEventBus"
 	add_child(event_bus)
+	ability_executor = AbilityExecutor.new(event_bus)
 
 
 func bind_character(runtime_character: RuntimeCharacter) -> void:
@@ -20,6 +22,16 @@ func bind_character(runtime_character: RuntimeCharacter) -> void:
 	character.state_changed.connect(_on_character_state_changed)
 	character.level_gained.connect(_on_character_level_gained)
 	event_bus.build_loaded.emit(character.build_id)
+
+
+func execute_ability(definition: AbilityDefinition) -> Dictionary:
+	return ability_executor.execute(character, definition)
+
+
+func tick_runtime(delta: float) -> void:
+	ability_executor.tick(delta)
+	if character != null:
+		character.class_resource.tick(delta)
 
 
 func _disconnect_character(runtime_character: RuntimeCharacter) -> void:
