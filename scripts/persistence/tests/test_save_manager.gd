@@ -4,20 +4,34 @@ var failures: Array[String] = []
 
 
 func _init() -> void:
+	call_deferred("_run_tests")
+
+
+func _run_tests() -> void:
+	print("START: Stage 1 persistence smoke tests")
 	_cleanup()
-	_test_profile_round_trip()
-	_test_independent_builds()
-	_test_rename_select_delete()
-	_test_backup_recovery()
+	_run_case("profile round-trip", _test_profile_round_trip)
+	_run_case("independent builds", _test_independent_builds)
+	_run_case("rename/select/delete", _test_rename_select_delete)
+	_run_case("profile backup recovery", _test_backup_recovery)
 	_cleanup()
 
 	if failures.is_empty():
 		print("PASS: Stage 1 persistence smoke tests")
 		quit(0)
-	else:
-		for failure in failures:
-			push_error(failure)
-		quit(1)
+		return
+
+	for failure in failures:
+		printerr("FAIL: %s" % failure)
+	quit(1)
+
+
+func _run_case(label: String, test_callable: Callable) -> void:
+	print("TEST: %s" % label)
+	var failure_count_before := failures.size()
+	test_callable.call()
+	if failures.size() == failure_count_before:
+		print("PASS: %s" % label)
 
 
 func _test_profile_round_trip() -> void:
@@ -44,14 +58,19 @@ func _test_independent_builds() -> void:
 	_expect(penitent != null and warlock != null, "Two builds should be created")
 	if penitent == null or warlock == null:
 		return
+	_expect(penitent.build_id != warlock.build_id, "Build IDs should be unique")
 	penitent.level = 8
 	penitent.build_specific_progress["fervor_mastery"] = 3
 	warlock.level = 5
 	warlock.build_specific_progress["corruption_mastery"] = 2
-	SaveManager.save_build(penitent)
-	SaveManager.save_build(warlock)
+	_expect(SaveManager.save_build(penitent) == OK, "Penitent build should save")
+	_expect(SaveManager.save_build(warlock) == OK, "Warlock build should save")
 	var loaded_penitent := SaveManager.load_build(penitent.build_id)
 	var loaded_warlock := SaveManager.load_build(warlock.build_id)
+	_expect(loaded_penitent != null, "Penitent build should load")
+	_expect(loaded_warlock != null, "Warlock build should load")
+	if loaded_penitent == null or loaded_warlock == null:
+		return
 	_expect(loaded_penitent.level == 8, "Penitent level should remain independent")
 	_expect(loaded_warlock.level == 5, "Warlock level should remain independent")
 	_expect(not loaded_warlock.build_specific_progress.has("fervor_mastery"), "Warlock should not inherit Penitent progress")
@@ -65,11 +84,19 @@ func _test_rename_select_delete() -> void:
 	var first_id := profile.build_ids[0]
 	var second_id := profile.build_ids[1]
 	_expect(SaveManager.rename_build(profile, first_id, "Faithbreaker") == OK, "Build should rename")
-	_expect(SaveManager.load_build(first_id).build_name == "Faithbreaker", "Renamed build should persist")
+	var renamed := SaveManager.load_build(first_id)
+	_expect(renamed != null, "Renamed build should load")
+	if renamed != null:
+		_expect(renamed.build_name == "Faithbreaker", "Renamed build should persist")
 	_expect(SaveManager.select_build(profile, first_id) == OK, "Build should select")
 	_expect(SaveManager.delete_build(profile, first_id) == OK, "Build should delete")
 	_expect(SaveManager.load_build(first_id) == null, "Deleted build should not load")
 	_expect(profile.selected_build_id == second_id, "Deleting selected build should select remaining build")
+	var reloaded_profile := SaveManager.load_profile()
+	_expect(reloaded_profile != null, "Profile should reload after deletion")
+	if reloaded_profile != null:
+		_expect(reloaded_profile.selected_build_id == second_id, "Fallback selection should persist")
+		_expect(not reloaded_profile.build_ids.has(first_id), "Deleted build ID should be removed from profile")
 
 
 func _test_backup_recovery() -> void:
@@ -78,10 +105,13 @@ func _test_backup_recovery() -> void:
 		_expect(false, "Profile required for backup test")
 		return
 	profile.display_name = "Backup Seed"
-	SaveManager.save_profile(profile)
+	_expect(SaveManager.save_profile(profile) == OK, "Backup seed should save")
 	profile.display_name = "Current Primary"
-	SaveManager.save_profile(profile)
+	_expect(SaveManager.save_profile(profile) == OK, "Current primary should save")
 	var corrupt := FileAccess.open(SaveManager.PROFILE_PATH, FileAccess.WRITE)
+	_expect(corrupt != null, "Primary profile should open for corruption test")
+	if corrupt == null:
+		return
 	corrupt.store_string("{ definitely not json")
 	corrupt.close()
 	var recovered := SaveManager.load_profile()
@@ -93,6 +123,7 @@ func _test_backup_recovery() -> void:
 func _expect(condition: bool, message: String) -> void:
 	if not condition:
 		failures.append(message)
+		printerr("ASSERTION FAILED: %s" % message)
 
 
 func _cleanup() -> void:
@@ -115,4 +146,5 @@ func _remove_tree(path: String) -> void:
 				DirAccess.remove_absolute(child)
 		entry = directory.get_next()
 	directory.list_dir_end()
+	directory = null
 	DirAccess.remove_absolute(path)
