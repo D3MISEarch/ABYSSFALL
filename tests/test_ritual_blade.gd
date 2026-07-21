@@ -22,7 +22,8 @@ func _run_tests() -> void:
 	_test_arc_geometry()
 	_test_step_in_rules()
 	_test_damage_sequence()
-	_test_canonical_attack_hits_readable_range()
+	await _test_canonical_attack_hits_readable_range_and_fades()
+	await _test_brand_pulse_material_fades()
 	_test_attack_visual_exists_on_miss()
 
 	if failures > 0:
@@ -79,7 +80,7 @@ func _test_damage_sequence() -> void:
 	_assert_equal(RULES.get_damage(3), 18, "Finisher keeps its damage")
 
 
-func _test_canonical_attack_hits_readable_range() -> void:
+func _test_canonical_attack_hits_readable_range_and_fades() -> void:
 	var previous_scene := current_scene
 	var world := Node3D.new()
 	world.name = "RitualBladeWorld"
@@ -109,6 +110,49 @@ func _test_canonical_attack_hits_readable_range() -> void:
 	var snapshot: Dictionary = penitent.get_ritual_blade_snapshot()
 	_assert_equal(int(snapshot.get("hits", 0)), 1, "Attack snapshot records the hit")
 	_assert_equal(int(snapshot.get("combo_step", 0)), 1, "Attack snapshot records combo step one")
+
+	var hit_visual := front_target.get_node_or_null("RitualBladeHit") as MeshInstance3D
+	_assert_true(is_instance_valid(hit_visual), "A successful hit creates an impact pulse")
+	if is_instance_valid(hit_visual):
+		var hit_material := hit_visual.material_override as StandardMaterial3D
+		_assert_true(is_instance_valid(hit_material), "Impact pulse owns a 3D fade material")
+		if is_instance_valid(hit_material):
+			var starting_alpha := hit_material.albedo_color.a
+			await create_timer(0.08).timeout
+			_assert_true(
+				hit_material.albedo_color.a < starting_alpha,
+				"Impact pulse fades its material alpha before cleanup"
+			)
+
+	current_scene = previous_scene
+	world.free()
+
+
+func _test_brand_pulse_material_fades() -> void:
+	var previous_scene := current_scene
+	var world := Node3D.new()
+	world.name = "BrandPulseWorld"
+	root.add_child(world)
+	current_scene = world
+
+	var penitent := PENITENT_CHARACTER_SCRIPT.new() as PenitentCharacter
+	world.add_child(penitent)
+	var target := DummyEnemy.new()
+	world.add_child(target)
+	penitent._spawn_brand_pulse(target, Color(0.82, 0.025, 0.045), 1.65)
+
+	var brand_visual := target.get_node_or_null("BrandPulse") as MeshInstance3D
+	_assert_true(is_instance_valid(brand_visual), "Brand of Ruin creates a named 3D pulse")
+	if is_instance_valid(brand_visual):
+		var brand_material := brand_visual.material_override as StandardMaterial3D
+		_assert_true(is_instance_valid(brand_material), "Brand pulse owns a 3D fade material")
+		if is_instance_valid(brand_material):
+			var starting_alpha := brand_material.albedo_color.a
+			await create_timer(0.10).timeout
+			_assert_true(
+				brand_material.albedo_color.a < starting_alpha,
+				"Brand pulse fades its material alpha before cleanup"
+			)
 
 	current_scene = previous_scene
 	world.free()

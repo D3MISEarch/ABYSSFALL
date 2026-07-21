@@ -92,11 +92,15 @@ func _ground_slam() -> void:
 	ring.mesh = torus
 	ring.rotation_degrees.x = 90.0
 	ring.position.y = -0.72
-	ring.material_override = _material(Color(0.31, 0.75, 0.05), true)
+	var ring_material := _material(Color(0.31, 0.75, 0.05, 0.82), true)
+	ring_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ring.material_override = ring_material
 	add_child(ring)
+	var faded_color := ring_material.albedo_color
+	faded_color.a = 0.0
 	var tween := create_tween()
 	tween.tween_property(ring, "scale", Vector3(3.0, 3.0, 3.0), 0.22)
-	tween.tween_property(ring, "modulate:a", 0.0, 0.12)
+	tween.tween_property(ring_material, "albedo_color", faded_color, 0.12)
 	tween.tween_callback(ring.queue_free)
 	_attack_pulse()
 

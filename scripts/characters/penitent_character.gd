@@ -430,10 +430,12 @@ func _spawn_ritual_blade_hit(target: Node3D) -> void:
 	material.emission_energy_multiplier = 2.8
 	pulse.material_override = material
 	target.add_child(pulse)
+	var faded_color := material.albedo_color
+	faded_color.a = 0.0
 	var tween := pulse.create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(pulse, "scale", Vector3.ONE * 1.35, 0.18)
-	tween.tween_property(pulse, "modulate:a", 0.0, 0.18)
+	tween.tween_property(material, "albedo_color", faded_color, 0.18)
 	tween.chain().tween_callback(pulse.queue_free)
 
 
@@ -517,6 +519,7 @@ func _spawn_brand_pulse(target: Node3D, color: Color, maximum_scale: float) -> v
 	if not is_instance_valid(target):
 		return
 	var pulse := MeshInstance3D.new()
+	pulse.name = "BrandPulse"
 	var sphere := SphereMesh.new()
 	sphere.radius = 0.34
 	sphere.height = 0.68
@@ -531,10 +534,12 @@ func _spawn_brand_pulse(target: Node3D, color: Color, maximum_scale: float) -> v
 	material.emission_energy_multiplier = 2.5
 	pulse.material_override = material
 	target.add_child(pulse)
+	var faded_color := material.albedo_color
+	faded_color.a = 0.0
 	var tween := pulse.create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(pulse, "scale", Vector3.ONE * maximum_scale, 0.24)
-	tween.tween_property(pulse, "modulate:a", 0.0, 0.24)
+	tween.tween_property(material, "albedo_color", faded_color, 0.24)
 	tween.chain().tween_callback(pulse.queue_free)
 
 
