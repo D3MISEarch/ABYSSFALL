@@ -1,38 +1,27 @@
 # AbyssFall Full-Project Independent Audit
 
-This branch exists only to produce a frozen, self-auditing verifier package for a complete repository review before further feature development.
+## Status
 
-## Audit scope
+Completed. Independent verdict: **PASS WITH FOLLOW-UP**.
 
-Review the entire maintained project rather than only the one-file branch diff:
+Reviewed commit: `d3b4568a03930758b24e179de7b23e0d6c5d60b8`
 
-- project configuration, boot flow, class selection, and gameplay scene loading
-- Void Warlock regression risk
-- Penitent architecture and complete current ability loop
-- Fervor, Rite Marks, Seal of Binding, Brand of Ruin, Martyr's Chain, Ashen Procession, and Sacrament
-- HUD and input wiring
-- scene-tree lifecycle and transform ordering
-- physics and coordinate-space calculations
-- cooldowns, state transitions, cleanup, replacement, overlap, and death behavior
-- tests and their meaningful coverage, including blind spots or false confidence
-- CI and verifier-artifact integrity
-- documentation accuracy and stale claims
-- architectural risks that should be corrected before Cathedral of Flesh or further content work
+## Confirmed results
 
-## Required outcome
+- All 102 tracked files were present and byte-identical to the reviewed commit.
+- Independent SHA-256 and `git hash-object` verification matched the package manifest for all files.
+- Godot 4.4.1 import completed cleanly.
+- All eight deterministic suites passed.
+- Both maintained scene/runtime paths idled headlessly without errors or warnings.
+- No blocking gameplay or tooling defects were found.
 
-Return one verdict using `docs/VERIFICATION_REPORT_TEMPLATE.md`:
+## Follow-up findings
 
-- PASS
-- PASS WITH FOLLOW-UP
-- FAIL
-- NEEDS GRAPHICAL PLAYTEST
+1. `penitent_character.gd` retained the original unsafe Seal of Binding placement implementation while `penitent_playable.gd` shadowed it with the safe implementation. Player-facing gameplay was safe, but the duplicate stale method created a latent refactor regression risk.
+2. `docs/PENITENT_CLASS.md` still described Ritual Blade as a placeholder despite its implemented three-hit combo.
 
-Separate findings into:
+These findings are recorded in `docs/BASELINE_TEST_RESULTS.md` and should be resolved in a focused follow-up branch.
 
-1. Blocking correctness defects
-2. Non-blocking engineering debt
-3. Graphical/manual-playtest-only questions
-4. Recommended order of fixes or next development work
+## Closure
 
-Do not modify implementation files. Report concrete paths, functions, reproduction steps, and reasoning for every finding.
+This branch and PR are review-only and should be closed without merge after the findings are preserved.
