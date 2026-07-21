@@ -2,6 +2,7 @@ extends SceneTree
 
 const BUILD_IDENTITY = preload("res://scripts/tooling/build_identity.gd")
 const OVERLAY_SCRIPT = preload("res://scripts/tooling/playtest_diagnostic_overlay.gd")
+const INPUT_PROMPT_PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
 
 var failures := 0
 
@@ -57,19 +58,50 @@ func _test_overlay_toggle_and_content() -> void:
 		return
 	_assert_true(not panel.visible, "Diagnostics start hidden")
 
-	var event := InputEventKey.new()
-	event.keycode = KEY_F3
-	event.pressed = true
-	overlay._unhandled_input(event)
+	var toggle_event := InputEventKey.new()
+	toggle_event.keycode = KEY_F3
+	toggle_event.pressed = true
+	overlay._unhandled_input(toggle_event)
 	_assert_true(panel.visible, "F3 opens diagnostics")
 	var label := panel.find_child("DiagnosticText", true, false) as Label
 	_assert_true(is_instance_valid(label), "Diagnostics create readable text")
 	if is_instance_valid(label):
 		_assert_true(label.text.contains("Commit:"), "Diagnostics expose commit identity")
-		_assert_true(label.text.contains("Input profile:"), "Diagnostics expose input profile")
+		_assert_true(label.text.contains("Active input profile:"), "Diagnostics expose active input profile")
 		_assert_true(label.text.contains("Connected controllers:"), "Diagnostics expose controller names")
 
-	overlay._unhandled_input(event)
+	var joy_event := InputEventJoypadButton.new()
+	joy_event.device = 999
+	joy_event.button_index = JOY_BUTTON_A
+	joy_event.pressed = true
+	overlay._unhandled_input(joy_event)
+	_assert_equal(
+		overlay.active_input_profile,
+		INPUT_PROMPT_PROFILE.XBOX,
+		"Joypad input updates the active diagnostic profile"
+	)
+	if is_instance_valid(label):
+		_assert_true(
+			label.text.contains("Active input profile: xbox"),
+			"Visible diagnostics refresh after joypad input"
+		)
+
+	var key_event := InputEventKey.new()
+	key_event.keycode = KEY_A
+	key_event.pressed = true
+	overlay._unhandled_input(key_event)
+	_assert_equal(
+		overlay.active_input_profile,
+		INPUT_PROMPT_PROFILE.KEYBOARD_MOUSE,
+		"Keyboard input restores the active diagnostic profile"
+	)
+	if is_instance_valid(label):
+		_assert_true(
+			label.text.contains("Active input profile: keyboard_mouse"),
+			"Visible diagnostics refresh after keyboard input"
+		)
+
+	overlay._unhandled_input(toggle_event)
 	_assert_true(not panel.visible, "F3 closes diagnostics")
 	overlay.queue_free()
 
