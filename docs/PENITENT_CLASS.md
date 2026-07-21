@@ -61,7 +61,7 @@ Ultimate. Connects existing marks into an arena-wide ritual network, chains enem
 2. Fervor resource component and HUD interface.
 3. Enemy Rite Mark component.
 4. Seal of Binding ground sigil.
-5. Ritual Blade placeholder attack that adds and completes marks.
+5. Ritual Blade three-hit sequence (10/12/18 damage) that carves partial marks and completes Rites on the finisher.
 6. One activation reaction when a marked enemy is inside the circle.
 
 Do not build the complete skill tree until this core interaction is fun.
