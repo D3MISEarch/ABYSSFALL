@@ -9,12 +9,13 @@ func register(definition: ItemDefinition) -> bool:
 		return false
 	if _definitions.has(definition.definition_id):
 		return false
-	_definitions[definition.definition_id] = definition
+	_definitions[definition.definition_id] = definition.duplicate_definition()
 	return true
 
 
 func get_definition(definition_id: StringName) -> ItemDefinition:
-	return _definitions.get(definition_id)
+	var stored: ItemDefinition = _definitions.get(definition_id)
+	return stored.duplicate_definition() if stored != null else null
 
 
 func has_definition(definition_id: StringName) -> bool:
