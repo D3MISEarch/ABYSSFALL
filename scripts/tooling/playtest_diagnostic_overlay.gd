@@ -10,7 +10,7 @@ var details: Label
 
 func _ready() -> void:
 	layer = 1000
-	_process_mode = Node.PROCESS_MODE_ALWAYS
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_ui()
 	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 	_refresh()
