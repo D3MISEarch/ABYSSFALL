@@ -50,7 +50,7 @@ static func save_text(report_text: String, filename_stem: String = "") -> Dictio
 			"path": "",
 			"error": "Could not create report directory (error %d)" % directory_error,
 		}
-	var path := "%s/AbyssFall_Playtest_%s.txt" % [REPORT_DIRECTORY, stem]
+	var path := _next_available_path(stem)
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		return {
@@ -66,3 +66,13 @@ static func save_text(report_text: String, filename_stem: String = "") -> Dictio
 		"absolute_path": ProjectSettings.globalize_path(path),
 		"error": "",
 	}
+
+
+static func _next_available_path(stem: String) -> String:
+	var base_path := "%s/AbyssFall_Playtest_%s" % [REPORT_DIRECTORY, stem]
+	var candidate := "%s.txt" % base_path
+	var suffix := 1
+	while FileAccess.file_exists(candidate):
+		candidate = "%s_%d.txt" % [base_path, suffix]
+		suffix += 1
+	return candidate
