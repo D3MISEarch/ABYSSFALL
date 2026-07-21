@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/persistence/**"
+      - "scripts/shared/**"
       - "scripts/boot.gd"
       - "project.godot"
       - ".github/workflows/persistence-tests.yml"
@@ -12,6 +13,7 @@ on:
       - main
     paths:
       - "scripts/persistence/**"
+      - "scripts/shared/**"
       - "scripts/boot.gd"
       - "project.godot"
       - ".github/workflows/persistence-tests.yml"
@@ -26,7 +28,7 @@ concurrency:
 
 jobs:
   persistence-smoke-test:
-    name: Godot 4.2 Persistence Smoke Test
+    name: Godot 4.4.1 Persistence Smoke Test
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -37,7 +39,7 @@ jobs:
       - name: Install Godot
         uses: chickensoft-games/setup-godot@v2
         with:
-          version: 4.2.2
+          version: 4.4.1
           use-dotnet: false
           include-templates: false
 
