@@ -87,6 +87,12 @@ jobs:
           set -o pipefail
           godot --headless --path . --script res://scripts/runtime/tests/test_stage34_rewards.gd 2>&1 | tee stage34-rewards-test.log
 
+      - name: Run Stage 3-4 durable vertical slice
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://scripts/runtime/tests/test_stage34_vertical_slice.gd 2>&1 | tee stage34-vertical-slice-test.log
+
       - name: Upload runtime test logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -99,5 +105,6 @@ jobs:
             stage34-catalog-inventory-test.log
             stage34-equipment-stats-test.log
             stage34-rewards-test.log
+            stage34-vertical-slice-test.log
           if-no-files-found: warn
           retention-days: 7
