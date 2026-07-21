@@ -1,0 +1,75 @@
+name: Validate Playtest Tooling
+
+on:
+  push:
+    branches:
+      - tooling/playtest-build-pipeline
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Build identity and F3 diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out exact review commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot 4.4.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="4.4.1"
+          ARCHIVE="Godot_v${VERSION}-stable_linux.x86_64.zip"
+          curl --fail --location --retry 3 \
+            "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/${ARCHIVE}" \
+            --output /tmp/godot.zip
+          mkdir -p "$HOME/godot"
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          BIN="$(find "$HOME/godot" -maxdepth 1 -type f -name 'Godot_v*-stable_linux.x86_64' | head -n 1)"
+          chmod +x "$BIN"
+          ln -s "$BIN" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+
+      - name: Import project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --quit 2>&1 | tee tooling-import.log
+
+      - name: Run playtest tooling tests
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_playtest_tooling.gd 2>&1 | tee tooling-tests.log
+
+      - name: Reject hidden Godot errors
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat tooling-import.log tooling-tests.log > tooling-combined.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR:|Invalid access|Invalid set index|Cannot call method" tooling-combined.log; then
+            echo "Godot emitted an engine, parser, script, or runtime error."
+            exit 1
+          fi
+
+      - name: Upload tooling logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playtest-tooling-logs
+          path: |
+            tooling-import.log
+            tooling-tests.log
+            tooling-combined.log
+          if-no-files-found: warn
