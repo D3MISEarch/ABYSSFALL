@@ -2,18 +2,29 @@ extends Node
 
 const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
 const CLASS_SELECTION_SCRIPT = preload("res://scripts/ui/class_selection_screen.gd")
+const DIAGNOSTIC_OVERLAY_SCRIPT = preload("res://scripts/tooling/playtest_diagnostic_overlay.gd")
 const GAMEPLAY_SCENE = preload("res://gameplay.tscn")
 
 var class_selection: ClassSelectionScreen
 var gameplay_root: Node3D
+var diagnostic_overlay: PlaytestDiagnosticOverlay
 
 
 func _ready() -> void:
+	_install_diagnostic_overlay()
 	var command_line_class := _get_command_line_class()
 	if CHARACTER_FACTORY.has_class(command_line_class):
 		call_deferred("_launch_gameplay", command_line_class)
 		return
 	_show_class_selection()
+
+
+func _install_diagnostic_overlay() -> void:
+	if is_instance_valid(diagnostic_overlay):
+		return
+	diagnostic_overlay = DIAGNOSTIC_OVERLAY_SCRIPT.new()
+	diagnostic_overlay.name = "PlaytestDiagnosticOverlay"
+	add_child(diagnostic_overlay)
 
 
 func _show_class_selection() -> void:
