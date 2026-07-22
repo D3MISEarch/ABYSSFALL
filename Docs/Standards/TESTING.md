@@ -29,6 +29,8 @@ Do not claim a fix passes without running Godot headlessly and reading the actua
 
 All headless GDScript regression suites live under [`scripts/runtime/tests/`](../../scripts/runtime/tests/) (e.g. `test_runtime_foundation.gd`, `test_runtime_session.gd`, `test_ability_execution.gd`, `test_stage34_*.gd`, `test_stage5_*.gd`). Persistence-specific suites live under `scripts/persistence/tests/`.
 
+**The runtime workflow currently lists its test suites manually.** [`.github/workflows/runtime-foundation-tests.yml`](../../.github/workflows/runtime-foundation-tests.yml) does not discover `scripts/runtime/tests/*.gd` automatically — each suite is invoked by an explicit `run_suite res://scripts/runtime/tests/<file>.gd <log-name>` line in the workflow. **Every new `scripts/runtime/tests/*.gd` suite must also be added to that workflow file as its own `run_suite` line, in the same pull request that adds the suite** — otherwise the suite exists in the repository but never actually runs in CI, and a red or silently-broken suite would go unnoticed. This document does not itself change the workflow; adding the suite there is part of the change that introduces it.
+
 Run an individual suite directly:
 
 ```bash
