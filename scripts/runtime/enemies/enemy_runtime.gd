@@ -11,6 +11,7 @@ var armor: float = 0.0
 var experience_reward: int = 10
 var loot_entries: Array[Dictionary] = []
 var loot_seed: int = 0
+var minimum_loot_rarity: int = LootRarity.Tier.NORMAL
 var _death_emitted: bool = false
 var _rewards_claimed: bool = false
 
@@ -29,6 +30,8 @@ func configure(data: Dictionary) -> void:
 			if raw_entry is Dictionary:
 				loot_entries.append(raw_entry.duplicate(true))
 	loot_seed = int(data.get("loot_seed", 0))
+	var configured_floor := int(data.get("minimum_loot_rarity", LootRarity.Tier.NORMAL))
+	minimum_loot_rarity = configured_floor if LootRarity.is_valid(configured_floor) else LootRarity.Tier.NORMAL
 	_death_emitted = false
 	_rewards_claimed = false
 
