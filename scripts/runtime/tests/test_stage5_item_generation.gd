@@ -10,6 +10,7 @@ func _init() -> void:
 func _run() -> void:
 	print("START: Stage 5 item generation")
 	_test_deterministic_weighted_generation()
+	_test_identity_separation_and_inventory_collision_guard()
 	_test_rarity_caps_and_duplicate_prevention()
 	_test_generation_failure_is_atomic()
 	_test_generated_item_round_trip()
@@ -63,22 +64,51 @@ func _weapon() -> ItemDefinition:
 	return ItemDefinition.new(&"ritual_blade", "Ritual Blade", slots, 1, modifiers, tags)
 
 
+func _identity(session_id: String, snapshot: Dictionary = {}) -> ItemIdentityService:
+	var service := ItemIdentityService.new()
+	_expect(service.configure(session_id, snapshot), "Identity service %s should configure" % session_id)
+	return service
+
+
 func _test_deterministic_weighted_generation() -> void:
 	var catalog := _catalog()
-	var first := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.LEGENDARY, 991337, catalog)
-	var second := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.LEGENDARY, 991337, catalog)
+	var first_identity := _identity("generation-test")
+	var second_identity := _identity("generation-test")
+	var first := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.LEGENDARY, 991337, first_identity.mint(), catalog)
+	var second := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.LEGENDARY, 991337, second_identity.mint(), catalog)
 	_expect(first != null and second != null, "Eligible legendary generation should succeed")
 	if first == null or second == null:
 		return
-	_expect(first.to_dict() == second.to_dict(), "Same seed and inputs should produce byte-equivalent item data")
-	_expect(first.instance_id == "generated:991337:ritual_blade:10:3", "Generated identity should be deterministic and input-derived")
+	_expect(first.to_dict() == second.to_dict(), "Identical session state, seed, and inputs should produce byte-equivalent item data")
+	_expect(first.instance_id == "item:generation-test:1", "Session identity should be deterministic and sequence-derived")
+
+
+func _test_identity_separation_and_inventory_collision_guard() -> void:
+	var catalog := _catalog()
+	var identity := _identity("identity-separation")
+	var first := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.RARE, 445566, identity.mint(), catalog)
+	var second := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.RARE, 445566, identity.mint(), catalog)
+	_expect(first != null and second != null, "Repeated content generation should succeed with distinct identities")
+	if first == null or second == null:
+		return
+	_expect(first.instance_id != second.instance_id, "Identical generation parameters must still mint unique item identities")
+	_expect(_without_identity(first) == _without_identity(second), "Generation seed should determine contents independently from identity")
+
+	var inventory := InventoryContainer.new(4, identity)
+	_expect(inventory.add_item(first, _weapon()), "First generated item should enter inventory")
+	var duplicate := ItemInstance.from_dict(first.to_dict())
+	_expect(not inventory.add_item(duplicate, _weapon()), "Inventory must reject a duplicate live instance ID")
+	_expect(inventory.add_item(second, _weapon()), "Otherwise-identical item with a unique ID should enter inventory")
+	var restored_inventory := InventoryContainer.new(4, _identity("identity-separation", identity.snapshot()))
+	_expect(restored_inventory.restore(inventory.serialize()), "Two content-identical items with unique IDs should restore safely")
 
 
 func _test_rarity_caps_and_duplicate_prevention() -> void:
 	var catalog := _catalog()
-	var magic := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.MAGIC, 111, catalog)
-	var rare := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.RARE, 222, catalog)
-	var legendary := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.LEGENDARY, 333, catalog)
+	var identity := _identity("rarity-test")
+	var magic := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.MAGIC, 111, identity.mint(), catalog)
+	var rare := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.RARE, 222, identity.mint(), catalog)
+	var legendary := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.LEGENDARY, 333, identity.mint(), catalog)
 	_expect(magic != null and _unique_affix_count(magic.affixes) >= 1 and _unique_affix_count(magic.affixes) <= 2, "Magic items should roll one or two affixes")
 	_expect(rare != null and _unique_affix_count(rare.affixes) >= 3 and _unique_affix_count(rare.affixes) <= 4, "Rare items should roll three or four affixes")
 	_expect(legendary != null and _unique_affix_count(legendary.affixes) >= 4 and _unique_affix_count(legendary.affixes) <= 6, "Legendary items should roll four to six affixes")
@@ -87,21 +117,31 @@ func _test_rarity_caps_and_duplicate_prevention() -> void:
 
 
 func _test_generation_failure_is_atomic() -> void:
+	var identity := _identity("failure-test")
 	var empty_catalog := AffixCatalog.new()
-	var failed := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.RARE, 44, empty_catalog)
+	var failed := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.RARE, 44, identity.mint(), empty_catalog)
 	_expect(failed == null, "Generation should fail when a rarity minimum cannot be satisfied")
-	var normal := ItemGenerator.generate(_weapon(), 1, LootRarity.Tier.NORMAL, 45, null)
+	var normal := ItemGenerator.generate(_weapon(), 1, LootRarity.Tier.NORMAL, 45, identity.mint(), null)
 	_expect(normal != null and normal.affixes.is_empty(), "Normal generation should not require an affix catalog")
-	_expect(ItemGenerator.generate(_weapon(), 1, LootRarity.Tier.NORMAL, 0, null) == null, "Zero seed should be rejected rather than creating unstable identity")
+	_expect(ItemGenerator.generate(_weapon(), 1, LootRarity.Tier.NORMAL, 0, identity.mint(), null) == null, "Zero seed should be rejected")
+	_expect(ItemGenerator.generate(_weapon(), 1, LootRarity.Tier.NORMAL, 46, "", null) == null, "Empty identity should be rejected")
 
 
 func _test_generated_item_round_trip() -> void:
-	var generated := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.RARE, 7788, _catalog())
+	var identity := _identity("round-trip")
+	var generated := ItemGenerator.generate(_weapon(), 10, LootRarity.Tier.RARE, 7788, identity.mint(), _catalog())
 	_expect(generated != null, "Round-trip source item should generate")
 	if generated == null:
 		return
 	var restored := ItemInstance.from_dict(generated.to_dict())
-	_expect(restored.to_dict() == generated.to_dict(), "Generated rarity, item level, identity, and affixes should survive serialization")
+	_expect(restored.to_dict() == generated.to_dict(), "Generated rarity, item level, identity, seed provenance, and affixes should survive serialization")
+	_expect(restored.generation_seed == 7788, "Generation seed should persist separately from instance identity")
+
+
+func _without_identity(item: ItemInstance) -> Dictionary:
+	var data := item.to_dict()
+	data.erase("instance_id")
+	return data
 
 
 func _unique_affix_count(modifiers: Array[Dictionary]) -> int:
