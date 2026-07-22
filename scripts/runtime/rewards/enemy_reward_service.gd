@@ -7,7 +7,8 @@ func grant(
 	character: RuntimeCharacter,
 	inventory: InventoryContainer,
 	catalog: ItemCatalog,
-	affix_catalog: AffixCatalog = null
+	affix_catalog: AffixCatalog = null,
+	identity_service: ItemIdentityService = null
 ) -> Dictionary:
 	var result := {
 		"granted": false,
@@ -16,7 +17,7 @@ func grant(
 		"loot": [],
 		"rejected_loot": [],
 	}
-	if enemy == null or character == null or inventory == null or catalog == null:
+	if enemy == null or character == null or inventory == null or catalog == null or identity_service == null:
 		return result
 	if not enemy.claim_rewards():
 		return result
@@ -31,7 +32,8 @@ func grant(
 		catalog,
 		affix_catalog,
 		enemy.level,
-		enemy.minimum_loot_rarity
+		enemy.minimum_loot_rarity,
+		identity_service
 	):
 		var definition := catalog.get_definition(item.definition_id)
 		if definition != null and inventory.add_item(item, definition):
