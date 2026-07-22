@@ -18,11 +18,18 @@ Authority order:
 1. [`../../Docs/Governance/ENGINEERING_CONSTITUTION.md`](../../Docs/Governance/ENGINEERING_CONSTITUTION.md) and approved ADRs govern engineering, architecture, ownership, persistence and testing.
 2. [`../../Docs/Architecture/ARCHITECTURE.md`](../../Docs/Architecture/ARCHITECTURE.md) describes the current implementation.
 3. [`../../Docs/Standards/`](../../Docs/Standards/) governs code, testing, naming and documentation practice.
-4. [`../../Docs/Design/`](../../Docs/Design/) owns project-level gameplay and class direction.
-5. This Codex owns approved **detailed game design** inside its documented character scope.
-6. Within a character folder, an approved audit-resolution document supersedes only the exact sections it names.
+4. [`../../Docs/Design/`](../../Docs/Design/) owns project-level gameplay, campaign and class direction.
+5. [`SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md) owns the narrative boundary between the universal campaign and class-specific journeys.
+6. This Codex owns approved **detailed game design** inside its documented character scope.
+7. Within a character folder, an approved audit-resolution document supersedes only the exact sections it names.
 
 A character Codex cannot authorize a second event bus, a new persistence owner or another architectural boundary by itself. When approved design needs architecture not covered by an ADR, implementation stops until an ADR is approved.
+
+## Shared campaign doctrine
+
+AbyssFall uses one shared world, campaign timeline and central conflict for every playable class. Character Codices add origins, mentors, trials, personal rivals, mastery finales and class-specific readings of shared events; they do not create replacement campaigns.
+
+Every class narrative must comply with [`SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md).
 
 ## Character index
 
@@ -41,19 +48,21 @@ A character Codex cannot authorize a second event bus, a new persistence owner o
 
 Before changing a class:
 
-1. Read its folder README.
-2. Read any audit resolutions first.
-3. Read every numbered bible relevant to the task.
-4. Read the Engineering Constitution, relevant ADRs, Architecture and Standards.
-5. Inspect current code before proposing implementation.
-6. Update the Codex and class changelog in the same PR when approved design changes.
-7. Update architecture/ADR documentation when system ownership or contracts change.
+1. Read this Codex README.
+2. Read [`SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md) for any lore, quest, faction or campaign work.
+3. Read the class folder README.
+4. Read any audit resolutions first.
+5. Read every numbered bible relevant to the task.
+6. Read the Engineering Constitution, relevant ADRs, Architecture and Standards.
+7. Inspect current code before proposing implementation.
+8. Update the Codex and class changelog in the same PR when approved design changes.
+9. Update architecture/ADR documentation when system ownership or contracts change.
 
 ## Shared template
 
 Every complete playable class uses [`characters/CHARACTER_BIBLE_TEMPLATE.md`](characters/CHARACTER_BIBLE_TEMPLATE.md).
 
-The template is a completeness standard, not a requirement that classes share mechanics.
+The template is a completeness standard, not a requirement that classes share mechanics. Every future class narrative must join the same shared campaign and clearly separate universal events from its personal journey.
 
 ## Directory-casing note
 
