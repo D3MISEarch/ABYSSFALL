@@ -11,6 +11,18 @@
 - Placeholder geometry is acceptable until mechanics are validated.
 - Update the relevant systems document and playtest checklist when behavior changes.
 
+## Design Codex authority
+
+- `docs/codex/` is the canonical source for approved game and playable-class design.
+- Before changing a playable class, read that class folder's `README.md` and every Codex document relevant to the task.
+- Existing prototype behavior does not override an approved Codex document.
+- When code and the Codex disagree, identify the conflict before implementation. Update the code to match, or amend the Codex in the same pull request when the project owner explicitly approves a design change.
+- Do not silently simplify, rename, replace, or reinterpret approved mechanics.
+- Stable IDs and compatibility IDs must be preserved unless the task explicitly includes a migration and regression coverage.
+- Meaningful class-behavior changes require the relevant Codex file and class `CHANGELOG.md` to be updated in the same pull request.
+- The current `void_warlock` ID is a compatibility and persistence key during the Voidbringer migration. Do not remove or rename it without an approved save-data migration.
+- For Voidbringer work, begin with `docs/codex/characters/voidbringer/README.md`.
+
 ## Role separation
 
 AbyssFall separates implementation from independent verification.
@@ -76,7 +88,6 @@ Regression expectation:
 - Assert that representative hidden paths such as `.github/workflows/` survive upload and download.
 - Fail CI on any missing tracked path or blob-hash mismatch between Git and the downloaded verifier artifact.
 
-
 ### 3D material fades and invalid CanvasItem properties
 
 Observed failures:
@@ -101,6 +112,8 @@ Regression expectation:
 - The implementer owns `docs/BASELINE_TEST_RESULTS.md` and keeps it current after accepted milestones and verification-changing fixes.
 - The verifier supplies independent results and findings but does not edit that document unless the project owner explicitly requests it.
 - The document must clearly separate automated CI, independent verification, and graphical playtest status.
+- Approved class-design ownership lives under `docs/codex/characters/<class_id>/`.
+- A class's Codex `CHANGELOG.md` records approved design amendments; it is not a substitute for implementation release notes.
 
 ## Required validation
 
@@ -115,4 +128,6 @@ The first command must complete without parser, compiler, resource-loading, or i
 
 ## Architecture direction
 
-The codebase must support multiple playable classes. The Void Warlock uses Corruption; The Penitent uses Fervor and a sigil network. Shared systems must not assume every class casts projectiles, uses Corruption, or has the same HUD.
+The codebase must support multiple playable classes. Shared systems must not assume every class casts projectiles, uses Corruption, or has the same HUD.
+
+The current `Void Warlock` implementation is a compatibility prototype. The approved replacement design is the Voidbringer Codex under `docs/codex/characters/voidbringer/`. The Penitent uses its own resource and ritual-network identity. Future classes must use reusable shared interfaces without being forced into either prototype's internal assumptions.
