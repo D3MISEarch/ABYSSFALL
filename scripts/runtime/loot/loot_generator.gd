@@ -8,9 +8,10 @@ static func roll(
 	item_catalog: ItemCatalog = null,
 	affix_catalog: AffixCatalog = null,
 	default_item_level: int = 1,
-	minimum_rarity: int = LootRarity.Tier.NORMAL
+	minimum_rarity: int = LootRarity.Tier.NORMAL,
+	identity_service: ItemIdentityService = null
 ) -> Array[ItemInstance]:
-	if seed == 0 or not LootRarity.is_valid(minimum_rarity):
+	if seed == 0 or not LootRarity.is_valid(minimum_rarity) or identity_service == null:
 		return []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
@@ -30,7 +31,18 @@ static func roll(
 			continue
 
 		if bool(raw_entry.get("generated", false)):
-			var generated_item := _generate_entry(raw_entry, definition_id, entry_index, seed, rng, item_catalog, affix_catalog, default_item_level, minimum_rarity)
+			var generated_item := _generate_entry(
+				raw_entry,
+				definition_id,
+				entry_index,
+				seed,
+				rng,
+				item_catalog,
+				affix_catalog,
+				default_item_level,
+				minimum_rarity,
+				identity_service
+			)
 			if generated_item != null:
 				drops.append(generated_item)
 			entry_index += 1
@@ -38,9 +50,13 @@ static func roll(
 
 		var minimum := maxi(1, int(raw_entry.get("minimum", 1)))
 		var maximum := maxi(minimum, int(raw_entry.get("maximum", minimum)))
+		var instance_id := identity_service.mint()
+		if instance_id.is_empty():
+			entry_index += 1
+			continue
 		var item := ItemInstance.new(definition_id, rng.randi_range(minimum, maximum))
 		item.item_level = maxi(1, int(raw_entry.get("item_level", default_item_level)))
-		item.instance_id = "loot:%s:%s:%s:%s" % [seed, entry_index, String(definition_id), drops.size()]
+		item.instance_id = instance_id
 		drops.append(item)
 		entry_index += 1
 	return drops
@@ -55,9 +71,10 @@ static func _generate_entry(
 	item_catalog: ItemCatalog,
 	affix_catalog: AffixCatalog,
 	default_item_level: int,
-	minimum_rarity: int
+	minimum_rarity: int,
+	identity_service: ItemIdentityService
 ) -> ItemInstance:
-	if item_catalog == null:
+	if item_catalog == null or identity_service == null:
 		return null
 	var definition := item_catalog.get_definition(definition_id)
 	if definition == null or definition.max_stack != 1:
@@ -76,4 +93,7 @@ static func _generate_entry(
 	var generation_seed := int(rng.randi())
 	if generation_seed == 0:
 		generation_seed = loot_seed + entry_index + 1
-	return ItemGenerator.generate(definition, item_level, rarity_value, generation_seed, affix_catalog)
+	var instance_id := identity_service.mint()
+	if instance_id.is_empty():
+		return null
+	return ItemGenerator.generate(definition, item_level, rarity_value, generation_seed, instance_id, affix_catalog)
