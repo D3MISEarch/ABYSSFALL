@@ -1,118 +1,52 @@
 # Agent Instructions
 
-## Project rules
+This is the repository map for Codex, Claude Code, and any other coding agent working in AbyssFall. Keep this file concise — it points at deeper documents rather than repeating them. If something here conflicts with a linked document, the linked document (and the ADR it cites) wins; stop and flag the conflict instead of guessing.
 
-- Target **Godot 4.4.1** and GDScript.
-- Do not claim a fix passes without running Godot headlessly.
-- Preserve current Void Warlock gameplay unless a task explicitly requests a balance change.
-- Keep feature work on separate branches and submit reviewable pull requests.
-- Prefer reusable character, ability, resource, enemy, item, and encounter components over class-specific conditionals in `main.gd`.
-- Do not broadly disable warnings to hide legitimate errors.
-- Placeholder geometry is acceptable until mechanics are validated.
-- Update the relevant systems document and playtest checklist when behavior changes.
+For contribution mechanics (branching, PR expectations, placeholder-art norms), see [`CONTRIBUTING.md`](CONTRIBUTING.md). For the full documentation tree and its index, see [`Docs/README.md`](Docs/README.md).
 
-## Role separation
+## Project identity
 
-AbyssFall separates implementation from independent verification.
+- **AbyssFall** — a dark-fantasy action dungeon crawler / ARPG.
+- **Engine:** Godot 4.4.1, GDScript.
+- **Current playable prototype:** Void Warlock v0.4 Hotfix 3 ("The Sunken Crypts"). The Penitent is the second class under active construction. See `PROJECT_OVERVIEW.md` and [`Docs/Design/CLASS_DESIGN.md`](Docs/Design/CLASS_DESIGN.md).
+- **Current architecture stage:** Stage 5 (deterministic procedural item generation) has merged into `stage3/equipment-runtime-foundation` (PR #35). See [`Docs/Roadmap/STAGE_5_LOOT_AFFIXES.md`](Docs/Roadmap/STAGE_5_LOOT_AFFIXES.md) for exact status.
 
-### Implementer — architecture, gameplay, and UI
+## Required reading order
 
-- Own feature branches and implementation files.
-- Add or update deterministic tests for new behavior.
-- Run the Godot 4.4.1 CI pipeline before handoff.
-- Provide the verifier with an exact branch or commit plus a one-line change summary.
-- Use the successful PR workflow's frozen `abyssfall-verifier-*` artifact for formal review; do not substitute an untracked local ZIP.
-- Check the standing bug-pattern log before handoff and again after any failed review.
-- Respond to verification findings with focused fixes.
+1. This file.
+2. [`Docs/Governance/ENGINEERING_CONSTITUTION.md`](Docs/Governance/ENGINEERING_CONSTITUTION.md) — the non-negotiable laws of this codebase.
+3. Any [`Docs/ADR/`](Docs/ADR/) entries relevant to the system you're touching.
+4. [`Docs/Architecture/ARCHITECTURE.md`](Docs/Architecture/ARCHITECTURE.md) — how the ADRs became actual runtime code.
+5. The relevant [`Docs/Standards/`](Docs/Standards/) document (`GDSCRIPT.md`, `TESTING.md`, `NAMING.md`, `DOCUMENTATION.md`).
+6. The current [`Docs/Roadmap/`](Docs/Roadmap/) stage document, so you know what's already in flight.
+7. If you are an AI contributor, also read [`Docs/Governance/AI_GUIDELINES.md`](Docs/Governance/AI_GUIDELINES.md) for your specific role's obligations. Claude Code specifically must also read [`CLAUDE.md`](CLAUDE.md).
 
-### Independent verifier — QA and reviewer/integrator
+## Documentation map
 
-- Verify the exact handed-off branch or commit in an independent environment.
-- Use the frozen verifier ZIP as the authority for the verdict even when GitHub-connected source is available.
-- Re-run import, headless runtime, and relevant unit tests rather than trusting implementation claims or CI summaries.
-- Manually trace new code for lifecycle ordering, input wiring, physics/coordinate math, timing, cleanup, replacement, and overlap bugs.
-- Report pass/fail with concrete findings and reproduction details.
-- Do not modify implementation code unless the project owner explicitly requests it.
+| Location | Owns |
+|---|---|
+| [`Docs/Governance/`](Docs/Governance/) | The rules: engineering laws and AI contributor roles. |
+| [`Docs/ADR/`](Docs/ADR/) | Approved architectural decisions — the source of truth for "why." |
+| [`Docs/Architecture/`](Docs/Architecture/) | What currently exists in code, derived from the ADRs. |
+| [`Docs/Design/`](Docs/Design/) | Gameplay/combat/itemization/class design. |
+| [`Docs/Lore/`](Docs/Lore/) | World and narrative lore. |
+| [`Docs/Standards/`](Docs/Standards/) | GDScript style, testing, naming, documentation conventions. |
+| [`Docs/Planning/`](Docs/Planning/) | Non-blocking tech debt and its severity/milestone. |
+| [`Docs/Roadmap/`](Docs/Roadmap/) | Stage-by-stage delivery plan and status. |
+| `design/` and `docs/` (repo root, lowercase) | Pre-existing detailed design/playtest/verification documents; still authoritative, not superseded by this structure. See [`Docs/README.md`](Docs/README.md) for the full index and a note on the casing overlap with `Docs/`. |
 
-The implementer and verifier must not co-author the same implementation files at the same time. See `docs/IMPLEMENTER_VERIFIER_HANDOFF.md` for the full handoff packet and merge gate.
+## Running tests / CI
 
-## Standing bug-pattern log
+Runtime and persistence regression suites run headlessly under Godot 4.4.1 and are wired into GitHub Actions:
 
-Keep this list short and category-level. Add an entry only when independent review finds a repeatable failure pattern.
+- [`.github/workflows/runtime-foundation-tests.yml`](.github/workflows/runtime-foundation-tests.yml) — runs every `scripts/runtime/tests/*.gd` suite.
+- [`.github/workflows/persistence-tests.yml`](.github/workflows/persistence-tests.yml) — runs `scripts/persistence/tests/test_save_manager.gd`.
 
-### Scene-tree lifecycle and transform ordering
+Full command reference, PASS-marker convention, and failure rules live in [`Docs/Standards/TESTING.md`](Docs/Standards/TESTING.md). Do not claim a fix works without actually running Godot headlessly.
 
-Observed failures:
+## Rules that apply to every agent
 
-- Reading or assigning global transforms before a node is inside the scene tree.
-- Adding a node whose `_ready()` has gameplay side effects before configuring its final transform, causing one-frame behavior at world origin.
-
-Prevention:
-
-- Complete configuration before `add_child()` whenever `_ready()` can observe the values or trigger gameplay.
-- Compute the intended world transform first, convert it through the future parent with `to_local()`, assign the local transform, then attach the node.
-- Do not access tree-dependent global transforms until the node is inside the tree.
-
-Regression expectation:
-
-- Include a decoy at world origin and a target at the intended spawn point when testing immediate area effects.
-- Assert that the first frame or first pulse affects only the intended location.
-
-### Artifact staging and uploaded-package completeness
-
-Observed failures:
-
-- A staging directory contained the complete Git archive, but `actions/upload-artifact` omitted dotfiles and dot-directories from the downloaded artifact.
-- A changed-file manifest could therefore claim files that the formal review package did not actually contain.
-
-Prevention:
-
-- Set `include-hidden-files: true` whenever a complete source tree is uploaded.
-- Record the exact Git tree and blob SHA for every tracked file inside the package.
-- Download the finished artifact inside CI and verify every uploaded file against the exact commit before declaring the workflow successful.
-
-Regression expectation:
-
-- Assert that representative hidden paths such as `.github/workflows/` survive upload and download.
-- Fail CI on any missing tracked path or blob-hash mismatch between Git and the downloaded verifier artifact.
-
-
-### 3D material fades and invalid CanvasItem properties
-
-Observed failures:
-
-- Tweening `modulate` or `modulate:a` on `MeshInstance3D`. Those properties belong to `CanvasItem`/2D nodes, so Godot logs a runtime error and drops the tween track.
-- Assertion-only test scripts can still print `passed` and exit zero while Godot has emitted an engine-level runtime error.
-
-Prevention:
-
-- Fade a unique `StandardMaterial3D` resource through `albedo_color` alpha, with material transparency enabled.
-- Do not apply CanvasItem-only visual properties to Node3D-derived objects.
-- Avoid tweening a shared material unless every mesh using it is intended to fade together.
-- Capture headless test output and fail CI on Godot parser, script, runtime, invalid-property, or engine error lines.
-
-Regression expectation:
-
-- Spawn the real 3D feedback effect under test and assert that its material alpha decreases before cleanup.
-- A test suite is not considered passing when assertion counts are green but the Godot log contains runtime errors.
-
-## Documentation ownership
-
-- The implementer owns `docs/BASELINE_TEST_RESULTS.md` and keeps it current after accepted milestones and verification-changing fixes.
-- The verifier supplies independent results and findings but does not edit that document unless the project owner explicitly requests it.
-- The document must clearly separate automated CI, independent verification, and graphical playtest status.
-
-## Required validation
-
-Run these commands from the repository root:
-
-```bash
-godot --headless --path . --editor --quit
-timeout 20s godot --headless --path .
-```
-
-The first command must complete without parser, compiler, resource-loading, or import errors. The second may end through the timeout, but its startup output must contain no script or runtime errors.
-
-## Architecture direction
-
-The codebase must support multiple playable classes. The Void Warlock uses Corruption; The Penitent uses Fervor and a sigil network. Shared systems must not assume every class casts projectiles, uses Corruption, or has the same HUD.
+- Do not bypass, reinterpret, or "simplify away" a rule stated in an ADR or in the Engineering Constitution. If a task seems to require that, stop and ask for an ADR instead of improvising architecture.
+- If your change alters a public system contract (a class's owned responsibilities, an ADR's rules, an event contract), update the relevant documentation in the same change. See [`Docs/Standards/DOCUMENTATION.md`](Docs/Standards/DOCUMENTATION.md).
+- Keep CI green. A red pipeline blocks merge; fix the cause, never the test's ability to detect it.
+- Keep feature work on separate branches and submit reviewable pull requests, one focused feature or fix per branch.
