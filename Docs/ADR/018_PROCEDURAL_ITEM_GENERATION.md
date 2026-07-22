@@ -27,6 +27,8 @@ The allocator uses the durable build ID as its scope and a monotonic sequence as
 
 `InventoryContainer` rejects empty or duplicate live instance IDs. Persistence continues rejecting duplicate IDs during restoration.
 
+Only one authoritative `RuntimeSession` may mint identities for a build at a time. A future multiplayer implementation must move minting behind network authority before two concurrent sessions can mutate the same build.
+
 ## Consequences
 
 - Identical generation seed and item inputs produce identical rolled contents independently from identity.
@@ -37,6 +39,7 @@ The allocator uses the durable build ID as its scope and a monotonic sequence as
 - Inventory and equipment continue consuming `ItemInstance` without knowing generation rules.
 - Generation failure is atomic and cannot leak a partial item.
 - Identity sequences may contain gaps when a valid creation attempt later fails; uniqueness is more important than contiguous numbering.
+- Serialized affix arrays are rebuilt as typed `Array[Dictionary]` values after JSON parsing so real disk saves restore through the same contract as in-memory snapshots.
 
 ## Affix representation
 
