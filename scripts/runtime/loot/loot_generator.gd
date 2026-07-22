@@ -7,9 +7,10 @@ static func roll(
 	seed: int,
 	item_catalog: ItemCatalog = null,
 	affix_catalog: AffixCatalog = null,
-	default_item_level: int = 1
+	default_item_level: int = 1,
+	minimum_rarity: int = LootRarity.Tier.NORMAL
 ) -> Array[ItemInstance]:
-	if seed == 0:
+	if seed == 0 or not LootRarity.is_valid(minimum_rarity):
 		return []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
@@ -28,18 +29,8 @@ static func roll(
 			entry_index += 1
 			continue
 
-		var generated := bool(raw_entry.get("generated", false))
-		if generated:
-			var generated_item := _generate_entry(
-				raw_entry,
-				definition_id,
-				entry_index,
-				seed,
-				rng,
-				item_catalog,
-				affix_catalog,
-				default_item_level
-			)
+		if bool(raw_entry.get("generated", false)):
+			var generated_item := _generate_entry(raw_entry, definition_id, entry_index, seed, rng, item_catalog, affix_catalog, default_item_level, minimum_rarity)
 			if generated_item != null:
 				drops.append(generated_item)
 			entry_index += 1
@@ -47,8 +38,7 @@ static func roll(
 
 		var minimum := maxi(1, int(raw_entry.get("minimum", 1)))
 		var maximum := maxi(minimum, int(raw_entry.get("maximum", minimum)))
-		var quantity := rng.randi_range(minimum, maximum)
-		var item := ItemInstance.new(definition_id, quantity)
+		var item := ItemInstance.new(definition_id, rng.randi_range(minimum, maximum))
 		item.item_level = maxi(1, int(raw_entry.get("item_level", default_item_level)))
 		item.instance_id = "loot:%s:%s:%s:%s" % [seed, entry_index, String(definition_id), drops.size()]
 		drops.append(item)
@@ -64,14 +54,22 @@ static func _generate_entry(
 	rng: RandomNumberGenerator,
 	item_catalog: ItemCatalog,
 	affix_catalog: AffixCatalog,
-	default_item_level: int
+	default_item_level: int,
+	minimum_rarity: int
 ) -> ItemInstance:
 	if item_catalog == null:
 		return null
 	var definition := item_catalog.get_definition(definition_id)
 	if definition == null or definition.max_stack != 1:
 		return null
-	var rarity_value := int(entry.get("rarity", LootRarity.Tier.MAGIC))
+	var rarity_value := int(entry.get("rarity", -1))
+	var raw_weights: Variant = entry.get("rarity_weights", [])
+	if raw_weights is Array and not raw_weights.is_empty():
+		rarity_value = LootRarity.weighted_roll(raw_weights, minimum_rarity, rng)
+	elif rarity_value >= 0:
+		rarity_value = maxi(rarity_value, minimum_rarity)
+	else:
+		rarity_value = minimum_rarity
 	if not LootRarity.is_valid(rarity_value):
 		return null
 	var item_level := maxi(1, int(entry.get("item_level", default_item_level)))
