@@ -30,7 +30,8 @@ func grant(
 		enemy.loot_seed,
 		catalog,
 		affix_catalog,
-		enemy.level
+		enemy.level,
+		enemy.minimum_loot_rarity
 	):
 		var definition := catalog.get_definition(item.definition_id)
 		if definition != null and inventory.add_item(item, definition):
