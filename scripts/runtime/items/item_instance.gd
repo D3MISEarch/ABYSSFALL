@@ -6,6 +6,7 @@ var definition_id: StringName = &""
 var quantity: int = 1
 var rarity: int = LootRarity.Tier.NORMAL
 var item_level: int = 1
+var generation_seed: int = 0
 var affixes: Array[Dictionary] = []
 var durability: float = 1.0
 
@@ -23,6 +24,7 @@ func to_dict() -> Dictionary:
 		"quantity": quantity,
 		"rarity": rarity,
 		"item_level": item_level,
+		"generation_seed": generation_seed,
 		"affixes": affixes.duplicate(true),
 		"durability": durability,
 	}
@@ -34,6 +36,7 @@ static func from_dict(data: Dictionary) -> ItemInstance:
 	var serialized_rarity := int(data.get("rarity", LootRarity.Tier.NORMAL))
 	item.rarity = serialized_rarity if LootRarity.is_valid(serialized_rarity) else LootRarity.Tier.NORMAL
 	item.item_level = maxi(1, int(data.get("item_level", 1)))
+	item.generation_seed = int(data.get("generation_seed", 0))
 	item.affixes = Array(data.get("affixes", [])).duplicate(true)
 	item.durability = clampf(float(data.get("durability", 1.0)), 0.0, 1.0)
 	return item
