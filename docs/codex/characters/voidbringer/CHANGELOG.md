@@ -3,6 +3,30 @@
 Canonical class ID: `voidbringer`  
 Compatibility ID: `void_warlock`
 
+## 1.2 — 2026-07-22
+
+Status: Approved shared-campaign integration
+
+Clarified that the Voidbringer narrative is a class-specific journey woven through one universal AbyssFall campaign.
+
+### Narrative architecture
+
+- Added the binding shared campaign and character-arc doctrine.
+- Confirmed one shared world, timeline, central conflict, campaign progression and universal finale for every playable class.
+- Reclassified the Last Measure, Gaugehouse, Manifold Trials, Dead Star quest, Axis Vault and Edras conflict as the Voidbringer personal arc and mastery finale.
+- Confirmed Edras is not automatically the universal final villain.
+- Preserved Architect, Redshift, Hollow and hybrid conclusions as local or personal class outcomes.
+- Prevented class endings from destroying shared campaign regions, chronology or endgame infrastructure.
+- Added mixed-class party participation and quest-state separation rules.
+- Updated the reusable class template so every future class distinguishes shared events from its personal journey.
+
+## 1.1 — 2026-07-22
+
+Status: Independently audited and corrected
+
+- Added binding audit resolutions for discipline-point counting, legal level-50 allocations, Dead Star cost, five-stage Mass, Collapse semantics, naming collisions, corpse-anchor stacking and implementation-architecture bridging.
+- Preserved the complete approved class design while correcting contradictions found during independent review.
+
 ## 1.0 — 2026-07-22
 
 Status: Approved initial Codex
