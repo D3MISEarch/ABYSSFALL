@@ -1,7 +1,7 @@
 # Voidbringer Codex
 
 Status: Approved design, independently audited and corrected  
-Codex version: 1.1  
+Codex version: 1.2  
 Last updated: 2026-07-22  
 Canonical design ID: `voidbringer`  
 Runtime/save compatibility ID during migration: `void_warlock`
@@ -12,17 +12,28 @@ The numbered bibles preserve the complete approved design developed with the pro
 
 **Read [`09_AUDIT_RESOLUTIONS.md`](09_AUDIT_RESOLUTIONS.md) before implementation.** Its rulings are binding and supersede only the exact conflicting sections it names. All unaffected content in the numbered bibles remains approved.
 
+For narrative work, also read [`../../SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](../../SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md) before `06_NARRATIVE_AND_QUESTS.md`.
+
+## Shared campaign classification
+
+AbyssFall has one shared world, one shared campaign timeline and one universal central conflict for every playable class.
+
+Voidbringer's origin, the Last Measure, Gaugehouse, Manifold Trials, Dead Star quest and conflict with Edras form a **class-specific journey woven through the shared campaign**. They do not replace the universal campaign, and Edras is not automatically the final villain for every class.
+
+Where `06_NARRATIVE_AND_QUESTS.md` reads like a standalone full campaign, the shared-campaign doctrine controls its scope and reclassifies that material as the Voidbringer class arc and mastery finale.
+
 ## Authority inside this folder
 
-1. `09_AUDIT_RESOLUTIONS.md` for explicitly resolved contradictions and canonical terminology.
-2. `02_SKILL_TREE.md` for progression, costs, skills, passives, keystones, capstones and numeric mechanics.
-3. `03_ITEMIZATION.md` for Frames, equipment, Distortions, uniques, crafting and stacking.
-4. `05_ENCOUNTER_INTERACTIONS.md` for enemy/boss translation and force conversion.
-5. `06_NARRATIVE_AND_QUESTS.md` for lore, class quests, Trials and Edras.
-6. `07_IMPLEMENTATION_CONTRACT.md` for design-to-code requirements, subordinate to repository Governance/ADRs/Architecture.
-7. `08_BALANCE_AND_TEST_MATRIX.md` for verification criteria.
-8. `04_COMBAT_PRESENTATION.md` for controls, animation, VFX, audio, HUD and accessibility.
-9. `01_CLASS_BIBLE.md` for fantasy, identity and high-level mechanical intent. Where a named mechanic differs from 02/03, the specialized document and audit resolutions control.
+1. [`../../SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](../../SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md) for universal campaign versus class-arc boundaries.
+2. `09_AUDIT_RESOLUTIONS.md` for explicitly resolved contradictions and canonical terminology.
+3. `02_SKILL_TREE.md` for progression, costs, skills, passives, keystones, capstones and numeric mechanics.
+4. `03_ITEMIZATION.md` for Frames, equipment, Distortions, uniques, crafting and stacking.
+5. `05_ENCOUNTER_INTERACTIONS.md` for enemy/boss translation and force conversion.
+6. `06_NARRATIVE_AND_QUESTS.md` for Voidbringer lore, class quests, Trials, Edras and the class mastery finale.
+7. `07_IMPLEMENTATION_CONTRACT.md` for design-to-code requirements, subordinate to repository Governance/ADRs/Architecture.
+8. `08_BALANCE_AND_TEST_MATRIX.md` for verification criteria.
+9. `04_COMBAT_PRESENTATION.md` for controls, animation, VFX, audio, HUD and accessibility.
+10. `01_CLASS_BIBLE.md` for fantasy, identity and high-level mechanical intent. Where a named mechanic differs from 02/03, the specialized document and audit resolutions control.
 
 Repository engineering authority remains:
 
@@ -40,10 +51,11 @@ The Codex specifies what the class should do. It does not permit bypassing exist
 - [`03_ITEMIZATION.md`](03_ITEMIZATION.md) — Frames, class slots, affixes, Distortions, uniques, crafting and loot rules.
 - [`04_COMBAT_PRESENTATION.md`](04_COMBAT_PRESENTATION.md) — controls, basic attacks, loadouts, animation, VFX, sound, HUD and accessibility.
 - [`05_ENCOUNTER_INTERACTIONS.md`](05_ENCOUNTER_INTERACTIONS.md) — all enemy families, boss translation, force conversion and anti-exploit rules.
-- [`06_NARRATIVE_AND_QUESTS.md`](06_NARRATIVE_AND_QUESTS.md) — Black Measure, Last Measure, Gaugehouse, characters, Trials, final boss and endings.
+- [`06_NARRATIVE_AND_QUESTS.md`](06_NARRATIVE_AND_QUESTS.md) — Voidbringer origin, faction, class Trials, Edras mastery arc and local endings.
 - [`07_IMPLEMENTATION_CONTRACT.md`](07_IMPLEMENTATION_CONTRACT.md) — stable IDs, runtime/data contracts and production milestones.
 - [`08_BALANCE_AND_TEST_MATRIX.md`](08_BALANCE_AND_TEST_MATRIX.md) — balance expectations, telemetry and validation suite.
 - [`09_AUDIT_RESOLUTIONS.md`](09_AUDIT_RESOLUTIONS.md) — binding consistency corrections from independent review.
+- [`../../SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](../../SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md) — binding universal-campaign and class-arc doctrine.
 - [`CHANGELOG.md`](CHANGELOG.md) — class-document history.
 
 ## Implementation status
