@@ -42,7 +42,20 @@ static func from_dict(data: Dictionary) -> ItemInstance:
 	if serialized_affixes is Array:
 		for raw_affix: Variant in serialized_affixes:
 			if raw_affix is Dictionary:
-				restored_affixes.append(raw_affix.duplicate(true))
+				restored_affixes.append(_restore_affix(raw_affix))
 	item.affixes = restored_affixes
 	item.durability = clampf(float(data.get("durability", 1.0)), 0.0, 1.0)
 	return item
+
+
+static func _restore_affix(raw_affix: Dictionary) -> Dictionary:
+	var restored := raw_affix.duplicate(true)
+	if restored.has("affix_kind"):
+		restored["affix_kind"] = int(restored["affix_kind"])
+	if restored.has("operation"):
+		restored["operation"] = int(restored["operation"])
+	if restored.has("priority"):
+		restored["priority"] = int(restored["priority"])
+	if restored.has("value"):
+		restored["value"] = float(restored["value"])
+	return restored
