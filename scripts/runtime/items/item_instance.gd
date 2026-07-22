@@ -37,6 +37,12 @@ static func from_dict(data: Dictionary) -> ItemInstance:
 	item.rarity = serialized_rarity if LootRarity.is_valid(serialized_rarity) else LootRarity.Tier.NORMAL
 	item.item_level = maxi(1, int(data.get("item_level", 1)))
 	item.generation_seed = int(data.get("generation_seed", 0))
-	item.affixes = Array(data.get("affixes", [])).duplicate(true)
+	var restored_affixes: Array[Dictionary] = []
+	var serialized_affixes: Variant = data.get("affixes", [])
+	if serialized_affixes is Array:
+		for raw_affix: Variant in serialized_affixes:
+			if raw_affix is Dictionary:
+				restored_affixes.append(raw_affix.duplicate(true))
+	item.affixes = restored_affixes
 	item.durability = clampf(float(data.get("durability", 1.0)), 0.0, 1.0)
 	return item
