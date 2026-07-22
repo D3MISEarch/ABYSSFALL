@@ -5,6 +5,8 @@ Last updated: 2026-07-22
 
 Every playable class should receive the same depth of design treatment while preserving completely different mechanics and fantasies.
 
+Every class narrative must also comply with [`../SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](../SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md): one shared world and campaign, with a distinct personal journey layered through it.
+
 ## Document set
 
 Create one folder per class with these files:
@@ -19,6 +21,8 @@ Create one folder per class with these files:
 8. `07_IMPLEMENTATION_CONTRACT.md`
 9. `08_BALANCE_AND_TEST_MATRIX.md`
 10. `CHANGELOG.md`
+
+Add an audit-resolution document only when independent review finds contradictions that cannot be corrected immediately in the owning numbered bible.
 
 ## Required metadata
 
@@ -185,31 +189,48 @@ An enemy may resist a mechanic but should not simply turn off the class fantasy.
 
 ## 06 — Narrative and Quests
 
-Must define:
+Must define the class journey **inside the universal AbyssFall campaign**, not a replacement campaign.
 
-- Narrative promise and central conflict
-- World-system relationship
-- Class origin
-- Why the player can use the mechanic
-- Class faction and hub
-- Key NPCs
-- Primary antagonist or rival
+Required sections:
+
+- Shared campaign intersections
+- Class-specific narrative promise and central conflict
+- Class relationship to world systems
+- Class origin and the point where the character joins the shared campaign
+- Why the player can use the class mechanic
+- Class faction, mentor and hub or linked sub-hub
+- Key class NPCs
+- Personal antagonist or rival
 - Class-specific enemy families
-- Level-band story progression
-- Each class trial
+- Level-band class progression aligned with shared campaign milestones
+- Every class trial
 - Ultimate-unlock quest
-- Final class quest
-- Final boss
-- Build-influenced resolutions where appropriate
-- Post-story state
-- Endgame hooks
+- Class interpretation of shared locations and events
+- Class mastery finale
+- Build-influenced class resolutions where appropriate
+- Local and personal consequences
+- Shared-campaign constraints
+- Multiplayer participation rules
+- Post-story class state
+- Endgame class hooks
 - Trial replay system
 - World interactions
 - Dialogue tone
 - Visual evolution
 - Narrative non-negotiable rules
 
-Mechanics and story should explain each other.
+Every narrative bible must answer:
+
+- Which events are universal campaign events?
+- Which events are class-exclusive?
+- Where does the class rejoin or remain inside the shared campaign?
+- What can other classes perceive or assist with?
+- Which consequences are personal, local, shared or account-wide?
+- Does the class antagonist remain distinct from the universal campaign antagonist?
+- Does the class finale preserve shared regions, timeline and endgame?
+- Can the story remain coherent for a player who never uses this class?
+
+Mechanics and story should explain each other. Different journeys must enrich the same world rather than creating different universes.
 
 ## 07 — Implementation Contract
 
@@ -264,7 +285,18 @@ Every class receives:
 - Three freely mixable progression paths
 - Behavior-changing upgrades
 - Multiple genuine endgame builds
+- One personal journey woven through the shared campaign
+- One mastery finale that does not replace the universal campaign ending
+
+All classes share:
+
+- one world,
+- one campaign timeline,
+- one universal central conflict,
+- major regions and campaign hubs,
+- universal campaign bosses and finale,
+- and a coherent transition into endgame.
 
 Do not make every class use the same internal structure simply because the documentation structure matches.
 
-The documents are consistent. The characters must remain radically distinct.
+The documents are consistent. The characters must remain radically distinct. Their stories must remain radically personal without becoming mutually incompatible campaigns.
