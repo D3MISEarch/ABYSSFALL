@@ -60,7 +60,20 @@ Reading the diagram: arrows point from consumer to the thing it depends on / rea
 
 ### RuntimeCharacter (`scripts/runtime/runtime_character.gd`)
 
-Session-scoped object constructed from one persistent `BuildData` record. Owns current health, class resource, cooldowns, temporary effects, runtime inventory/equipment state, and calculated stats. Never performs disk I/O. Emits `state_changed(reason)` after durable changes and `level_gained(new_level)`. Exposes `durable_snapshot(item_identity_snapshot)` as the only path to a serializable snapshot. ([ADR-011](../ADR/ADR-011-RUNTIME-CHARACTER-STATE.md))
+Session-scoped object constructed from one persistent `BuildData` record (`configure_from_build()`). Never performs disk I/O. Verified against the current implementation, `RuntimeCharacter` owns exactly:
+
+- build/class identity (`build_id`, `class_id`)
+- level and experience (`level`, `experience`, `experience_to_next`)
+- current health (`current_health`)
+- `StatBlock` (`stats`)
+- `ClassResourcePool` (`class_resource`)
+- unlocked abilities (`unlocked_abilities`)
+- attached inventory/equipment references (`inventory`, `equipment`, set by `attach_item_systems()`)
+- retained pending restoration snapshots (`_pending_inventory_snapshot`, `_pending_equipment_snapshot`, `_pending_item_identity_snapshot`) used during session binding — read by `attach_item_systems()`/`pending_item_identity_snapshot()`, and still retained (not cleared) as a fallback source for `durable_snapshot()` if `inventory`/`equipment` are unset
+
+`RuntimeCharacter` does **not** own ability cooldown state and does **not** own temporary effects. Ability cooldown runtime state is owned by `AbilityExecutor`, not by the character — see the `AbilityExecutor` entry below. RuntimeCharacter does not currently expose or own temporary-effect state; see "Future design" at the end of this document.
+
+Emits `state_changed(reason)` after durable changes and `level_gained(new_level)`. Exposes `durable_snapshot(item_identity_snapshot)` as the only path to a serializable snapshot. ([ADR-011](../ADR/ADR-011-RUNTIME-CHARACTER-STATE.md))
 
 ### RuntimeEventBus (`scripts/runtime/runtime_event_bus.gd`)
 
@@ -68,7 +81,7 @@ A `Node`, constructed and owned by exactly one `RuntimeSession`. Not an autoload
 
 ### AbilityExecutor (`scripts/runtime/abilities/ability_executor.gd`)
 
-Owned one-per-session by `RuntimeSession`, constructed with that session's `RuntimeEventBus`. Cooldown state is keyed by build ID and ability ID inside the executor, so cooldowns stay isolated per session/build without any global map. Execution follows **validate → spend cost → start cooldown → execute effects**; a rejected attempt spends no resource and emits `ability_rejected` with an explicit reason, a successful attempt spends exactly once and emits `ability_cast`. ([ADR-013](../ADR/ADR-013-ABILITY-RESOURCE-ARCHITECTURE.md), [ADR-017](../ADR/ADR-017-ABILITY-EXECUTION-OWNERSHIP.md))
+Owned one-per-session by `RuntimeSession`, constructed with that session's `RuntimeEventBus`. **Ability cooldown runtime state lives here, not on `RuntimeCharacter`:** the executor's private `_runtimes` dictionary maps a `"<build_id>::<ability_id>"` key to an `AbilityRuntime` holding `cooldown_remaining`, so cooldowns stay isolated per build/ability without any global map and without `RuntimeCharacter` needing to know about them. `clear_build(build_id)` erases every runtime entry for a build. Execution follows **validate → spend cost → start cooldown → execute effects**; a rejected attempt spends no resource and emits `ability_rejected` with an explicit reason, a successful attempt spends exactly once and emits `ability_cast`. ([ADR-013](../ADR/ADR-013-ABILITY-RESOURCE-ARCHITECTURE.md), [ADR-017](../ADR/ADR-017-ABILITY-EXECUTION-OWNERSHIP.md))
 
 ### ItemCatalog / AffixCatalog (`scripts/runtime/items/item_catalog.gd`, `affix_catalog.gd`)
 
@@ -76,7 +89,9 @@ Immutable registries of `ItemDefinition`/`AffixDefinition`, keyed by stable ID (
 
 ### InventoryContainer (`scripts/runtime/items/inventory_container.gd`)
 
-One per bound character, constructed with a capacity and the session's `ItemIdentityService`. Owns `add_item`, `remove_instance`, `has_instance`, `find_instance`, `serialize`/`restore`. Emits `item_added`/`item_removed`. Rejects empty or duplicate live instance IDs on restore. ([ADR-014](../ADR/ADR-014-INVENTORY-EQUIPMENT-OWNERSHIP.md))
+One per bound character, constructed with a capacity and the session's `ItemIdentityService`. Owns `add_item`, `remove_instance`, `has_instance`, `find_instance`, `serialize`/`restore`. Emits `item_added`/`item_removed`.
+
+Both entry points reject empty or duplicate instance IDs, but by different rules: `add_item()` returns `false` without mutating the inventory when the incoming item's `instance_id` is empty or already exists in the live inventory (via `has_instance()`). `restore()` validates the entire incoming snapshot into a temporary array first and only replaces the current inventory if every entry passes — it returns `false` without touching the current inventory if the snapshot exceeds capacity, contains a non-`Dictionary` entry, contains an entry with an empty `instance_id`, or contains duplicate `instance_id`s within that same snapshot. ([ADR-014](../ADR/ADR-014-INVENTORY-EQUIPMENT-OWNERSHIP.md))
 
 ### EquipmentManager (`scripts/runtime/items/equipment_manager.gd`)
 
