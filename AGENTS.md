@@ -1,52 +1,60 @@
 # Agent Instructions
 
-This is the repository map for Codex, Claude Code, and any other coding agent working in AbyssFall. Keep this file concise — it points at deeper documents rather than repeating them. If something here conflicts with a linked document, the linked document (and the ADR it cites) wins; stop and flag the conflict instead of guessing.
+This is the repository map for Codex, Claude Code, and any other coding agent working in AbyssFall. Keep this file concise — it points at deeper documents rather than repeating them. If something here conflicts with a linked document, the linked document and the ADR it cites win; stop and flag the conflict instead of guessing.
 
-For contribution mechanics (branching, PR expectations, placeholder-art norms), see [`CONTRIBUTING.md`](CONTRIBUTING.md). For the full documentation tree and its index, see [`Docs/README.md`](Docs/README.md).
+For contribution mechanics, see [`CONTRIBUTING.md`](CONTRIBUTING.md). For the full documentation tree and its index, see [`Docs/README.md`](Docs/README.md).
 
 ## Project identity
 
 - **AbyssFall** — a dark-fantasy action dungeon crawler / ARPG.
 - **Engine:** Godot 4.4.1, GDScript.
-- **Current playable prototype:** Void Warlock v0.4 Hotfix 3 ("The Sunken Crypts"). The Penitent is the second class under active construction. See `PROJECT_OVERVIEW.md` and [`Docs/Design/CLASS_DESIGN.md`](Docs/Design/CLASS_DESIGN.md).
-- **Current architecture stage:** Stage 5 (deterministic procedural item generation) has merged into `stage3/equipment-runtime-foundation` (PR #35). See [`Docs/Roadmap/STAGE_5_LOOT_AFFIXES.md`](Docs/Roadmap/STAGE_5_LOOT_AFFIXES.md) for exact status.
+- **Current playable prototype:** Void Warlock v0.4 Hotfix 3 ("The Sunken Crypts"). The approved future class design that replaces this prototype is **Voidbringer**; the runtime compatibility ID remains `void_warlock` until a versioned migration is approved.
+- **The Penitent** is the second class under active construction.
+- **Current architecture stage:** Stage 5 deterministic procedural item generation is on `stage3/equipment-runtime-foundation`.
 
 ## Required reading order
 
 1. This file.
-2. [`Docs/Governance/ENGINEERING_CONSTITUTION.md`](Docs/Governance/ENGINEERING_CONSTITUTION.md) — the non-negotiable laws of this codebase.
-3. Any [`Docs/ADR/`](Docs/ADR/) entries relevant to the system you're touching.
-4. [`Docs/Architecture/ARCHITECTURE.md`](Docs/Architecture/ARCHITECTURE.md) — how the ADRs became actual runtime code.
-5. The relevant [`Docs/Standards/`](Docs/Standards/) document (`GDSCRIPT.md`, `TESTING.md`, `NAMING.md`, `DOCUMENTATION.md`).
-6. The current [`Docs/Roadmap/`](Docs/Roadmap/) stage document, so you know what's already in flight.
-7. If you are an AI contributor, also read [`Docs/Governance/AI_GUIDELINES.md`](Docs/Governance/AI_GUIDELINES.md) for your specific role's obligations. Claude Code specifically must also read [`CLAUDE.md`](CLAUDE.md).
+2. [`Docs/Governance/ENGINEERING_CONSTITUTION.md`](Docs/Governance/ENGINEERING_CONSTITUTION.md).
+3. Relevant [`Docs/ADR/`](Docs/ADR/) entries.
+4. [`Docs/Architecture/ARCHITECTURE.md`](Docs/Architecture/ARCHITECTURE.md).
+5. Relevant [`Docs/Standards/`](Docs/Standards/) documents.
+6. The current [`Docs/Roadmap/`](Docs/Roadmap/) stage document.
+7. Relevant gameplay-design documents under [`Docs/Design/`](Docs/Design/) and detailed approved character Codices under [`docs/codex/`](docs/codex/).
+8. AI contributors also read [`Docs/Governance/AI_GUIDELINES.md`](Docs/Governance/AI_GUIDELINES.md); Claude Code also reads [`CLAUDE.md`](CLAUDE.md).
 
-## Documentation map
+## Authority and ownership
 
 | Location | Owns |
 |---|---|
-| [`Docs/Governance/`](Docs/Governance/) | The rules: engineering laws and AI contributor roles. |
-| [`Docs/ADR/`](Docs/ADR/) | Approved architectural decisions — the source of truth for "why." |
-| [`Docs/Architecture/`](Docs/Architecture/) | What currently exists in code, derived from the ADRs. |
-| [`Docs/Design/`](Docs/Design/) | Gameplay/combat/itemization/class design. |
-| [`Docs/Lore/`](Docs/Lore/) | World and narrative lore. |
-| [`Docs/Standards/`](Docs/Standards/) | GDScript style, testing, naming, documentation conventions. |
-| [`Docs/Planning/`](Docs/Planning/) | Non-blocking tech debt and its severity/milestone. |
-| [`Docs/Roadmap/`](Docs/Roadmap/) | Stage-by-stage delivery plan and status. |
-| `design/` and `docs/` (repo root, lowercase) | Pre-existing detailed design/playtest/verification documents; still authoritative, not superseded by this structure. See [`Docs/README.md`](Docs/README.md) for the full index and a note on the casing overlap with `Docs/`. |
+| [`Docs/Governance/`](Docs/Governance/) | Engineering laws and AI contributor roles. |
+| [`Docs/ADR/`](Docs/ADR/) | Approved architectural decisions and the reason behind them. |
+| [`Docs/Architecture/`](Docs/Architecture/) | What currently exists in code. |
+| [`Docs/Design/`](Docs/Design/) | Project-level gameplay, combat, itemization and class direction. |
+| [`docs/codex/`](docs/codex/) | Approved detailed character design: exact skills, builds, items, presentation, encounters and narrative. |
+| [`Docs/Lore/`](Docs/Lore/) | Project-level world and narrative lore. |
+| [`Docs/Standards/`](Docs/Standards/) | GDScript, testing, naming and documentation conventions. |
+| [`Docs/Planning/`](Docs/Planning/) | Tracked technical debt. |
+| [`Docs/Roadmap/`](Docs/Roadmap/) | Delivery stages and current status. |
+
+The detailed character Codex is canonical **only for approved game design within that character's scope**. It does not override the Engineering Constitution, ADRs, existing runtime ownership or testing requirements. If an approved design requires architecture not covered by an ADR, stop and request an ADR before implementation.
+
+For Voidbringer work, read [`docs/codex/characters/voidbringer/README.md`](docs/codex/characters/voidbringer/README.md) and its audit resolutions before changing code or design.
 
 ## Running tests / CI
 
 Runtime and persistence regression suites run headlessly under Godot 4.4.1 and are wired into GitHub Actions:
 
-- [`.github/workflows/runtime-foundation-tests.yml`](.github/workflows/runtime-foundation-tests.yml) — runs every `scripts/runtime/tests/*.gd` suite.
-- [`.github/workflows/persistence-tests.yml`](.github/workflows/persistence-tests.yml) — runs `scripts/persistence/tests/test_save_manager.gd`.
+- [`.github/workflows/runtime-foundation-tests.yml`](.github/workflows/runtime-foundation-tests.yml)
+- [`.github/workflows/persistence-tests.yml`](.github/workflows/persistence-tests.yml)
 
-Full command reference, PASS-marker convention, and failure rules live in [`Docs/Standards/TESTING.md`](Docs/Standards/TESTING.md). Do not claim a fix works without actually running Godot headlessly.
+Full commands, PASS-marker rules and failure requirements live in [`Docs/Standards/TESTING.md`](Docs/Standards/TESTING.md). Do not claim a fix works without actually running Godot headlessly.
 
 ## Rules that apply to every agent
 
-- Do not bypass, reinterpret, or "simplify away" a rule stated in an ADR or in the Engineering Constitution. If a task seems to require that, stop and ask for an ADR instead of improvising architecture.
-- If your change alters a public system contract (a class's owned responsibilities, an ADR's rules, an event contract), update the relevant documentation in the same change. See [`Docs/Standards/DOCUMENTATION.md`](Docs/Standards/DOCUMENTATION.md).
-- Keep CI green. A red pipeline blocks merge; fix the cause, never the test's ability to detect it.
-- Keep feature work on separate branches and submit reviewable pull requests, one focused feature or fix per branch.
+- Do not bypass or reinterpret an ADR or the Engineering Constitution.
+- Do not silently contradict an approved character Codex. Propose and document the design change in the same PR.
+- Do not invent a new system owner, event bus, persistence field or cross-system dependency without an ADR when the existing decisions do not cover it.
+- If a public system contract changes, update its owning documentation and relevant playtest checklist in the same PR.
+- Keep CI green; fix the cause, never weaken the test.
+- Keep work on focused feature branches and submit reviewable pull requests.
