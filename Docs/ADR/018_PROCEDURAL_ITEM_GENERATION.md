@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for Stage 5 implementation.
+Accepted for Stage 5 implementation. Amended after independent architecture review to separate item identity from generation provenance.
 
 ## Decision
 
@@ -12,17 +12,31 @@ Procedural item generation is a pure runtime service built from explicit immutab
 - `AffixCatalog`
 - item level
 - rarity
-- seed
+- generation seed
+- unique item identity token
 
-`ItemGenerator` returns a complete `ItemInstance` or `null`. It never mutates inventory, equipment, persistence, catalogs, or character state.
+`ItemGenerator` returns a complete `ItemInstance` or `null`. It never mutates inventory, equipment, persistence, catalogs, characters, or the identity allocator.
+
+The generation seed determines item contents. The identity token determines which individual physical item the instance represents. Two calls may intentionally use identical generation inputs and produce identical contents, but each live item must receive a different identity token.
+
+## Identity ownership
+
+`RuntimeSession` owns one `ItemIdentityService` for the active build. Loot, crafting, vendors, stack splitting, and future item-creation services request identities from this service before creating a new physical item.
+
+The allocator uses the durable build ID as its scope and a monotonic sequence as its local identity source. Its next unused sequence is stored in `build_specific_progress.item_identity`. During legacy restoration, the service also observes restored inventory and equipment IDs before minting new ones.
+
+`InventoryContainer` rejects empty or duplicate live instance IDs. Persistence continues rejecting duplicate IDs during restoration.
 
 ## Consequences
 
-- Identical inputs produce identical serialized generated items.
+- Identical generation seed and item inputs produce identical rolled contents independently from identity.
+- Identical complete inputs, including the identity token, produce identical serialized generated items.
+- Two otherwise-identical physical items can coexist, save, and restore safely because their IDs differ.
+- The generation seed is serialized separately for provenance, replay verification, and debugging.
 - Loot tables and reward services may request generated items without owning affix logic.
 - Inventory and equipment continue consuming `ItemInstance` without knowing generation rules.
-- Persistence requires no new service boundary because rarity, item level, and rolled affixes are serialized by the item instance.
 - Generation failure is atomic and cannot leak a partial item.
+- Identity sequences may contain gaps when a valid creation attempt later fails; uniqueness is more important than contiguous numbering.
 
 ## Affix representation
 
@@ -39,4 +53,5 @@ This keeps equipment stat application compatible while preserving enough durable
 
 - Legendary powers use a separate effect-definition contract and are not encoded as ordinary stat modifiers.
 - Crafting mutation and affix reroll ownership will receive a separate ADR.
-- Network-authoritative seed ownership is deferred until multiplayer architecture begins.
+- Network authority will own identity minting when multiplayer architecture begins.
+- Affix pools may be pre-indexed when catalog scale or profiling justifies the optimization.
