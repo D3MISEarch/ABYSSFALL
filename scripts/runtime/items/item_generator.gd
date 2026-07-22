@@ -7,9 +7,12 @@ static func generate(
 	item_level: int,
 	rarity: LootRarity.Tier,
 	seed: int,
+	instance_id: String,
 	affix_catalog: AffixCatalog
 ) -> ItemInstance:
 	if definition == null or definition.definition_id == &"" or item_level < 1 or seed == 0:
+		return null
+	if instance_id.strip_edges().is_empty():
 		return null
 	if not LootRarity.is_valid(int(rarity)):
 		return null
@@ -19,9 +22,10 @@ static func generate(
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var item := ItemInstance.new(definition.definition_id, 1)
-	item.instance_id = "generated:%s:%s:%s:%s" % [seed, String(definition.definition_id), item_level, int(rarity)]
+	item.instance_id = instance_id
 	item.rarity = int(rarity)
 	item.item_level = item_level
+	item.generation_seed = seed
 
 	var ruleset: Dictionary = LootRarity.rules(rarity)
 	var minimum_affixes := int(ruleset.get("minimum_affixes", 0))
