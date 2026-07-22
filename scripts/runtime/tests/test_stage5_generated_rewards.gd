@@ -52,19 +52,21 @@ func _test_enemy_generated_loot_round_trip() -> void:
 	_expect(not bool(session.grant_enemy_rewards(enemy).get("granted", false)), "Generated rewards should remain exactly once")
 
 	var snapshot := session.durable_snapshot()
-	var identity_snapshot: Dictionary = snapshot.get("build_specific_progress", {}).get("item_identity", {})
+	var disk_snapshot := _json_round_trip(snapshot)
+	_expect(not disk_snapshot.is_empty(), "Durable snapshot should survive JSON serialization and parsing")
+	var identity_snapshot: Dictionary = disk_snapshot.get("build_specific_progress", {}).get("item_identity", {})
 	_expect(int(identity_snapshot.get("next_sequence", 0)) == 2, "Snapshot should persist the next unused item identity")
 	var reloaded_build := BuildData.from_dict(build.to_dict())
-	reloaded_build.level = int(snapshot.get("level", reloaded_build.level))
-	reloaded_build.experience = int(snapshot.get("experience", reloaded_build.experience))
-	reloaded_build.build_specific_progress = snapshot.get("build_specific_progress", {}).duplicate(true)
-	reloaded_build.equipped_gear = snapshot.get("equipped_gear", {}).duplicate(true)
+	reloaded_build.level = int(disk_snapshot.get("level", reloaded_build.level))
+	reloaded_build.experience = int(disk_snapshot.get("experience", reloaded_build.experience))
+	reloaded_build.build_specific_progress = disk_snapshot.get("build_specific_progress", {}).duplicate(true)
+	reloaded_build.equipped_gear = disk_snapshot.get("equipped_gear", {}).duplicate(true)
 	var reloaded_character := RuntimeCharacter.new()
 	reloaded_character.configure_from_build(reloaded_build)
 	var reloaded_session := RuntimeSession.new()
 	_expect(_register_item_and_affixes(reloaded_session, tags, slots, base_modifiers), "Reload reward data should register")
-	_expect(reloaded_session.bind_character(reloaded_character), "Reloaded generated inventory should bind")
-	_expect(reloaded_session.inventory.serialize() == session.inventory.serialize(), "Generated item rarity, level, identity, seed, and affixes should survive runtime reload")
+	_expect(reloaded_session.bind_character(reloaded_character), "JSON-reloaded generated inventory should bind")
+	_expect(reloaded_session.inventory.serialize() == session.inventory.serialize(), "Generated item rarity, level, identity, seed, and affixes should survive a real JSON round trip")
 
 	var repeated_enemy := _generated_enemy()
 	repeated_enemy.apply_damage(10.0)
@@ -78,22 +80,29 @@ func _test_enemy_generated_loot_round_trip() -> void:
 		_expect(repeated.generation_seed == generated.generation_seed, "Repeated deterministic reward should preserve matching provenance")
 		_expect(repeated.affixes == generated.affixes, "Repeated deterministic reward should preserve matching contents")
 	var second_snapshot := reloaded_session.durable_snapshot()
-	var second_identity_snapshot: Dictionary = second_snapshot.get("build_specific_progress", {}).get("item_identity", {})
+	var second_disk_snapshot := _json_round_trip(second_snapshot)
+	_expect(not second_disk_snapshot.is_empty(), "Two-item snapshot should survive JSON serialization and parsing")
+	var second_identity_snapshot: Dictionary = second_disk_snapshot.get("build_specific_progress", {}).get("item_identity", {})
 	_expect(int(second_identity_snapshot.get("next_sequence", 0)) == 3, "Allocator state should advance after the second item")
 
 	var final_build := BuildData.from_dict(reloaded_build.to_dict())
-	final_build.build_specific_progress = second_snapshot.get("build_specific_progress", {}).duplicate(true)
-	final_build.equipped_gear = second_snapshot.get("equipped_gear", {}).duplicate(true)
+	final_build.build_specific_progress = second_disk_snapshot.get("build_specific_progress", {}).duplicate(true)
+	final_build.equipped_gear = second_disk_snapshot.get("equipped_gear", {}).duplicate(true)
 	var final_character := RuntimeCharacter.new()
 	final_character.configure_from_build(final_build)
 	var final_session := RuntimeSession.new()
 	_expect(final_session.item_catalog.register(ItemDefinition.new(&"ritual_blade", "Ritual Blade", slots, 1, base_modifiers, tags)), "Final reload base item should register")
-	_expect(final_session.bind_character(final_character), "Save containing otherwise-identical generated items should remain restorable")
-	_expect(final_session.inventory.items.size() == 2, "Final reload should retain both unique physical items")
+	_expect(final_session.bind_character(final_character), "JSON save containing otherwise-identical generated items should remain restorable")
+	_expect(final_session.inventory.items.size() == 2, "Final JSON reload should retain both unique physical items")
 
 	session.free()
 	reloaded_session.free()
 	final_session.free()
+
+
+func _json_round_trip(data: Dictionary) -> Dictionary:
+	var parsed: Variant = JSON.parse_string(JSON.stringify(data))
+	return parsed if parsed is Dictionary else {}
 
 
 func _generated_enemy() -> EnemyRuntime:
