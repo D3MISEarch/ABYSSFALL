@@ -4,6 +4,8 @@
 
 **Documentation must change when a public system contract changes.** If your change alters what a class owns, what an ADR's rules require, what an event means, or what a save field contains, the change is not done until the relevant document is updated in the same pull request. See the Engineering Constitution's final law.
 
+**When a behavior change affects manual or graphical playtesting, update the relevant playtest checklist in the same pull request, in addition to updating the owning system document.** (e.g. `docs/v0.4-hotfix3/PLAYTEST_CHECKLIST.md`, `docs/PENITENT_PLAYTEST.md`, `docs/UI_PLAYTEST.md` — whichever checklist covers the affected class or system.) A system document describes the contract; the playtest checklist is what an independent verifier or the User actually walks through by hand, and it goes stale just as fast as any other documentation if a behavior change doesn't update it.
+
 ## Ownership by category
 
 Don't duplicate a rule in more than one document — link to the document that owns it instead.
