@@ -78,6 +78,9 @@ jobs:
           run_suite res://scripts/runtime/tests/test_stage34_equipment_stats.gd stage34-equipment-stats-test.log
           run_suite res://scripts/runtime/tests/test_stage34_rewards.gd stage34-rewards-test.log
           run_suite res://scripts/runtime/tests/test_stage34_vertical_slice.gd stage34-vertical-slice-test.log
+          run_suite res://scripts/runtime/tests/test_stage5_affix_catalog.gd stage5-affix-catalog-test.log
+          run_suite res://scripts/runtime/tests/test_stage5_item_generation.gd stage5-item-generation-test.log
+          run_suite res://scripts/runtime/tests/test_stage5_generated_rewards.gd stage5-generated-rewards-test.log
 
       - name: Upload runtime test logs
         if: always()
@@ -92,5 +95,8 @@ jobs:
             stage34-equipment-stats-test.log
             stage34-rewards-test.log
             stage34-vertical-slice-test.log
+            stage5-affix-catalog-test.log
+            stage5-item-generation-test.log
+            stage5-generated-rewards-test.log
           if-no-files-found: warn
           retention-days: 7

@@ -4,6 +4,8 @@ extends Node
 var event_bus: RuntimeEventBus
 var ability_executor: AbilityExecutor
 var item_catalog: ItemCatalog
+var affix_catalog: AffixCatalog
+var item_identity: ItemIdentityService
 var inventory: InventoryContainer
 var equipment: EquipmentManager
 var reward_service: EnemyRewardService
@@ -16,6 +18,8 @@ func _init() -> void:
 	add_child(event_bus)
 	ability_executor = AbilityExecutor.new(event_bus)
 	item_catalog = ItemCatalog.new()
+	affix_catalog = AffixCatalog.new()
+	item_identity = ItemIdentityService.new()
 	reward_service = EnemyRewardService.new()
 
 
@@ -27,15 +31,26 @@ func bind_character(runtime_character: RuntimeCharacter, inventory_capacity: int
 	if character == null:
 		inventory = null
 		equipment = null
+		item_identity.clear()
+		return false
+	if not item_identity.configure(character.build_id, character.pending_item_identity_snapshot()):
+		character = null
+		inventory = null
+		equipment = null
 		return false
 
-	var next_inventory := InventoryContainer.new(inventory_capacity)
+	var next_inventory := InventoryContainer.new(inventory_capacity, item_identity)
 	var next_equipment := EquipmentManager.new()
 	next_equipment.configure(item_catalog, character.stats)
 	if not character.attach_item_systems(next_inventory, next_equipment):
 		character = null
+		inventory = null
+		equipment = null
+		item_identity.clear()
 		return false
 
+	item_identity.observe_items(next_inventory.items)
+	item_identity.observe_equipment(next_equipment.equipped)
 	inventory = next_inventory
 	equipment = next_equipment
 	character.state_changed.connect(_on_character_state_changed)
@@ -54,7 +69,7 @@ func execute_ability(definition: AbilityDefinition) -> Dictionary:
 func grant_enemy_rewards(enemy: EnemyRuntime) -> Dictionary:
 	if character == null or inventory == null:
 		return {"granted": false, "experience": 0, "levels": 0, "loot": [], "rejected_loot": []}
-	var result := reward_service.grant(enemy, character, inventory, item_catalog)
+	var result := reward_service.grant(enemy, character, inventory, item_catalog, affix_catalog, item_identity)
 	if bool(result.get("granted", false)):
 		event_bus.enemy_killed.emit(enemy.enemy_id, character.build_id)
 		event_bus.experience_gained.emit(character.build_id, int(result.get("experience", 0)))
@@ -68,7 +83,7 @@ func tick_runtime(delta: float) -> void:
 
 
 func durable_snapshot() -> Dictionary:
-	return character.durable_snapshot() if character != null else {}
+	return character.durable_snapshot(item_identity.snapshot()) if character != null else {}
 
 
 func _disconnect_character(runtime_character: RuntimeCharacter) -> void:

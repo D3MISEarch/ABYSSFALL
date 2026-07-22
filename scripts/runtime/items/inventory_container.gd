@@ -6,14 +6,18 @@ signal item_removed(item: ItemInstance)
 
 var capacity: int = 24
 var items: Array[ItemInstance] = []
+var item_identity_service: ItemIdentityService
 
 
-func _init(p_capacity: int = 24) -> void:
+func _init(p_capacity: int = 24, p_item_identity_service: ItemIdentityService = null) -> void:
 	capacity = maxi(1, p_capacity)
+	item_identity_service = p_item_identity_service
 
 
 func add_item(item: ItemInstance, definition: ItemDefinition) -> bool:
 	if item == null or definition == null:
+		return false
+	if item.instance_id.is_empty() or has_instance(item.instance_id):
 		return false
 	if item.definition_id != definition.definition_id:
 		return false
@@ -53,6 +57,8 @@ func remove_instance(instance_id: String, quantity: int = 1) -> ItemInstance:
 			return existing
 		var removed := ItemInstance.from_dict(existing.to_dict())
 		removed.instance_id = _new_split_instance_id(existing.instance_id)
+		if removed.instance_id.is_empty():
+			return null
 		removed.quantity = quantity
 		existing.quantity -= quantity
 		item_removed.emit(removed)
@@ -96,6 +102,8 @@ func restore(serialized_items: Array) -> bool:
 
 
 func _new_split_instance_id(source_instance_id: String) -> String:
+	if item_identity_service != null:
+		return item_identity_service.mint()
 	return "%s:split:%s:%s:%s" % [
 		source_instance_id,
 		Time.get_ticks_usec(),
