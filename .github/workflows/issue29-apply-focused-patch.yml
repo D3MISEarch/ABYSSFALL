@@ -1,0 +1,88 @@
+name: Apply Issue 29 focused patch
+
+on:
+  push:
+    branches:
+      - fix/penitent-cli-smoke
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/penitent-cli-smoke
+          fetch-depth: 0
+
+      - name: Apply asserted focused replacements
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_exact(path: Path, old: str, new: str) -> None:
+              text = path.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one match in {path} but found {count}: {old!r}")
+              path.write_text(text.replace(old, new), encoding="utf-8")
+
+          boot = Path("scripts/boot.gd")
+          replace_exact(
+              boot,
+              "\tgameplay_root.requested_class_id = class_id\n\tadd_child(gameplay_root)\n",
+              "\tgameplay_root.requested_class_id = class_id\n\tadd_child(gameplay_root)\n\tprint(\"ABYSSFALL_CLASS_LAUNCHED:%s\" % class_id)\n",
+          )
+
+          workflow = Path(".github/workflows/godot-hotfix3-validation.yml")
+          replace_exact(
+              workflow,
+              "          echo \"Void Warlock smoke test completed with acceptable status $STATUS.\"\n",
+              "          if ! grep -Fq 'ABYSSFALL_CLASS_LAUNCHED:void_warlock' runtime-warlock.log; then\n            echo \"Void Warlock smoke test never confirmed that the requested class launched.\"\n            exit 1\n          fi\n\n          echo \"Void Warlock smoke test completed with acceptable status $STATUS.\"\n",
+          )
+          replace_exact(workflow, "      - name: Penitent placeholder runtime smoke test\n", "      - name: Penitent runtime smoke test\n")
+          replace_exact(workflow, "-- --class=penitent_placeholder", "-- --class=penitent")
+          replace_exact(workflow, "Godot reported a parser or runtime error in the Penitent placeholder path.", "Godot reported a parser or runtime error in the Penitent path.")
+          replace_exact(workflow, "Penitent placeholder runtime exited unexpectedly with status $STATUS.", "Penitent runtime exited unexpectedly with status $STATUS.")
+          replace_exact(
+              workflow,
+              "          echo \"Penitent placeholder smoke test completed with acceptable status $STATUS.\"\n",
+              "          if ! grep -Fq 'ABYSSFALL_CLASS_LAUNCHED:penitent' runtime-penitent.log; then\n            echo \"Penitent smoke test never confirmed that the requested class launched.\"\n            exit 1\n          fi\n\n          echo \"Penitent smoke test completed with acceptable status $STATUS.\"\n",
+          )
+
+          docs = Path("docs/CHARACTER_ARCHITECTURE.md")
+          replace_exact(
+              docs,
+              "The first architecture pass preserves the existing Void Warlock implementation and introduces a small shared contract around it. The Penitent is represented by a deliberately limited placeholder whose purpose is to prove that a second class can spawn, move, take damage, gain progression, expose a different resource, and bind to the existing level flow.",
+              "The first architecture pass preserves the existing Void Warlock implementation and introduces a small shared contract around it. The Penitent is represented by a deliberately limited playable prototype whose purpose is to prove that a second class can spawn, move, take damage, gain progression, expose a different resource, and bind to the existing level flow.",
+          )
+          replace_exact(docs, "- `penitent_placeholder`\n", "- `penitent`\n")
+          replace_exact(docs, "### Penitent placeholder\n", "### Penitent playable prototype\n")
+          replace_exact(
+              docs,
+              "`scripts/characters/penitent_placeholder.gd`\n`scripts/characters/penitent_character.gd`\n",
+              "`scripts/characters/penitent_playable.gd`\n",
+          )
+          replace_exact(docs, "The placeholder proves the architecture only. It contains:", "The playable prototype proves the architecture only. It contains:")
+          replace_exact(docs, "- Three placeholder skill branches\n", "- Three prototype skill branches\n")
+          replace_exact(docs, "- Red, black, bone, and neon-green placeholder geometry\n", "- Red, black, bone, and neon-green prototype geometry\n")
+          replace_exact(docs, "The placeholder Penitent can be launched through a user command-line argument:", "The Penitent prototype can be launched through a user command-line argument:")
+          replace_exact(docs, "godot --path . -- --class=penitent_placeholder", "godot --path . -- --class=penitent")
+          replace_exact(docs, "- Penitent placeholder can be instantiated through the factory.\n", "- Penitent can be instantiated through the factory with the canonical `penitent` ID.\n")
+          PY
+
+      - name: Commit focused changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/boot.gd .github/workflows/godot-hotfix3-validation.yml docs/CHARACTER_ARCHITECTURE.md
+          git diff --cached --check
+          git commit -m "fix: verify canonical Penitent CLI launch"
+          git push origin HEAD:fix/penitent-cli-smoke
