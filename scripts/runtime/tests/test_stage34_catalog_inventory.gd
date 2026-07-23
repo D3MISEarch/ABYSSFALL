@@ -96,7 +96,7 @@ func _test_partial_merge_failure_is_atomic() -> void:
 	_expect(item_added_events == 0 and item_removed_events == 0, "Failed partial merge must emit no inventory signals")
 
 	var oversize := _item(&"ember_shard", 21, identity)
-	var oversize_before := inventory.serialize()
+	var oversize_before: Array[Dictionary] = inventory.serialize()
 	_expect(not bool(inventory.add_item(oversize, definition)), "Oversize single-stack payload should be rejected")
 	_expect(inventory.serialize() == oversize_before and oversize.quantity == 21, "Oversize rejection must remain atomic")
 
@@ -124,7 +124,7 @@ func _test_identity_requirements_and_stack_splitting() -> void:
 	_expect(bool(inventory_without_identity.add_item(unsplittable, definition)), "Minted source stack should enter inventory without a split service")
 	inventory_without_identity.item_removed.connect(_on_item_removed)
 	item_removed_events = 0
-	var before := inventory_without_identity.serialize()
+	var before: Array[Dictionary] = inventory_without_identity.serialize()
 	_expect(inventory_without_identity.remove_instance(unsplittable.instance_id, 3) == null, "Partial removal without identity service should fail")
 	_expect(inventory_without_identity.serialize() == before, "Failed split should preserve original stack")
 	_expect(item_removed_events == 0, "Failed split should emit no removal signal")
@@ -134,7 +134,7 @@ func _test_identity_requirements_and_stack_splitting() -> void:
 	var splittable := _item(&"ember_shard", 7, split_identity)
 	_expect(splittable.instance_id == "item:split:1", "Source stack should use first monotonic identity")
 	_expect(bool(split_inventory.add_item(splittable, definition)), "Splittable stack should enter inventory")
-	var removed := split_inventory.remove_instance(splittable.instance_id, 3)
+	var removed: ItemInstance = split_inventory.remove_instance(splittable.instance_id, 3)
 	_expect(removed != null and removed.quantity == 3, "Configured split should return requested quantity")
 	if removed != null:
 		_expect(removed.instance_id == "item:split:2", "Split should mint the next monotonic identity")
