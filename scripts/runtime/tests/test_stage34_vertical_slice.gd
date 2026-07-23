@@ -69,7 +69,13 @@ func _test_kill_loot_equip_save_reload() -> void:
 	var persistence := PersistenceService.new()
 	persistence.active_build = build
 	_expect(persistence.apply_active_build_snapshot(session.durable_snapshot()), "Durable runtime snapshot should apply to persistence")
-	var reloaded_build := BuildData.from_dict(build.to_dict())
+	var parsed_build: Variant = JSON.parse_string(JSON.stringify(build.to_dict()))
+	_expect(parsed_build is Dictionary, "Durable build should survive a real JSON serialization and parse cycle")
+	if not parsed_build is Dictionary:
+		session.free()
+		persistence.free()
+		return
+	var reloaded_build := BuildData.from_dict(parsed_build)
 	var reloaded_character := RuntimeCharacter.new()
 	reloaded_character.configure_from_build(reloaded_build)
 	var reloaded_session := RuntimeSession.new()
