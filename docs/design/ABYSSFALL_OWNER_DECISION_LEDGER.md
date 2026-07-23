@@ -36,6 +36,13 @@ A pull-request merge by itself is not proof of owner approval. The decision ID a
 - **Authority not granted:** merge, gameplay implementation, scene changes, test changes, workflow changes, save-schema changes, or full-class production
 - **PR state requirement:** PR #40 remains draft and unmerged until a later explicit owner merge authorization
 
+### EVT-PR40-002 — Camera direction locked
+
+- **Owner response:** “Sick! Lets lock that in.”
+- **Decision ID:** `DEC-PR40-021`
+- **Authority granted:** canonical camera, framing, motion-comfort, accessibility, and graphical-prototype requirements
+- **Authority not granted:** camera-node changes, scene changes, input changes, test changes, workflow changes, implementation branches, or merge
+
 ---
 
 # 1. Product and tone decisions
@@ -119,6 +126,39 @@ AbyssFall combines four quality targets while remaining an original universe:
 4. **Deep action-RPG play:** responsive combat, meaningful loot, persistent progression, broad build diversity, class mastery, boss readability, and endgame depth are required. Complexity must produce real player choice rather than imitate another game’s passive tree, item economy, or skill structure.
 
 These references define ambition and quality, not content. Every mechanic, faction, region, class, boss, item, visual motif, and musical identity must be translated through AbyssFall’s own cosmology.
+
+## DEC-PR40-021 — Close cinematic isometric camera
+
+**Source:** explicit human-owner approval on 2026-07-23  
+**Owner selection:** LOCK THE CLOSE CINEMATIC ISOMETRIC CAMERA WITH RESTRAINED MOTION AND STRONG COMFORT CONTROLS  
+**Status:** **OWNER APPROVED AT DESIGN-FOUNDATION LEVEL**
+
+The approved camera identity is:
+
+- a three-quarter overhead isometric view;
+- lower and closer than the conventional practical camera of many modern ARPGs;
+- slightly behind and below the character to create physical presence and useful forward visibility;
+- close enough to appreciate armor, body transformation, enemy damage, executions, and environmental detail;
+- wide and stable enough to read packs, ranged threats, ground hazards, territory mechanics, and boss telegraphs;
+- Destiny-like embodiment translated into an isometric action RPG, without copying its first-person perspective, movement model, encounter design, or camera behavior.
+
+Motion-comfort law:
+
+- no camera roll;
+- no head bob;
+- no constant sway;
+- no rapid automatic rotation;
+- no continuous zoom pulsing;
+- no prolonged shake;
+- no routine camera takeover during executions;
+- smooth restrained pullback for dense combat and boss readability;
+- foreground obstruction must resolve through fade, dissolve, cutaway, or transparency;
+- player settings must include shake-off and dynamic-zoom-off alternatives.
+
+Exact distance, angle, field of view, damping, look-ahead, shake, pullback, and obstruction values remain graphical prototype outputs.
+
+**Canonical detail:** `ABYSSFALL_CAMERA_AND_COMBAT_PRESENTATION_CANONICAL.md`  
+**Implementation authority:** none until a separate bounded issue, branch, acceptance criteria, graphical playtest, and owner go-ahead exist.
 
 ---
 
@@ -471,5 +511,6 @@ Closed revision gates:
 11. Dark, abysmal, dread-heavy tone and originality rules encoded.
 12. Human-only owner-approval authority encoded.
 13. Focused second independent review completed and accepted.
+14. Close cinematic isometric camera, restrained-motion law, accessibility controls, and graphical prototype criteria encoded.
 
 PR #40 remains draft and must not be merged until the owner separately reviews the canonization diff and explicitly authorizes merge.
