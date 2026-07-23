@@ -4,7 +4,7 @@
 
 AbyssFall must support playable classes with fundamentally different combat loops without teaching the level controller about every ability or resource.
 
-The first architecture pass preserves the existing Void Warlock implementation and introduces a small shared contract around it. The Penitent is represented by a deliberately limited placeholder whose purpose is to prove that a second class can spawn, move, take damage, gain progression, expose a different resource, and bind to the existing level flow.
+The first architecture pass preserves the existing Void Warlock implementation and introduces a small shared contract around it. The Penitent is represented by a deliberately limited playable prototype whose purpose is to prove that a second class can spawn, move, take damage, gain progression, expose a different resource, and bind to the existing level flow.
 
 ## Current layers
 
@@ -37,7 +37,7 @@ The factory owns the class registry and creates a character by stable class ID. 
 Registered IDs:
 
 - `void_warlock`
-- `penitent_placeholder`
+- `penitent`
 
 Unknown IDs fall back to `void_warlock`.
 
@@ -49,21 +49,20 @@ The adapter inherits the validated v0.4 Warlock implementation and forwards the 
 
 The underlying Warlock combat, skills, inventory, items, and visuals remain untouched in this pass.
 
-### Penitent placeholder
+### Penitent playable prototype
 
-`scripts/characters/penitent_placeholder.gd`
-`scripts/characters/penitent_character.gd`
+`scripts/characters/penitent_playable.gd`
 
-The placeholder proves the architecture only. It contains:
+The playable prototype proves the architecture only. It contains:
 
 - Movement and dodge
 - Health and death
 - Fervor gain and spend
 - Soul pickup compatibility
 - Minimal inventory compatibility
-- Three placeholder skill branches
+- Three prototype skill branches
 - A debug Ritual Blade strike
-- Red, black, bone, and neon-green placeholder geometry
+- Red, black, bone, and neon-green prototype geometry
 
 It does not implement the final mark, sigil, chain, Sacrament, or health-substitution systems. Those belong to the Penitent gameplay vertical-slice task.
 
@@ -86,10 +85,10 @@ The original `scripts/main.gd` remains intact, minimizing regression risk.
 
 The default class remains the Void Warlock.
 
-The placeholder Penitent can be launched through a user command-line argument:
+The Penitent prototype can be launched through a user command-line argument:
 
 ```bash
-godot --path . -- --class=penitent_placeholder
+godot --path . -- --class=penitent
 ```
 
 This is a developer path only. The proper visual class-selection screen remains issue #4.
@@ -139,7 +138,7 @@ After this pass is validated:
 
 - Default game still starts as the Void Warlock.
 - Warlock behavior remains unchanged.
-- Penitent placeholder can be instantiated through the factory.
+- Penitent can be instantiated through the factory with the canonical `penitent` ID.
 - Both classes satisfy the shared contract.
 - The level controller binds health, resource, XP, inventory, skills, messages, and death through shared names.
 - Godot 4.4.1 editor/import validation passes.
