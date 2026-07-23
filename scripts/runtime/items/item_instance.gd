@@ -12,7 +12,6 @@ var durability: float = 1.0
 
 
 func _init(p_definition_id: StringName = &"", p_quantity: int = 1) -> void:
-	instance_id = "%s-%s" % [Time.get_unix_time_from_system(), randi()]
 	definition_id = p_definition_id
 	quantity = maxi(1, p_quantity)
 
@@ -32,7 +31,7 @@ func to_dict() -> Dictionary:
 
 static func from_dict(data: Dictionary) -> ItemInstance:
 	var item := ItemInstance.new(StringName(str(data.get("definition_id", ""))), int(data.get("quantity", 1)))
-	item.instance_id = str(data.get("instance_id", item.instance_id))
+	item.instance_id = str(data.get("instance_id", ""))
 	var serialized_rarity := int(data.get("rarity", LootRarity.Tier.NORMAL))
 	item.rarity = serialized_rarity if LootRarity.is_valid(serialized_rarity) else LootRarity.Tier.NORMAL
 	item.item_level = maxi(1, int(data.get("item_level", 1)))
