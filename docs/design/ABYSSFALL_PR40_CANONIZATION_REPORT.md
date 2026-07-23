@@ -5,6 +5,7 @@
 > Initial focused-review head: `aa316861d2ef42b5ecc06e266be0c8d3f36737a3`  
 > Independent focused-review verdict: **PASS**  
 > Human-owner acceptance: **“Accepted, keep working.”** on 2026-07-23  
+> Camera-direction approval: **“Sick! Lets lock that in.”** on 2026-07-23  
 > PR requirement: remain **draft and unmerged**
 
 ## 1. Purpose
@@ -51,6 +52,25 @@ Created as the normalized source for the material approved through PR #40:
 - implementation and canonization authority hierarchy;
 - explicit list of content not canonized.
 
+### `ABYSSFALL_CAMERA_AND_COMBAT_PRESENTATION_CANONICAL.md`
+
+Created after explicit owner approval to lock the camera direction:
+
+- close cinematic isometric player view;
+- lower and closer framing than conventional practical ARPG cameras;
+- Destiny-like physical presence translated into an isometric game, without copying its perspective or camera system;
+- player framed slightly below center with predictable movement and aim look-ahead;
+- smooth exploration, combat-density, and boss-distance states;
+- restrained execution emphasis;
+- fixed or strongly controlled normal orientation;
+- no head bob, camera roll, constant sway, rapid rotation, or continuous zoom pulsing;
+- comfort controls for shake, zoom, motion blur, distortion, flashes, VFX, and wider fixed framing;
+- foreground fade and environment-composition rules;
+- a ten-scenario graphical camera prototype matrix;
+- acceptance criteria for readability, embodiment, boss telegraphs, ranged play, obstruction, comfort, and motion-sickness prevention.
+
+Exact camera values remain prototype outputs rather than canonized numbers.
+
 ## 3. Canonized material
 
 The following is now owner-approved at the design-foundation level:
@@ -69,7 +89,8 @@ The following is now owner-approved at the design-foundation level:
 - Graftborn and Gorgon core identities;
 - multiple saved builds plus low-cost common-currency respec;
 - low-floor/high-ceiling class onboarding;
-- Graftborn as the first bounded new-class prototype direction.
+- Graftborn as the first bounded new-class prototype direction;
+- the close cinematic isometric camera and motion-comfort laws recorded in the canonical camera foundation.
 
 ## 4. Material that remains non-authoritative
 
@@ -86,6 +107,7 @@ The following remains proposed, revised, deferred, held, or otherwise outside im
 - final primary attributes;
 - final class-item-slot rules;
 - optional modifier modes such as Abyss Siege;
+- exact camera angle, distance, field of view, damping, shake amplitude, zoom thresholds, and obstruction values before graphical playtesting;
 - any new gameplay, scene, test, workflow, architecture, persistence, or save-schema change.
 
 All six new class bibles retain `_PROPOSED.md` status.
@@ -98,6 +120,7 @@ It does not:
 
 - alter gameplay code;
 - alter scenes or resources;
+- alter camera nodes;
 - alter tests;
 - alter workflows;
 - alter PR #24 history;
@@ -105,7 +128,7 @@ It does not:
 - merge PR #40;
 - mark PR #40 ready for review;
 - create implementation issues;
-- authorize a Graftborn code branch.
+- authorize a Graftborn or camera code branch.
 
 ## 6. Next gate
 
@@ -114,9 +137,10 @@ The human owner must review and accept the canonization diff before any merge au
 After eventual documentation merge, the project should return to its existing production sequence:
 
 1. finish the current Godot/runtime work already on the plate;
-2. run the structured Godot playtest;
-3. evaluate combat feel, progression, loot, usability, and technical stability;
-4. decide later whether production remains in Godot or migrates to Unreal;
-5. only then create a separately approved implementation brief for the Graftborn vertical slice.
+2. create a bounded graphical camera prototype plan using the canonical camera matrix;
+3. run the structured Godot playtest, including the camera-comfort scenarios;
+4. evaluate combat feel, camera presence, motion comfort, progression, loot, usability, and technical stability;
+5. decide later whether production remains in Godot or migrates to Unreal;
+6. only then create a separately approved implementation brief for the Graftborn vertical slice.
 
 No step in this report bypasses those gates.
