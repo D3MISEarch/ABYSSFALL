@@ -39,6 +39,8 @@ func configure_from_build(build: Variant) -> void:
 func attach_item_systems(p_inventory: InventoryContainer, p_equipment: EquipmentManager) -> bool:
 	if p_inventory == null or p_equipment == null:
 		return false
+	if not _pending_item_ownership_is_disjoint():
+		return false
 	if not p_inventory.restore(_pending_inventory_snapshot):
 		return false
 	if not p_equipment.restore(_pending_equipment_snapshot):
@@ -104,6 +106,24 @@ func durable_snapshot(item_identity_snapshot: Dictionary = {}) -> Dictionary:
 			"item_identity": serialized_identity,
 		},
 	}
+
+
+func _pending_item_ownership_is_disjoint() -> bool:
+	var inventory_ids: Dictionary = {}
+	for raw_item: Variant in _pending_inventory_snapshot:
+		if not raw_item is Dictionary:
+			continue
+		var instance_id := str(raw_item.get("instance_id", ""))
+		if not instance_id.is_empty():
+			inventory_ids[instance_id] = true
+	for raw_slot: Variant in _pending_equipment_snapshot:
+		var raw_equipped: Variant = _pending_equipment_snapshot.get(raw_slot)
+		if not raw_equipped is Dictionary:
+			continue
+		var instance_id := str(raw_equipped.get("instance_id", ""))
+		if not instance_id.is_empty() and inventory_ids.has(instance_id):
+			return false
+	return true
 
 
 func _apply_class_defaults() -> void:
