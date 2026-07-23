@@ -1033,11 +1033,11 @@ A perfectly timed activation against an incoming heavy hit:
 - Creates a temporary barrier
 - Causes the empowered release to originate from both the Voidbringer and the attacker’s anchor
 
-### Branch B: Vacancy
+### Branch B: Vacancy Field
 
 Hard Vacuum leaves behind an empty region for four seconds.
 
-The Vacancy:
+The Vacancy Field:
 
 - Continues pulling enemies
 - Slows projectiles
@@ -1046,9 +1046,9 @@ The Vacancy:
 
 #### Apex B: Nothing Escapes
 
-Collapsing an anchor inside the Vacancy:
+Collapsing an anchor inside the Vacancy Field:
 
-- Pulls the Vacancy into the collapse
+- Pulls the Vacancy Field into the collapse
 - Increases Collapse radius by 50%
 - Causes surviving enemies to be dragged back toward the empty point after the initial explosion
 
@@ -1344,7 +1344,7 @@ Each corpse:
 - Increases the next Collapse’s damage
 - Briefly strengthens the field’s pull
 
-#### Apex A: Common Grave
+#### Apex A: Grave Convergence
 
 When the field ends:
 
@@ -1673,7 +1673,7 @@ All shards combine into one unstable projectile.
 - Lower area coverage
 - Gains more benefit from Velocity Reserve
 
-#### Apex B: No Rest Frame
+#### Apex B: Simultaneous Vector
 
 The projectile exists simultaneously at several points along its path.
 
@@ -1727,7 +1727,7 @@ Defensive focus:
 - Orbiting shards intercept projectiles
 - Personal Mass decays more slowly
 
-#### Apex A: Unfallen Weight
+#### Apex A: Absolute Anchorage
 
 Prevented displacement becomes Personal Mass.
 
@@ -1737,7 +1737,7 @@ At maximum Personal Mass:
 - Heavy attacks create localized shockwaves
 - Movement speed is reduced by 15%
 
-### Branch B: Bone Orbit
+### Branch B: Shard Carapace
 
 Offensive focus:
 
@@ -1901,13 +1901,13 @@ Zero-Range Collapse:
 - Gains damage from nearby corpses
 - Reduces Instability based on enemies struck
 
-### Branch A: Living Singularity
+### Branch A: Inward Dominion
 
 The implosion remains centered on the player for two seconds.
 
 The Voidbringer can move slowly while enemies continue being dragged inward.
 
-#### Apex A: Devouring Center
+#### Apex A: All Roads Inward
 
 During the effect:
 
@@ -2062,7 +2062,7 @@ Dead Star creates a violent orbital system.
 - Periapsis and Tidal Lock gain additional orbital speed
 - Early detonation launches stored objects outward
 
-### Apex: Lightless Velocity
+### Apex: Terminal Redshift
 
 Every full orbit increases stored velocity.
 
@@ -2345,7 +2345,7 @@ Anchored enemies have:
 
 - 5% reduced movement-skill distance per rank
 
-### Heavy Silence
+### Muffled Violence
 
 Enemies actively being pulled deal:
 
@@ -2755,7 +2755,7 @@ In return:
 - The projectile cannot be destroyed during its first orbit
 - Closure releases all orbiting projectiles
 
-## Event Horizon + Hollow Form: Devouring Center
+## Event Horizon + Hollow Form: Null Nexus
 
 Requirements:
 
@@ -2847,7 +2847,7 @@ Critical anchors override all weaker anchors.
 
 Everything nearby is drawn toward the strongest point.
 
-### Mutation B: Shared Center
+### Mutation B: Composite Center
 
 Enemies caught between multiple anchors are drawn toward the network’s combined center.
 
@@ -3163,7 +3163,7 @@ Capture enemy projectiles, build several orbital systems and release everything 
 - Gravitic Skin: Containment route — 4
 - Mass Driver: Absolute Fist route — 4
 - Countermass: Standing Law route — 4
-- Zero-Range Collapse: Living Singularity route — 4
+- Zero-Range Collapse: Inward Dominion route — 4
 - Event Step: Exchange route — 4
 - Dead Star: Star Vessel route — 3
 
@@ -3179,7 +3179,7 @@ Active total: 23
 - Impact Body: 3
 - Law of Compression mutation and apex: 2
 - Living Singularity capstone: 1
-- Devouring Center keystone: 1
+- Null Nexus keystone: 1
 - Utility: 1
 
 Total: 57

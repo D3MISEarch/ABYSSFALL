@@ -649,11 +649,11 @@ This creates a build based on using positioning and movement as the actual weapo
 
 Enemy deaths near an anchor add Mass based on the enemy’s size.
 
-### Common Grave
+### Grave Convergence
 
 Collapsing one critical anchor pulls nearby anchors into the same event.
 
-### Heavy Silence
+### Muffled Violence
 
 Enemies being pulled cannot use movement abilities, but the Voidbringer’s own movement is reduced near critical anchors.
 
@@ -903,7 +903,7 @@ The Voidbringer permanently counts as a Mass Anchor.
 
 While stationary, personal Mass steadily increases. Moving releases it through the first impact made.
 
-### Bone Orbit
+### Shard Carapace
 
 Null Shards orbit closer to the body and damage enemies pulled into point-blank range.
 
@@ -984,7 +984,7 @@ Anchored enemies can be fired through Fold Lines as living projectiles.
 
 Enemy collision damage becomes a primary build strategy.
 
-## Devouring Center
+## Null Nexus
 ### Event Horizon + Hollow Form
 
 Ground anchors cannot be placed. The Voidbringer becomes the center point of every active Fold Line.
@@ -1307,7 +1307,7 @@ They deal increased damage based on how many Fold Lines they crossed, but the pl
 
 ### Event Cannibal
 
-Collapsing an anchor restores no Instability.
+Collapsing an anchor removes no Instability.
 
 Instead, the next anchor absorbs the collapsed anchor’s Mass and effects.
 

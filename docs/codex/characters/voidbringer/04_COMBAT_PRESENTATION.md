@@ -1290,7 +1290,7 @@ Collapse Core
 
 ### Slot 1
 
-Mass Brand — Terminal Brand
+Mass Brand — Carrier Brand
 
 ### Slot 2
 

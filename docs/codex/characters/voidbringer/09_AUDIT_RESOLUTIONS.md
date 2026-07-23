@@ -108,14 +108,14 @@ Other:
 
 - Law of Compression mutation and apex: 2
 - Living Singularity capstone: 1
-- Devouring Center hybrid keystone: 1
+- Null Nexus hybrid keystone: 1
 
 Discipline totals:
 
 - Hollow Form: 16 active + 22 passive = 38
 - Event Horizon: 8 passive = 8
 
-Devouring Center and the Hollow Form capstone are legal.
+Null Nexus and the Hollow Form capstone are legal.
 
 ## Kinetic Butcher
 
@@ -163,7 +163,7 @@ Catapult Doctrine and No Rest Frame are legal.
 
 ### Active and ultimate — 27
 
-- Mass Brand — Terminal Brand route: 4
+- Mass Brand — Carrier Brand route: 4
 - Crush Point — Internal Failure route: 4
 - Accretion Field — Grave Accretion route: 4
 - Hard Vacuum — Force Vault route: 4
@@ -364,6 +364,9 @@ The following duplicate or near-duplicate player-facing names are replaced befor
 | Dead Star Red Orbit apex: Lightless Velocity | Terminal Redshift | `vb.ultimate.dead_star.terminal_redshift` |
 | Law of Compression mutation: Shared Center | Composite Center | `vb.law.compression.composite_center` |
 | Hard Vacuum branch: Vacancy | Vacancy Field | `vb.skill.hard_vacuum.vacancy_field` |
+| Event Horizon + Hollow Form hybrid keystone: Devouring Center | Null Nexus | `vb.keystone.null_nexus` |
+
+Null Nexus is a follow-up correction: renaming the Zero-Range Collapse apex to All Roads Inward removed the literal duplicate, but the hybrid keystone kept the disputed name. It receives a fully distinct name rather than inheriting either side of the original collision. Its requirements, mechanics and point cost are unchanged from the keystone previously called Devouring Center.
 
 The unique items **Unfallen Weight** and **Lightless Velocity** retain their names.
 
@@ -436,7 +439,7 @@ The Empty Throne exists to grant the one-anchor build while allowing a different
 
 - Use **remove Instability**, not “restore Instability,” for Closure effects.
 - “Critical or higher” includes Terminal and Impossible.
-- The Devouring Center hybrid keystone treats the player as a valid geometry endpoint through the same player-endpoint rule established by Centered Architecture. It removes terrain-anchor placement, not all closed geometry.
+- The Null Nexus hybrid keystone (formerly named Devouring Center; see section 9) treats the player as a valid geometry endpoint through the same player-endpoint rule established by Centered Architecture. It removes terrain-anchor placement, not all closed geometry.
 - In balance documents, “Open or Overclocked containment” means **Open Harness or Overclocked Containment Core**; they are different equipment slots.
 - Trial levels are canonically 8, 14, 20, 26, 32, 38, 44 and 50.
 

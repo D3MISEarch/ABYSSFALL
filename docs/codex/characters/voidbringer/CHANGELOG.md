@@ -3,6 +3,16 @@
 Canonical class ID: `voidbringer`  
 Compatibility ID: `void_warlock`
 
+## 1.3 — 2026-07-22
+
+Status: Audit corrections folded into the numbered bibles
+
+- Fixed `09_AUDIT_RESOLUTIONS.md`'s One Final Point allocation: replaced the nonexistent "Mass Brand — Terminal Brand route" with the legal "Mass Brand — Carrier Brand route." Point total, discipline totals and capstone legality are unchanged.
+- Folded all ten approved renames from `09_AUDIT_RESOLUTIONS.md` § 9 directly into `01_CLASS_BIBLE.md` and `02_SKILL_TREE.md` as primary headings, including internal cross-references in sample builds. The old terms no longer appear as headings in either file.
+- Resolved the remaining Devouring Center naming collision: renamed the Event Horizon + Hollow Form hybrid keystone (previously sharing its name with the now-renamed Zero-Range Collapse apex) to **Null Nexus**, `vb.keystone.null_nexus`. Mechanics, requirements and point cost are unchanged. Recorded in `09_AUDIT_RESOLUTIONS.md` § 9.
+- Corrected a stray "restores" to "removes" in `01_CLASS_BIBLE.md`'s Event Cannibal entry to match the approved Collapse-taxonomy verb.
+- Added a `Docs/Planning/TECH_DEBT.md` tracking entry for the remaining `09_AUDIT_RESOLUTIONS.md` rules not yet folded into their owning numbered bibles.
+
 ## 1.2 — 2026-07-22
 
 Status: Approved shared-campaign integration
