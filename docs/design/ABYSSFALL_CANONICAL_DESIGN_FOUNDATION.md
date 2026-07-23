@@ -3,10 +3,11 @@
 > Status: **CANONICAL DESIGN FOUNDATION — OWNER APPROVED / PENDING PR #40 MERGE**  
 > Authority: `ABYSSFALL_OWNER_DECISION_LEDGER.md`  
 > Canonization authorization: owner acceptance of focused second-review PASS on 2026-07-23  
+> Camera-direction authority: `ABYSSFALL_CAMERA_AND_COMBAT_PRESENTATION_CANONICAL.md`  
 > Implementation authority: **NONE BY DEFAULT**  
-> Scope: product identity, creative north star, shared-world structure, campaign scale, naming, approved class cores, and explicit deferred or held boundaries
+> Scope: product identity, creative north star, shared-world structure, campaign scale, naming, approved class cores, camera identity, and explicit deferred or held boundaries
 
-This document normalizes only the portions of PR #40 that the human owner approved. It does not silently canonize the full campaign bible, every class-bible detail, final numbers, final itemization, final skill kits, or implementation architecture.
+This document normalizes only the portions of PR #40 that the human owner approved. It does not silently canonize the full campaign bible, every class-bible detail, final numbers, final itemization, final skill kits, exact camera values, or implementation architecture.
 
 ---
 
@@ -231,7 +232,7 @@ Reserved for later expansion or specialization work:
 
 Protected identity:
 
-- self-authored anatomy;
+- authored anatomy;
 - Biomass;
 - Body Regions;
 - Major Adaptations;
@@ -239,7 +240,7 @@ Protected identity:
 - Rupture;
 - deliberate bodily commitment rather than random mutation.
 
-Core approval does not canonize every skill, item, number, path, story name, or animation combination.
+This approves the class thesis and owned design territory. It does not canonize every proposed skill, item, number, path, lore name, or animation requirement.
 
 ## 7.2 Gorgon — approved core
 
@@ -252,101 +253,128 @@ Protected identity:
 - deliberate petrification;
 - Monument Pressure against bosses;
 - reflection and counterplay;
-- venom families distinct from Plaguebringer disease ecology.
+- venom families without disease ecology.
 
-Core approval does not authorize full implementation.
+This approves the class thesis and owned design territory. It does not authorize full production implementation.
 
----
+## 7.3 Revised or held classes
 
-# 8. Revised, deferred, and held class boundaries
+- **Somnarch:** revised pending territory and readability proof.
+- **Relic Host:** revised pending combat-tempo proof.
+- **Tidewrought:** revised pending arena-geometry and forced-movement proof.
+- **Anachron:** held pending a deterministic replay spike.
 
-## 8.1 Somnarch — revised pending prototype
-
-Not implementation-approved until a territory-readability prototype proves arena flexibility, telegraph visibility, controller clarity, beginner accessibility, and boss-safe Nightmare Pressure.
-
-## 8.2 Relic Host — revised pending prototype
-
-Not implementation-approved until a combat-tempo prototype proves that Council setup is long-term buildcraft, Presence rotation is fast and tactile, Memory Conditions reward active play, and possession never becomes menu administration, passive aura stacking, or loss of agency.
-
-## 8.3 Tidewrought — revised pending prototype
-
-Not implementation-approved until an arena-geometry prototype proves Current Lines function across varied spaces, forced movement preserves telegraphs, Pressure Fracture substitutes against resistant bosses, and pressure remains distinct from Voidbringer gravity.
-
-## 8.4 Anachron — held
-
-Anachron remains a preserved design candidate but is held from production implementation pending a deterministic replay spike.
-
-The spike must prove exactly-once damage, cost, cooldown, proc, death, and reward behavior; collision-safe movement; target validity; deterministic results; session isolation; and no restoration of destroyed world or boss state.
+Their proposed bibles remain valuable design candidates but are not implementation authority.
 
 ---
 
-# 9. Shared progression decisions
+# 8. Shared-system laws
 
-## 9.1 Respec
+## 8.1 Respec
 
 Approved direction:
 
 - multiple saved builds;
-- low-cost common-currency respec;
-- free or nearly free early experimentation;
-- understandable low endgame cost;
-- no bespoke respec currency at this stage;
-- no respec during combat;
-- no repetitive farming merely to correct or test a build.
+- early experimentation is free or nearly free;
+- later respec uses low-cost common progression currency;
+- no bespoke respec currency;
+- no repetitive farming merely to correct or test a build;
+- no respec during combat.
 
-## 9.2 Attributes — deferred
+## 8.2 Deferred primary attributes
 
 `Might / Finesse / Will / Vitality` remains placeholder language.
 
-No final attribute model, naming, scaling, equipment requirements, or character-sheet layout may be locked before itemization prototyping proves the model across multiple class fantasies.
+No final attributes, scaling model, equipment requirements, or character-sheet layout are approved before a focused itemization prototype proves their value across the roster.
 
-## 9.3 Class-item slot — deferred
+## 8.3 Deferred class-item-slot model
 
-No universal or bespoke class-item-slot model is approved.
+The project has not approved:
 
-The Graftborn vertical slice remains slot-agnostic and must test identity, UI, loot-table, save, and fairness costs before a global decision.
+- one universal class slot;
+- eight unrelated bespoke slot systems;
+- mandatory use of normal equipment slots;
+- removal of class-item concepts.
+
+The first Graftborn slice remains slot-agnostic.
 
 ---
 
-# 10. Beginner-accessibility law
-
-AbyssFall will not add a generic class merely to imitate another launch roster.
+# 9. Accessibility and mastery law
 
 Every class must provide:
 
 - a one-sentence beginner promise;
-- a simple starter loop;
+- a simple starter combat loop;
 - gradual introduction of secondary systems;
-- one viable starter build without external research;
-- readable boss interaction;
+- a viable starter build without external research;
+- readable boss behavior;
 - advanced mastery through sequencing, positioning, synergy, and build knowledge.
+
+AbyssFall will not add a generic warrior or elemental caster merely to satisfy a conventional roster checkbox.
 
 Complexity is allowed. Immediate administrative overload is not.
 
 ---
 
-# 11. Graftborn vertical-slice planning boundary
+# 10. Camera and player-view law
 
-Graftborn is approved as the first new-class prototype direction.
+AbyssFall uses a **close cinematic isometric camera** governed by `ABYSSFALL_CAMERA_AND_COMBAT_PRESENTATION_CANONICAL.md`.
 
-Bounded slice:
+The view is:
+
+- three-quarter overhead;
+- lower and closer than the conventional practical view of many modern isometric ARPGs;
+- slightly biased behind and below the character to create presence and useful forward visibility;
+- close enough to appreciate armor, body transformation, enemy damage, execution windows, and environmental detail;
+- wide and stable enough to read packs, ranged threats, ground hazards, territory mechanics, and boss telegraphs.
+
+The camera aims for Destiny-like physical presence translated into an isometric action RPG. This is a quality target for embodiment only, not permission to copy another game’s perspective, movement model, encounter framing, or camera behavior.
+
+Motion-comfort law:
+
+- no camera roll;
+- no head bob;
+- no constant sway;
+- no rapid automatic rotation;
+- no continuous zoom pulsing;
+- no prolonged shake;
+- no routine camera takeover during executions;
+- smooth restrained pullback for combat density and boss readability;
+- comfort controls including shake-off and dynamic-zoom-off modes.
+
+Exact camera angle, distance, field of view, damping, shake, pullback, and obstruction values remain graphical prototype outputs.
+
+---
+
+# 11. Bounded next prototypes
+
+## 11.1 Graftborn direction
+
+Approved for a future bounded implementation brief only:
 
 - Biomass;
-- Arms and Torso Body Regions only;
+- Arms and Torso regions;
 - two Major Adaptations per region;
 - Rupture application and consumption;
 - one Trauma Imprint;
 - one cross-path interaction;
 - one behavior-changing unique effect;
-- beginner tutorial and controller readability;
-- boss-safe Rupture behavior;
-- no assumption about a final class-item slot.
+- boss-safe Rupture;
+- beginner and controller readability;
+- slot-agnostic class-item handling.
 
-This unlocks an implementation brief and issue proposal only. It does not authorize code changes before a separate owner-approved implementation issue, target branch, acceptance criteria, architecture review, tests, and playtest gates exist.
+No code is authorized without a separate issue, acceptance criteria, branch, and owner go-ahead.
+
+## 11.2 Camera direction
+
+Approved for a future bounded graphical prototype plan using the camera foundation’s ten-scenario test matrix.
+
+No camera-node, scene, input, test, or workflow changes are authorized by this document alone.
 
 ---
 
-# 12. Canonization and authority rules
+# 12. Authority and production sequence
 
 Authority order:
 
@@ -356,32 +384,32 @@ Authority order:
 4. approved bounded implementation issue;
 5. code, assets, tests, and playtest evidence.
 
-The following do not independently authorize implementation:
+The current production sequence remains:
 
-- AI recommendations;
-- verifier reports;
-- chat summaries;
-- proposed documents;
-- unmerged drafts;
-- documentation merge by itself.
-
-Only the human owner may assign owner-approval status.
-
-Every implementation issue must cite exact approved decision IDs, bounded scope, acceptance criteria, target branch, architecture constraints, test obligations, and graphical playtest requirements.
+1. finish the current Godot/runtime work;
+2. prepare the bounded camera prototype plan;
+3. run the structured Godot playtest, including camera-presence and comfort scenarios;
+4. evaluate combat feel, progression, loot, camera comfort, usability, and stability;
+5. decide later whether production remains in Godot or migrates to Unreal;
+6. only then prepare the separately approved Graftborn implementation brief.
 
 ---
 
-# 13. Explicitly not canonized by this document
+# 13. Material not canonized by this foundation
 
-The following remain proposed, deferred, revised, held, or otherwise non-authoritative unless separately approved:
+This document does not canonize:
 
-- every unselected campaign detail in the proposed campaign bible;
-- final faction names, boss titles, quest outcomes, region layouts, and plot revelations;
-- final skill lists, values, cooldowns, costs, trees, keystones, item names, and unique effects for the new classes;
-- complete Graftborn or Gorgon implementation;
-- Somnarch, Relic Host, or Tidewrought production implementation;
-- Anachron production implementation;
-- final primary attributes;
+- every detail in `ABYSSFALL_CAMPAIGN_AND_SYSTEMS_BIBLE_PROPOSED.md`;
+- every skill, path, item, number, boss, faction, quest, ending, or lore title in the new class bibles;
+- final attributes;
 - final class-item-slot rules;
-- optional temporary-modifier modes such as Abyss Siege;
-- any gameplay, scene, test, workflow, persistence, or save-schema change not approved through its own process.
+- optional temporary-modifier modes;
+- full implementation of Graftborn or Gorgon;
+- implementation of Somnarch, Relic Host, or Tidewrought before their gates pass;
+- implementation of Anachron before its replay spike passes;
+- exact camera values before graphical playtesting;
+- any gameplay, scene, test, workflow, architecture, persistence, or save-schema change.
+
+All six new full class bibles remain `_PROPOSED.md` documents.
+
+PR #40 remains draft and unmerged until the human owner separately authorizes merge.
