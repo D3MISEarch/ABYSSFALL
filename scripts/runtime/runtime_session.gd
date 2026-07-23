@@ -24,35 +24,30 @@ func _init() -> void:
 
 
 func bind_character(runtime_character: RuntimeCharacter, inventory_capacity: int = 24) -> bool:
+	if runtime_character == null:
+		return false
+
+	var next_identity := ItemIdentityService.new()
+	if not next_identity.configure(runtime_character.build_id, runtime_character.pending_item_identity_snapshot()):
+		return false
+
+	var next_inventory := InventoryContainer.new(inventory_capacity, next_identity)
+	var next_equipment := EquipmentManager.new()
+	next_equipment.configure(item_catalog, null)
+	if not runtime_character.attach_item_systems(next_inventory, next_equipment):
+		return false
+
+	next_identity.observe_items(next_inventory.items)
+	next_identity.observe_equipment(next_equipment.equipped)
+
 	if character != null:
 		_disconnect_character(character)
 	_disconnect_item_systems()
 	character = runtime_character
-	if character == null:
-		inventory = null
-		equipment = null
-		item_identity.clear()
-		return false
-	if not item_identity.configure(character.build_id, character.pending_item_identity_snapshot()):
-		character = null
-		inventory = null
-		equipment = null
-		return false
-
-	var next_inventory := InventoryContainer.new(inventory_capacity, item_identity)
-	var next_equipment := EquipmentManager.new()
-	next_equipment.configure(item_catalog, character.stats)
-	if not character.attach_item_systems(next_inventory, next_equipment):
-		character = null
-		inventory = null
-		equipment = null
-		item_identity.clear()
-		return false
-
-	item_identity.observe_items(next_inventory.items)
-	item_identity.observe_equipment(next_equipment.equipped)
+	item_identity = next_identity
 	inventory = next_inventory
 	equipment = next_equipment
+	equipment.configure(item_catalog, character.stats)
 	character.state_changed.connect(_on_character_state_changed)
 	character.level_gained.connect(_on_character_level_gained)
 	inventory.item_added.connect(_on_inventory_changed)
