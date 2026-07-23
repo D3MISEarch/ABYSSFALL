@@ -1,6 +1,6 @@
 # Agent Instructions
 
-This is the repository map for Codex, Claude Code, and any other coding agent working in AbyssFall. Keep this file concise — it points at deeper documents rather than repeating them. If something here conflicts with a linked document, the linked document (and the ADR it cites) wins; stop and flag the conflict instead of guessing.
+This is the repository map for Codex, Claude Code, and any other coding agent working in AbyssFall. Keep this file concise — it points at deeper documents rather than repeating them. If something here conflicts with a linked document (and the ADR it cites), stop and flag the conflict instead of guessing.
 
 For contribution mechanics (branching, PR expectations, placeholder-art norms), see [`CONTRIBUTING.md`](CONTRIBUTING.md). For the full documentation tree and its index, see [`Docs/README.md`](Docs/README.md).
 
@@ -9,7 +9,7 @@ For contribution mechanics (branching, PR expectations, placeholder-art norms), 
 - **AbyssFall** — a dark-fantasy action dungeon crawler / ARPG.
 - **Engine:** Godot 4.4.1, GDScript.
 - **Current playable prototype:** Void Warlock v0.4 Hotfix 3 ("The Sunken Crypts"). The Penitent is the second class under active construction. See `PROJECT_OVERVIEW.md` and [`Docs/Design/CLASS_DESIGN.md`](Docs/Design/CLASS_DESIGN.md).
-- **Current architecture stage:** Stage 5 (deterministic procedural item generation) has merged into `stage3/equipment-runtime-foundation` (PR #35). See [`Docs/Roadmap/STAGE_5_LOOT_AFFIXES.md`](Docs/Roadmap/STAGE_5_LOOT_AFFIXES.md) for exact status.
+- **Current architecture stage:** Stages 3–5 (durable ARPG loop plus deterministic procedural item generation) are integrated on draft PR #34 and undergoing focused verification. See [`Docs/Roadmap/STAGE_3_4_GAMEPLAY_LOOP.md`](Docs/Roadmap/STAGE_3_4_GAMEPLAY_LOOP.md) and [`Docs/Roadmap/STAGE_5_LOOT_AFFIXES.md`](Docs/Roadmap/STAGE_5_LOOT_AFFIXES.md).
 
 ## Required reading order
 
@@ -39,7 +39,7 @@ For contribution mechanics (branching, PR expectations, placeholder-art norms), 
 
 Runtime and persistence regression suites run headlessly under Godot 4.4.1 and are wired into GitHub Actions:
 
-- [`.github/workflows/runtime-foundation-tests.yml`](.github/workflows/runtime-foundation-tests.yml) — runs every `scripts/runtime/tests/*.gd` suite.
+- [`.github/workflows/runtime-foundation-tests.yml`](.github/workflows/runtime-foundation-tests.yml) — runs every explicitly listed `scripts/runtime/tests/*.gd` suite.
 - [`.github/workflows/persistence-tests.yml`](.github/workflows/persistence-tests.yml) — runs `scripts/persistence/tests/test_save_manager.gd`.
 
 Full command reference, PASS-marker convention, and failure rules live in [`Docs/Standards/TESTING.md`](Docs/Standards/TESTING.md). Do not claim a fix works without actually running Godot headlessly.
