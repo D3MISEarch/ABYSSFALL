@@ -1,19 +1,15 @@
-name: Apply Issue 29 focused patch
+name: Export Issue 29 focused patch
 
 on:
-  push:
-    branches:
-      - fix/penitent-cli-smoke
   pull_request:
     branches:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply:
-    if: github.actor != 'github-actions[bot]'
+  export:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -79,13 +75,20 @@ jobs:
           replace_exact(docs, "- Penitent placeholder can be instantiated through the factory.\n", "- Penitent can be instantiated through the factory with the canonical `penitent` ID.\n")
           PY
 
-      - name: Commit focused changes
+      - name: Stage patched files
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts/boot.gd .github/workflows/godot-hotfix3-validation.yml docs/CHARACTER_ARCHITECTURE.md
-          git diff --cached --check
-          git commit -m "fix: verify canonical Penitent CLI launch"
-          git push origin HEAD:fix/penitent-cli-smoke
+          mkdir -p issue29-patched/.github/workflows issue29-patched/scripts issue29-patched/docs
+          cp .github/workflows/godot-hotfix3-validation.yml issue29-patched/.github/workflows/
+          cp scripts/boot.gd issue29-patched/scripts/
+          cp docs/CHARACTER_ARCHITECTURE.md issue29-patched/docs/
+
+      - name: Upload patched files
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue29-patched-files
+          path: issue29-patched
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
