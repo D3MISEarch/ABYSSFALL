@@ -1,4 +1,4 @@
-name: Build Issue 29 clean commit
+name: Build Issue 29 clean tree
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build-clean-commit:
+  build-clean-tree:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,45 +17,13 @@ jobs:
           ref: fix/penitent-cli-smoke
           fetch-depth: 0
 
-      - name: Apply asserted workflow replacements
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          def replace_exact(path: Path, old: str, new: str) -> None:
-              text = path.read_text(encoding="utf-8")
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"Expected exactly one match in {path} but found {count}: {old!r}")
-              path.write_text(text.replace(old, new), encoding="utf-8")
-
-          workflow = Path(".github/workflows/godot-hotfix3-validation.yml")
-          replace_exact(
-              workflow,
-              "          echo \"Void Warlock smoke test completed with acceptable status $STATUS.\"\n",
-              "          if ! grep -Fq 'ABYSSFALL_CLASS_LAUNCHED:void_warlock' runtime-warlock.log; then\n            echo \"Void Warlock smoke test never confirmed that the requested class launched.\"\n            exit 1\n          fi\n\n          echo \"Void Warlock smoke test completed with acceptable status $STATUS.\"\n",
-          )
-          replace_exact(workflow, "      - name: Penitent placeholder runtime smoke test\n", "      - name: Penitent runtime smoke test\n")
-          replace_exact(workflow, "-- --class=penitent_placeholder", "-- --class=penitent")
-          replace_exact(workflow, "Godot reported a parser or runtime error in the Penitent placeholder path.", "Godot reported a parser or runtime error in the Penitent path.")
-          replace_exact(workflow, "Penitent placeholder runtime exited unexpectedly with status $STATUS.", "Penitent runtime exited unexpectedly with status $STATUS.")
-          replace_exact(
-              workflow,
-              "          echo \"Penitent placeholder smoke test completed with acceptable status $STATUS.\"\n",
-              "          if ! grep -Fq 'ABYSSFALL_CLASS_LAUNCHED:penitent' runtime-penitent.log; then\n            echo \"Penitent smoke test never confirmed that the requested class launched.\"\n            exit 1\n          fi\n\n          echo \"Penitent smoke test completed with acceptable status $STATUS.\"\n",
-          )
-          PY
-
-      - name: Build unreferenced clean Git commit
+      - name: Create clean tree object
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import base64
           import json
           import os
           import subprocess
@@ -66,11 +34,11 @@ jobs:
           token = os.environ["GH_TOKEN"]
           api_root = f"https://api.github.com/repos/{repository}"
 
-          def api(method: str, path: str, payload: dict) -> dict:
+          def api(path: str, payload: dict) -> dict:
               request = urllib.request.Request(
                   api_root + path,
                   data=json.dumps(payload).encode("utf-8"),
-                  method=method,
+                  method="POST",
                   headers={
                       "Authorization": f"Bearer {token}",
                       "Accept": "application/vnd.github+json",
@@ -81,47 +49,24 @@ jobs:
               with urllib.request.urlopen(request) as response:
                   return json.loads(response.read().decode("utf-8"))
 
-          def create_blob(path: str) -> str:
-              encoded = base64.b64encode(Path(path).read_bytes()).decode("ascii")
-              return api("POST", "/git/blobs", {"content": encoded, "encoding": "base64"})["sha"]
-
-          parent = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
           base_tree = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip()
-
-          workflow_blob = create_blob(".github/workflows/godot-hotfix3-validation.yml")
-          boot_blob = create_blob("scripts/boot.gd")
-          docs_blob = create_blob("docs/CHARACTER_ARCHITECTURE.md")
-
-          expected_workflow_blob = "b318ebf376c821e10d7a0fae7c8e5bf98c7ab048"
-          expected_boot_blob = "19715a552ceed20977941a11711ec9feb79fc76a"
-          expected_docs_blob = "c466659c90526722683761b2cab43ca2e1991253"
-          actual = (workflow_blob, boot_blob, docs_blob)
-          expected = (expected_workflow_blob, expected_boot_blob, expected_docs_blob)
-          if actual != expected:
-              raise SystemExit(f"Blob verification failed. expected={expected} actual={actual}")
-
-          tree = api("POST", "/git/trees", {
+          tree = api("/git/trees", {
               "base_tree": base_tree,
               "tree": [
-                  {"path": ".github/workflows/godot-hotfix3-validation.yml", "mode": "100644", "type": "blob", "sha": workflow_blob},
-                  {"path": "scripts/boot.gd", "mode": "100644", "type": "blob", "sha": boot_blob},
-                  {"path": "docs/CHARACTER_ARCHITECTURE.md", "mode": "100644", "type": "blob", "sha": docs_blob},
+                  {"path": ".github/workflows/godot-hotfix3-validation.yml", "mode": "100644", "type": "blob", "sha": "b318ebf376c821e10d7a0fae7c8e5bf98c7ab048"},
+                  {"path": "scripts/boot.gd", "mode": "100644", "type": "blob", "sha": "19715a552ceed20977941a11711ec9feb79fc76a"},
+                  {"path": "docs/CHARACTER_ARCHITECTURE.md", "mode": "100644", "type": "blob", "sha": "c466659c90526722683761b2cab43ca2e1991253"},
                   {"path": ".github/workflows/issue29-apply-focused-patch.yml", "mode": "100644", "type": "blob", "sha": None},
               ],
           })
-          commit = api("POST", "/git/commits", {
-              "message": "fix: verify canonical Penitent CLI launch",
-              "tree": tree["sha"],
-              "parents": [parent],
-          })
-          Path("issue29-clean-commit.txt").write_text(commit["sha"] + "\n", encoding="utf-8")
-          print(f"Built clean unreferenced commit {commit['sha']}")
+          Path("issue29-clean-tree.txt").write_text(tree["sha"] + "\n", encoding="utf-8")
+          print(f"Built clean tree {tree['sha']}")
           PY
 
-      - name: Upload clean commit SHA
+      - name: Upload clean tree SHA
         uses: actions/upload-artifact@v4
         with:
-          name: issue29-clean-commit
-          path: issue29-clean-commit.txt
+          name: issue29-clean-tree
+          path: issue29-clean-tree.txt
           if-no-files-found: error
           retention-days: 1
