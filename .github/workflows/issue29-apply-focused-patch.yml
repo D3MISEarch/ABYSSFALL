@@ -1,4 +1,4 @@
-name: Export Issue 29 focused patch
+name: Build Issue 29 clean commit
 
 on:
   pull_request:
@@ -6,10 +6,10 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export:
+  build-clean-commit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,7 +17,7 @@ jobs:
           ref: fix/penitent-cli-smoke
           fetch-depth: 0
 
-      - name: Apply asserted focused replacements
+      - name: Apply asserted workflow replacements
         shell: bash
         run: |
           set -euo pipefail
@@ -30,13 +30,6 @@ jobs:
               if count != 1:
                   raise SystemExit(f"Expected exactly one match in {path} but found {count}: {old!r}")
               path.write_text(text.replace(old, new), encoding="utf-8")
-
-          boot = Path("scripts/boot.gd")
-          replace_exact(
-              boot,
-              "\tgameplay_root.requested_class_id = class_id\n\tadd_child(gameplay_root)\n",
-              "\tgameplay_root.requested_class_id = class_id\n\tadd_child(gameplay_root)\n\tprint(\"ABYSSFALL_CLASS_LAUNCHED:%s\" % class_id)\n",
-          )
 
           workflow = Path(".github/workflows/godot-hotfix3-validation.yml")
           replace_exact(
@@ -53,42 +46,82 @@ jobs:
               "          echo \"Penitent placeholder smoke test completed with acceptable status $STATUS.\"\n",
               "          if ! grep -Fq 'ABYSSFALL_CLASS_LAUNCHED:penitent' runtime-penitent.log; then\n            echo \"Penitent smoke test never confirmed that the requested class launched.\"\n            exit 1\n          fi\n\n          echo \"Penitent smoke test completed with acceptable status $STATUS.\"\n",
           )
-
-          docs = Path("docs/CHARACTER_ARCHITECTURE.md")
-          replace_exact(
-              docs,
-              "The first architecture pass preserves the existing Void Warlock implementation and introduces a small shared contract around it. The Penitent is represented by a deliberately limited placeholder whose purpose is to prove that a second class can spawn, move, take damage, gain progression, expose a different resource, and bind to the existing level flow.",
-              "The first architecture pass preserves the existing Void Warlock implementation and introduces a small shared contract around it. The Penitent is represented by a deliberately limited playable prototype whose purpose is to prove that a second class can spawn, move, take damage, gain progression, expose a different resource, and bind to the existing level flow.",
-          )
-          replace_exact(docs, "- `penitent_placeholder`\n", "- `penitent`\n")
-          replace_exact(docs, "### Penitent placeholder\n", "### Penitent playable prototype\n")
-          replace_exact(
-              docs,
-              "`scripts/characters/penitent_placeholder.gd`\n`scripts/characters/penitent_character.gd`\n",
-              "`scripts/characters/penitent_playable.gd`\n",
-          )
-          replace_exact(docs, "The placeholder proves the architecture only. It contains:", "The playable prototype proves the architecture only. It contains:")
-          replace_exact(docs, "- Three placeholder skill branches\n", "- Three prototype skill branches\n")
-          replace_exact(docs, "- Red, black, bone, and neon-green placeholder geometry\n", "- Red, black, bone, and neon-green prototype geometry\n")
-          replace_exact(docs, "The placeholder Penitent can be launched through a user command-line argument:", "The Penitent prototype can be launched through a user command-line argument:")
-          replace_exact(docs, "godot --path . -- --class=penitent_placeholder", "godot --path . -- --class=penitent")
-          replace_exact(docs, "- Penitent placeholder can be instantiated through the factory.\n", "- Penitent can be instantiated through the factory with the canonical `penitent` ID.\n")
           PY
 
-      - name: Stage patched files
+      - name: Build unreferenced clean Git commit
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          mkdir -p issue29-patched/.github/workflows issue29-patched/scripts issue29-patched/docs
-          cp .github/workflows/godot-hotfix3-validation.yml issue29-patched/.github/workflows/
-          cp scripts/boot.gd issue29-patched/scripts/
-          cp docs/CHARACTER_ARCHITECTURE.md issue29-patched/docs/
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import subprocess
+          import urllib.request
+          from pathlib import Path
 
-      - name: Upload patched files
+          repository = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          api_root = f"https://api.github.com/repos/{repository}"
+
+          def api(method: str, path: str, payload: dict) -> dict:
+              request = urllib.request.Request(
+                  api_root + path,
+                  data=json.dumps(payload).encode("utf-8"),
+                  method=method,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "Content-Type": "application/json",
+                  },
+              )
+              with urllib.request.urlopen(request) as response:
+                  return json.loads(response.read().decode("utf-8"))
+
+          def create_blob(path: str) -> str:
+              encoded = base64.b64encode(Path(path).read_bytes()).decode("ascii")
+              return api("POST", "/git/blobs", {"content": encoded, "encoding": "base64"})["sha"]
+
+          parent = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          base_tree = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip()
+
+          workflow_blob = create_blob(".github/workflows/godot-hotfix3-validation.yml")
+          boot_blob = create_blob("scripts/boot.gd")
+          docs_blob = create_blob("docs/CHARACTER_ARCHITECTURE.md")
+
+          expected_workflow_blob = "b318ebf376c821e10d7a0fae7c8e5bf98c7ab048"
+          expected_boot_blob = "19715a552ceed20977941a11711ec9feb79fc76a"
+          expected_docs_blob = "c466659c90526722683761b2cab43ca2e1991253"
+          actual = (workflow_blob, boot_blob, docs_blob)
+          expected = (expected_workflow_blob, expected_boot_blob, expected_docs_blob)
+          if actual != expected:
+              raise SystemExit(f"Blob verification failed. expected={expected} actual={actual}")
+
+          tree = api("POST", "/git/trees", {
+              "base_tree": base_tree,
+              "tree": [
+                  {"path": ".github/workflows/godot-hotfix3-validation.yml", "mode": "100644", "type": "blob", "sha": workflow_blob},
+                  {"path": "scripts/boot.gd", "mode": "100644", "type": "blob", "sha": boot_blob},
+                  {"path": "docs/CHARACTER_ARCHITECTURE.md", "mode": "100644", "type": "blob", "sha": docs_blob},
+                  {"path": ".github/workflows/issue29-apply-focused-patch.yml", "mode": "100644", "type": "blob", "sha": None},
+              ],
+          })
+          commit = api("POST", "/git/commits", {
+              "message": "fix: verify canonical Penitent CLI launch",
+              "tree": tree["sha"],
+              "parents": [parent],
+          })
+          Path("issue29-clean-commit.txt").write_text(commit["sha"] + "\n", encoding="utf-8")
+          print(f"Built clean unreferenced commit {commit['sha']}")
+          PY
+
+      - name: Upload clean commit SHA
         uses: actions/upload-artifact@v4
         with:
-          name: issue29-patched-files
-          path: issue29-patched
-          include-hidden-files: true
+          name: issue29-clean-commit
+          path: issue29-clean-commit.txt
           if-no-files-found: error
           retention-days: 1
