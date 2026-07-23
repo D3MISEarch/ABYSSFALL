@@ -25,6 +25,7 @@ Updated to:
 - mark the reconciled World-Lattice foundation structurally approved;
 - add the approved creative north star, including physical brutality, heavy soundtrack identity, dark campaign storytelling, and deep ARPG play;
 - identify Penitent as the Milestone A class-personal mission integration;
+- record `DEC-PR40-021`, the close cinematic isometric camera decision;
 - preserve all revised, deferred, and held boundaries;
 - mark the PR #40 revision gates closed while retaining the draft/no-merge requirement.
 
@@ -48,7 +49,8 @@ Created as the normalized source for the material approved through PR #40:
 - approved respec philosophy;
 - deferred attributes and class-item-slot model;
 - low-floor/high-ceiling accessibility law;
-- bounded Graftborn planning scope;
+- close cinematic isometric camera law;
+- bounded Graftborn and camera prototype planning scope;
 - implementation and canonization authority hierarchy;
 - explicit list of content not canonized.
 
