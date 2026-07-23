@@ -2,54 +2,105 @@
 
 ## Confirmed
 
-### Void Warlock (currently playable)
+### Void Warlock — current playable compatibility prototype
 
-- Fantasy: commands the hungry void. Ranged control and burst; gravity, portals, soul collection, summoning.
-- Resource: **Corruption** — living, parasitic, organic, wet, hungry. Collected and fed, not performed.
-- Visual language: obsidian black, abyss purple, sickly neon green.
-- Confirmed kit: Void Bolt, Shadow Step, Grasping Rift.
-- Preserve current Void Warlock gameplay unless a task explicitly requests a balance change — this was a standing project rule prior to this documentation restructuring and remains in force.
+- Current shipped/prototype fantasy: hungry-void ranged control and burst using Corruption, Void Bolt, Shadow Step and Grasping Rift.
+- Preserve current playable behavior until a replacement milestone explicitly changes it.
+- Persistent compatibility ID: `void_warlock`.
+- This prototype is **not** the approved future design authority for the class.
 
-Source: `PROJECT_OVERVIEW.md`, `README.md` (repository root).
+Sources: `PROJECT_OVERVIEW.md`, current runtime implementation and existing playtest documentation.
 
-### The Penitent (in active construction, second playable class)
+### Voidbringer — approved future replacement design
+
+- Canonical design identity: `voidbringer`.
+- Compatibility during migration: existing saves and class selection continue using `void_warlock` until a versioned migration is approved.
+- Fantasy: fused to a forbidden Manifold that assigns Mass, direction and valid location; controls physical relationships rather than casting generic void magic.
+- Core loop: **Anchor → Load → Bend → Collapse**.
+- Core systems: Mass Anchors, Fold Lines, Instability, Breach, Closure, Personal Mass and Velocity Reserve.
+- Disciplines: Event Horizon, Redshift and Hollow Form.
+- Complete approved specification: [`../../docs/codex/characters/voidbringer/README.md`](../../docs/codex/characters/voidbringer/README.md).
+
+The detailed Codex is canonical for Voidbringer's player-facing design. Engineering implementation remains subordinate to the Engineering Constitution, ADRs and current architecture.
+
+### The Penitent — active construction, second playable class
 
 - Fantasy: carve laws into flesh and force reality to obey them. Close-to-mid-range ritual combat; melee carves and completes magic rather than replacing it.
-- Resource: **Fervor** — performed and earned, not collected. Full specification: `design/FERVOR_SYSTEM_V1.md` (repository root).
-- Visual language: ritual black, blood-crimson sigils, neon venom-green corruption accents, bone/ivory mask.
-- Skill branches: Brands (spreading marks, echoed damage, chain reactions), Circles (battlefield geometry, bindings, traps), Sacrifice (health spending, lifesteal, mutation, power spikes).
-- Full class blueprint: `docs/PENITENT_CLASS.md` (repository root, lowercase `docs/`). Full item pool: `design/PENITENT_ITEM_POOL_V1.md`.
-
-Source: `PROJECT_OVERVIEW.md`, `docs/PENITENT_CLASS.md`, `design/FERVOR_SYSTEM_V1.md`.
+- Current implemented/prototype resource: **Fervor**.
+- Existing detailed sources: `design/FERVOR_SYSTEM_V1.md`, `docs/PENITENT_CLASS.md`, `design/PENITENT_ITEM_POOL_V1.md`.
+- The eventual full Penitent Codex must use the shared character-bible template and reconcile existing implementation before replacing it as authority.
 
 ### Shared architecture constraint
 
-Shared systems (`main.gd` and runtime infrastructure) must not assume every class casts projectiles, uses Corruption, or has the same HUD — the resource interface, ability execution pipeline, and stat pipeline are class-agnostic by design (see [`../Architecture/ARCHITECTURE.md`](../Architecture/ARCHITECTURE.md), [ADR-013](../ADR/ADR-013-ABILITY-RESOURCE-ARCHITECTURE.md)).
+Shared systems must not assume every class casts projectiles, uses Corruption, uses Fervor or shares one HUD. Resource interfaces, ability execution, event delivery, stat calculation and persistence must remain class-agnostic. See [`../Architecture/ARCHITECTURE.md`](../Architecture/ARCHITECTURE.md) and the relevant ADRs.
 
-### Visual identity direction
+### Shared campaign and character-arc constraint
 
-Dark reds, black, and neon green accents are the confirmed cross-class visual direction. This is consistent with, and slightly broadened by, the per-class palettes above (Penitent adds bone/ivory and blood-crimson; Void Warlock adds abyss purple as a class-specific accent alongside the shared black/neon-green language).
+AbyssFall has one shared world, one campaign timeline and one universal central conflict for every playable class.
 
-## Proposed
+Every class receives a personal journey layered through that campaign:
 
-The following classes are project direction, not yet represented in any repository design document, ADR, or roadmap stage. They are recorded here so agents don't rediscover or contradict them, but nothing about their mechanics is locked.
+- a class-specific origin,
+- mentor or specialist faction,
+- personal rivals,
+- trials and mechanic-unlock quests,
+- class-specific readings of shared regions and events,
+- and a mastery finale with local or personal consequences.
 
-### Void Warlock / Voidbringer direction
+Class stories do not become mutually incompatible replacement campaigns. Class antagonists are not automatically universal campaign villains, and class finales cannot erase shared regions, chronology or endgame infrastructure.
 
-A possible evolution or naming direction for the Void Warlock identity. Not yet reflected in `PROJECT_OVERVIEW.md`, `docs/PENITENT_CLASS.md`, or any ADR. Treat "Voidbringer" as a working label for future Void Warlock direction, not a confirmed second class.
+Binding narrative doctrine: [`../../docs/codex/SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](../../docs/codex/SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md).
 
-### Sigil Cultist
+### Approved full launch roster direction
 
-A third planned class concept, distinct from The Penitent. Emphasizes ritual/sigil magic combined with **selective** melee interaction — explicitly not a pure caster and not a blade-only archetype. Given the Penitent already occupies "ritual combat carved by melee," the Sigil Cultist's differentiation from the Penitent (resource, sigil mechanics, melee-selectivity rules) is undecided and should be resolved before implementation begins, to avoid the two classes converging on the same fantasy.
+The character Codex program will develop one class at a time to the Voidbringer depth standard:
 
-`PROJECT_OVERVIEW.md`'s class-selection design already anticipates this: future classes appear as chained silhouettes with a lore hint and unlock requirement, and "potential future archetypes remain intentionally undecided until the first two classes prove the shared architecture" — the Sigil Cultist is one candidate for that slot, not a committed one.
+1. Voidbringer
+2. Penitent
+3. Graftborn
+4. Somnarch
+5. Relic Host
+6. Gorgon
+7. Tidewrought
+8. Anachron
 
-## Open Questions
+Reserved for expansions or later specialization work:
 
-- How the Sigil Cultist differentiates its resource and melee rules from The Penitent's Fervor/Rite Mark system.
-- Whether "Voidbringer" is a rename, a mechanical evolution, or a separate future class from Void Warlock.
-- Timing: `PROJECT_OVERVIEW.md` explicitly defers deciding future archetypes until the Warlock/Penitent shared architecture is proven — no committed order exists yet for a third class.
+- Choirborn
+- Echo Thief
+- Plaguebringer
+
+Only Voidbringer currently has a complete approved Codex. Other roster entries remain design direction until their own folders are completed and approved.
+
+## Character-bible standard
+
+Every complete class must define:
+
+- fantasy and silhouette,
+- core verb and gameplay loop,
+- resource and advanced risk mechanic,
+- movement identity,
+- complete level progression and skill tree,
+- three freely mixable disciplines or paths,
+- build-changing upgrades, keystones and capstones,
+- equipment and unique-item interactions,
+- controls, HUD, animation, VFX and audio,
+- enemy and boss translations,
+- lore, quests and class-specific encounters,
+- shared campaign intersections,
+- a class mastery finale that preserves universal campaign continuity,
+- implementation, balance and verification contracts.
+
+Template: [`../../docs/codex/characters/CHARACTER_BIBLE_TEMPLATE.md`](../../docs/codex/characters/CHARACTER_BIBLE_TEMPLATE.md).
+
+## Open questions
+
+- Exact schedule for replacing the current Void Warlock prototype with the approved Voidbringer implementation.
+- Versioned migration from compatibility ID `void_warlock` to canonical ID `voidbringer`.
+- Which class receives the next full Codex after the Voidbringer foundation enters implementation.
+- Final universal campaign act structure, central antagonist and finale; these belong in a future shared campaign bible rather than any single class Codex.
 
 ## Deprecated
 
-None currently.
+- Treating “Voidbringer” as an undecided working label or separate class from Void Warlock. It is now the approved future replacement design, while `void_warlock` remains only the compatibility/prototype identity during migration.
+- Treating any class-specific journey as a replacement for the shared AbyssFall campaign.

@@ -39,3 +39,11 @@ Stop and ask for an explicit architectural decision — do not guess — when:
 - Two existing ADRs appear to conflict with each other, or with the code as it currently exists.
 
 Report the conflict plainly and wait for direction rather than picking a side yourself.
+
+## Detailed character Codex
+
+Before implementing or changing a playable class, read its approved detailed Codex in addition to the required engineering documents above. For Voidbringer, start with [`docs/codex/characters/voidbringer/README.md`](docs/codex/characters/voidbringer/README.md) and read `09_AUDIT_RESOLUTIONS.md` before the numbered bibles.
+
+The Codex specifies approved player-facing behavior; it does not authorize new architecture. Translate its requirements through the existing `RuntimeSession`, event, ability, equipment and persistence boundaries. If that translation requires a new system owner, global event bus, durable field or dependency not already covered by an ADR, stop and ask for an ADR.
+
+Do not use the current Void Warlock prototype as the future Voidbringer design authority. Preserve the `void_warlock` compatibility ID and existing playable behavior until a specific migration milestone changes them. When approved class behavior changes, update the affected Codex document and its `CHANGELOG.md` in the same pull request.

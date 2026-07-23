@@ -4,14 +4,14 @@ Index of AbyssFall's documentation tree. See [`../AGENTS.md`](../AGENTS.md) for 
 
 ```text
 Docs/
-├── README.md                     — this file
+├── README.md
 ├── Governance/
-│   ├── ENGINEERING_CONSTITUTION.md   — the 20 non-negotiable laws
-│   └── AI_GUIDELINES.md              — AI contributor roles and rules
+│   ├── ENGINEERING_CONSTITUTION.md
+│   └── AI_GUIDELINES.md
 ├── Architecture/
-│   └── ARCHITECTURE.md               — what currently exists in code
+│   └── ARCHITECTURE.md
 ├── Design/
-│   ├── GAMEPLAY_BIBLE.md              — pillars, index into design docs
+│   ├── GAMEPLAY_BIBLE.md
 │   ├── COMBAT.md
 │   ├── ITEMIZATION.md
 │   └── CLASS_DESIGN.md
@@ -24,20 +24,27 @@ Docs/
 │   └── DOCUMENTATION.md
 ├── Planning/
 │   └── TECH_DEBT.md
-├── ADR/                            — approved architectural decisions (preserved, unmodified)
-└── Roadmap/                        — stage-by-stage delivery plan (preserved, unmodified)
+├── ADR/
+└── Roadmap/
 ```
+
+## Detailed character design Codices
+
+Approved full-depth playable-class design lives under the pre-existing lowercase `docs/` tree until the dedicated casing-normalization migration is performed.
+
+- [`../docs/codex/README.md`](../docs/codex/README.md) — Codex scope and authority.
+- [`../docs/codex/characters/voidbringer/README.md`](../docs/codex/characters/voidbringer/README.md) — complete approved Voidbringer design.
+
+The character Codex owns exact game-design content inside its class: skills, progression, builds, items, presentation, encounter behavior and class narrative. It does **not** override Governance, ADRs, Architecture or Standards. A design that requires a new architecture decision must receive an ADR before implementation.
 
 ## Relationship to pre-existing documentation
 
-This structure was added to organize governance, architecture, design, and standards documentation that did not previously have a consistent home. It does **not** replace or supersede documentation that already existed:
+This structure organizes governance, architecture, design and standards material. It does not erase existing sources:
 
-- `Docs/ADR/` and `Docs/Roadmap/` are unchanged — every existing ADR and roadmap document is preserved exactly.
-- `design/` (repository root, lowercase) holds detailed, already-shipped design specs (`FERVOR_SYSTEM_V1.md`, `PENITENT_ITEM_POOL_V1.md`, `PENITENT_HUD_AND_CLASS_SELECT_V1.md`) that `Docs/Design/` documents link to rather than duplicate.
-- `docs/` (repository root, lowercase) holds playtest, verification, and handoff documentation (`PENITENT_CLASS.md`, `BASELINE_TEST_RESULTS.md`, `IMPLEMENTER_VERIFIER_HANDOFF.md`, `CLAUDE_VERIFIER_SETUP.md`, `VERIFICATION_REPORT_TEMPLATE.md`, `v0.4-hotfix3/`) that remains authoritative and is referenced from `Docs/Standards/` and `Docs/Governance/` rather than moved.
+- `Docs/ADR/` and `Docs/Roadmap/` remain the approved architectural and delivery records.
+- `design/` contains detailed existing design specs such as Penitent systems and item pools.
+- `docs/` contains playtest, verification and handoff documentation, and now the detailed character Codex.
 
 ## Known inconsistency: `docs/` vs. `Docs/`
 
-The repository's Git history contains two case-distinct top-level paths, `docs/` and `Docs/`. On a case-insensitive filesystem (e.g. Windows, default macOS) both resolve to the same folder, but Git itself tracks them as separate paths — on a case-sensitive filesystem (e.g. the Ubuntu runners used by this repository's own GitHub Actions workflows) they would appear as two distinct top-level directories. This predates this documentation restructuring and is called out here rather than silently fixed, because resolving it means moving a large number of already-referenced files (playtest checklists, verification templates, hotfix notes) and would risk breaking existing links from `.github/workflows/`, `AGENTS.md`, and other in-flight documentation. Recommended follow-up: a dedicated, narrowly-scoped cleanup task (Codex's role per [`Governance/AI_GUIDELINES.md`](Governance/AI_GUIDELINES.md)) that normalizes every reference before physically merging the two paths on a case-sensitive checkout.
-
-`Docs/ADR/` and `Docs/Roadmap/` themselves have no such duplication — both exist only under the capitalized `Docs/` path, consistent with the requirement not to create duplicate ADR or Roadmap directories with different capitalization.
+The repository tracks both case-distinct paths. On case-insensitive filesystems they may appear merged; on case-sensitive CI they are separate. The dedicated normalization work remains tracked in [`Planning/TECH_DEBT.md`](Planning/TECH_DEBT.md). Until that migration, do not perform partial case-only moves inside unrelated PRs; update links carefully and treat both trees according to the ownership map above.

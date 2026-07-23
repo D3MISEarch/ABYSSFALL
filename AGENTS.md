@@ -50,3 +50,11 @@ Full command reference, PASS-marker convention, and failure rules live in [`Docs
 - If your change alters a public system contract (a class's owned responsibilities, an ADR's rules, an event contract), update the relevant documentation in the same change. See [`Docs/Standards/DOCUMENTATION.md`](Docs/Standards/DOCUMENTATION.md).
 - Keep CI green. A red pipeline blocks merge; fix the cause, never the test's ability to detect it.
 - Keep feature work on separate branches and submit reviewable pull requests, one focused feature or fix per branch.
+
+## Detailed character Codex
+
+Approved full-depth character design is indexed under [`docs/codex/`](docs/codex/). It is canonical for player-facing design inside the documented class scope, but it does not override the Engineering Constitution, ADRs, Architecture, Standards, persistence ownership, or test requirements.
+
+Before changing a documented class, read its folder README and any audit-resolution document before the numbered bibles. For Voidbringer, begin at [`docs/codex/characters/voidbringer/README.md`](docs/codex/characters/voidbringer/README.md).
+
+If a Codex requirement implies a new owner, event bus, persistence field, session service, or cross-system dependency not covered by an ADR, stop and request an ADR rather than treating the Codex as architectural approval. Approved design changes must update the affected Codex document and class changelog in the same pull request.
