@@ -109,8 +109,9 @@ func _test_runtime_character_snapshot() -> void:
 	_expect(runtime.build_id == build.build_id, "Runtime character should bind to its build")
 	_expect(runtime.class_id == StringName(ClassIds.PENITENT), "Runtime character should retain canonical class ID")
 	_expect(is_equal_approx(float(runtime.current_health), 145.0), "Penitent runtime defaults should derive from level")
-	_expect(runtime.equipment.has("main_hand"), "Runtime character should restore equipment")
-	_expect(runtime.inventory.size() == 1, "Runtime character should restore inventory")
+	var pre_attach_snapshot: Dictionary = _call(runtime, &"durable_snapshot")
+	_expect(pre_attach_snapshot.get("equipped_gear", {}).has("main_hand"), "Runtime character should retain pending equipment until session attachment")
+	_expect(pre_attach_snapshot.get("build_specific_progress", {}).get("inventory", []).size() == 1, "Runtime character should retain pending inventory until session attachment")
 	_expect(runtime.unlocked_abilities.has(&"ashen_sigil"), "Runtime character should restore unlocked abilities")
 	var snapshot: Dictionary = _call(runtime, &"durable_snapshot")
 	_expect(snapshot.get("build_id", "") == build.build_id, "Durable snapshot should retain build ID")
@@ -129,13 +130,13 @@ func _test_runtime_persistence_round_trip() -> void:
 		return
 
 	build.build_specific_progress["existing_flag"] = true
+	build.equipped_gear["main_hand"] = {"definition_id": "faithbreaker", "instance_id": "test:faithbreaker", "quantity": 1}
+	build.build_specific_progress["inventory"] = [{"definition_id": "ember_shard", "instance_id": "test:ember_shard", "quantity": 3}]
+	build.skills["unlocked_abilities"] = ["brand_of_ruin"]
 	var runtime: Variant = RUNTIME_CHARACTER_SCRIPT.new()
 	_call(runtime, &"configure_from_build", [build])
 	runtime.level = 6
 	runtime.experience = 19
-	runtime.equipment["main_hand"] = {"definition_id": "faithbreaker"}
-	runtime.inventory.append({"definition_id": "ember_shard", "quantity": 3})
-	runtime.unlocked_abilities.append(&"brand_of_ruin")
 	var snapshot: Dictionary = _call(runtime, &"durable_snapshot")
 
 	_expect(bool(_call(service, &"apply_active_build_snapshot", [snapshot])), "Matching runtime snapshot should apply")
