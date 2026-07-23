@@ -21,26 +21,44 @@ func add_item(item: ItemInstance, definition: ItemDefinition) -> bool:
 		return false
 	if item.definition_id != definition.definition_id:
 		return false
+	if item.quantity <= 0 or item.quantity > definition.max_stack:
+		return false
+
+	var remaining := item.quantity
+	var merge_plan: Array[Dictionary] = []
 	if definition.max_stack > 1:
 		for existing: ItemInstance in items:
 			if existing.definition_id != item.definition_id:
 				continue
 			if existing.affixes != item.affixes or existing.durability != item.durability:
 				continue
-			var available: int = definition.max_stack - existing.quantity
+			var available := definition.max_stack - existing.quantity
 			if available <= 0:
 				continue
-			var moved: int = mini(available, item.quantity)
-			existing.quantity += moved
-			item.quantity -= moved
-			if item.quantity <= 0:
-				item_added.emit(existing)
-				return true
-	if items.size() >= capacity:
+			var moved := mini(available, remaining)
+			if moved <= 0:
+				continue
+			merge_plan.append({"item": existing, "quantity": moved})
+			remaining -= moved
+			if remaining <= 0:
+				break
+
+	if remaining > 0 and items.size() >= capacity:
 		return false
-	item.quantity = mini(item.quantity, definition.max_stack)
-	items.append(item)
-	item_added.emit(item)
+
+	for step: Dictionary in merge_plan:
+		var target: ItemInstance = step.get("item")
+		target.quantity += int(step.get("quantity", 0))
+
+	if remaining > 0:
+		item.quantity = remaining
+		items.append(item)
+		item_added.emit(item)
+		return true
+
+	item.quantity = 0
+	var final_target: ItemInstance = merge_plan[merge_plan.size() - 1].get("item")
+	item_added.emit(final_target)
 	return true
 
 
@@ -55,10 +73,11 @@ func remove_instance(instance_id: String, quantity: int = 1) -> ItemInstance:
 			items.remove_at(index)
 			item_removed.emit(existing)
 			return existing
-		var removed := ItemInstance.from_dict(existing.to_dict())
-		removed.instance_id = _new_split_instance_id(existing.instance_id)
-		if removed.instance_id.is_empty():
+		var split_instance_id := _new_split_instance_id()
+		if split_instance_id.is_empty():
 			return null
+		var removed := ItemInstance.from_dict(existing.to_dict())
+		removed.instance_id = split_instance_id
 		removed.quantity = quantity
 		existing.quantity -= quantity
 		item_removed.emit(removed)
@@ -95,18 +114,15 @@ func restore(serialized_items: Array) -> bool:
 		var item := ItemInstance.from_dict(raw_item)
 		if item.instance_id.is_empty() or seen_ids.has(item.instance_id):
 			return false
+		if item.definition_id == &"" or item.quantity <= 0:
+			return false
 		seen_ids[item.instance_id] = true
 		restored.append(item)
 	items = restored
 	return true
 
 
-func _new_split_instance_id(source_instance_id: String) -> String:
-	if item_identity_service != null:
-		return item_identity_service.mint()
-	return "%s:split:%s:%s:%s" % [
-		source_instance_id,
-		Time.get_ticks_usec(),
-		Time.get_unix_time_from_system(),
-		randi(),
-	]
+func _new_split_instance_id() -> String:
+	if item_identity_service == null:
+		return ""
+	return item_identity_service.mint()
