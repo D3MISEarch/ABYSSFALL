@@ -182,30 +182,40 @@ jobs:
             exit "$STATUS"
           fi
 
+          if ! grep -Fq 'ABYSSFALL_CLASS_LAUNCHED:void_warlock' runtime-warlock.log; then
+            echo "Void Warlock smoke test never confirmed that the requested class launched."
+            exit 1
+          fi
+
           echo "Void Warlock smoke test completed with acceptable status $STATUS."
 
-      - name: Penitent placeholder runtime smoke test
+      - name: Penitent runtime smoke test
         shell: bash
         run: |
           set -uo pipefail
           PROJECT_DIR="${{ steps.source.outputs.project_dir }}"
           set +e
-          timeout 20s godot --headless --path "$PROJECT_DIR" -- --class=penitent_placeholder > runtime-penitent.log 2>&1
+          timeout 20s godot --headless --path "$PROJECT_DIR" -- --class=penitent > runtime-penitent.log 2>&1
           STATUS=$?
           set -e
           cat runtime-penitent.log
 
           if grep -Eiq 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' runtime-penitent.log; then
-            echo "Godot reported a parser or runtime error in the Penitent placeholder path."
+            echo "Godot reported a parser or runtime error in the Penitent path."
             exit 1
           fi
 
           if [[ "$STATUS" -ne 0 && "$STATUS" -ne 124 ]]; then
-            echo "Penitent placeholder runtime exited unexpectedly with status $STATUS."
+            echo "Penitent runtime exited unexpectedly with status $STATUS."
             exit "$STATUS"
           fi
 
-          echo "Penitent placeholder smoke test completed with acceptable status $STATUS."
+          if ! grep -Fq 'ABYSSFALL_CLASS_LAUNCHED:penitent' runtime-penitent.log; then
+            echo "Penitent smoke test never confirmed that the requested class launched."
+            exit 1
+          fi
+
+          echo "Penitent smoke test completed with acceptable status $STATUS."
 
       - name: Build independent-verifier handoff package
         if: success() && github.event_name == 'pull_request'
