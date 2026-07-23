@@ -5,6 +5,7 @@ const VALID_SLOTS: Array[StringName] = [
 	&"head", &"chest", &"gloves", &"boots", &"belt", &"amulet",
 	&"ring_left", &"ring_right", &"main_hand", &"off_hand",
 ]
+const TWO_HANDED_TAG := &"two_handed"
 
 signal equipment_changed(slot_id: StringName, equipped: ItemInstance, unequipped: ItemInstance)
 
@@ -20,15 +21,7 @@ func configure(p_item_catalog: ItemCatalog, p_stat_block: StatBlock) -> void:
 
 
 func can_equip(slot_id: StringName, item: ItemInstance, allowed_slots: Array[StringName] = []) -> bool:
-	if slot_id not in VALID_SLOTS or item == null or item.quantity != 1:
-		return false
-	var resolved_slots := allowed_slots
-	if item_catalog != null:
-		var definition: ItemDefinition = item_catalog.get_definition(item.definition_id)
-		if definition == null:
-			return false
-		resolved_slots = definition.equipment_slots
-	return slot_id in resolved_slots
+	return _can_equip_in_state(slot_id, item, equipped, allowed_slots)
 
 
 func equip(slot_id: StringName, item: ItemInstance, allowed_slots: Array[StringName] = []) -> ItemInstance:
@@ -63,7 +56,7 @@ func restore(serialized_equipment: Dictionary) -> bool:
 		if not raw_item is Dictionary:
 			return false
 		var item := ItemInstance.from_dict(raw_item)
-		if not can_equip(slot_id, item):
+		if not _can_equip_in_state(slot_id, item, restored):
 			return false
 		restored[slot_id] = item
 	equipped = restored
@@ -88,6 +81,52 @@ func serialize() -> Dictionary:
 		var item: ItemInstance = equipped[slot_id]
 		result[String(slot_id)] = item.to_dict()
 	return result
+
+
+func _can_equip_in_state(
+	slot_id: StringName,
+	item: ItemInstance,
+	state: Dictionary,
+	allowed_slots: Array[StringName] = []
+) -> bool:
+	if slot_id not in VALID_SLOTS or item == null or item.quantity != 1:
+		return false
+	if item.instance_id.is_empty():
+		return false
+
+	var resolved_slots := allowed_slots
+	var definition: ItemDefinition = null
+	if item_catalog != null:
+		definition = item_catalog.get_definition(item.definition_id)
+		if definition == null:
+			return false
+		resolved_slots = definition.equipment_slots
+	if slot_id not in resolved_slots:
+		return false
+
+	for existing_slot: Variant in state:
+		var existing: ItemInstance = state.get(existing_slot)
+		if existing != null and existing.instance_id == item.instance_id:
+			return false
+
+	if definition != null and TWO_HANDED_TAG in definition.tags:
+		if slot_id != &"main_hand":
+			return false
+		if state.get(&"off_hand") != null:
+			return false
+
+	if slot_id == &"off_hand":
+		var main_hand: ItemInstance = state.get(&"main_hand")
+		if main_hand != null and _item_has_tag(main_hand, TWO_HANDED_TAG):
+			return false
+	return true
+
+
+func _item_has_tag(item: ItemInstance, tag: StringName) -> bool:
+	if item_catalog == null or item == null:
+		return false
+	var definition := item_catalog.get_definition(item.definition_id)
+	return definition != null and tag in definition.tags
 
 
 func _apply_item_modifiers(item: ItemInstance, slot_override: StringName = &"") -> void:
