@@ -1,9 +1,8 @@
 name: Apply live projection payload
 
 on:
-  push:
-    branches:
-      - feature/issue46b-graphical-class-tree
+  pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - ".github/workflows/apply-live-projection.yml"
       - "tools/apply_live_projection.py"
@@ -13,11 +12,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: apply-live-projection-${{ github.ref }}
+  group: apply-live-projection-${{ github.event.pull_request.head.ref }}
   cancel-in-progress: false
 
 jobs:
   apply:
+    if: github.event.pull_request.head.ref == 'feature/issue46b-graphical-class-tree'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
