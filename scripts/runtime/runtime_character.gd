@@ -20,6 +20,7 @@ var unlocked_abilities: Array[StringName] = []
 var _pending_inventory_snapshot: Array[Dictionary] = []
 var _pending_equipment_snapshot: Dictionary = {}
 var _pending_item_identity_snapshot: Dictionary = {}
+var _pending_class_tree_snapshot: Dictionary = {}
 
 
 func configure_from_build(build: Variant) -> void:
@@ -31,6 +32,7 @@ func configure_from_build(build: Variant) -> void:
 	_pending_equipment_snapshot = build.equipped_gear.duplicate(true)
 	_pending_inventory_snapshot = _inventory_from_progress(build.build_specific_progress)
 	_pending_item_identity_snapshot = _item_identity_from_progress(build.build_specific_progress)
+	_pending_class_tree_snapshot = build.class_tree_state.duplicate(true)
 	unlocked_abilities = _abilities_from_skills(build.skills)
 	_apply_class_defaults()
 	current_health = stats.get_value(&"max_health", 100.0)
@@ -52,6 +54,10 @@ func attach_item_systems(p_inventory: InventoryContainer, p_equipment: Equipment
 
 func pending_item_identity_snapshot() -> Dictionary:
 	return _pending_item_identity_snapshot.duplicate(true)
+
+
+func pending_class_tree_snapshot() -> Dictionary:
+	return _pending_class_tree_snapshot.duplicate(true)
 
 
 func gain_experience(amount: int) -> int:
@@ -86,7 +92,7 @@ func is_dead() -> bool:
 	return current_health <= 0.0
 
 
-func durable_snapshot(item_identity_snapshot: Dictionary = {}) -> Dictionary:
+func durable_snapshot(item_identity_snapshot: Dictionary = {}, class_tree_snapshot: Dictionary = {}) -> Dictionary:
 	var serialized_abilities: Array[String] = []
 	for ability_id: StringName in unlocked_abilities:
 		serialized_abilities.append(String(ability_id))
@@ -95,12 +101,16 @@ func durable_snapshot(item_identity_snapshot: Dictionary = {}) -> Dictionary:
 	var serialized_identity := _pending_item_identity_snapshot.duplicate(true)
 	if not item_identity_snapshot.is_empty():
 		serialized_identity = item_identity_snapshot.duplicate(true)
+	var serialized_class_tree := _pending_class_tree_snapshot.duplicate(true)
+	if not class_tree_snapshot.is_empty():
+		serialized_class_tree = class_tree_snapshot.duplicate(true)
 	return {
 		"build_id": build_id,
 		"level": level,
 		"experience": experience,
 		"equipped_gear": serialized_equipment,
 		"skills": {"unlocked_abilities": serialized_abilities},
+		"class_tree_state": serialized_class_tree,
 		"build_specific_progress": {
 			"inventory": serialized_inventory,
 			"item_identity": serialized_identity,

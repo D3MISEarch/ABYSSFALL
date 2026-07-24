@@ -9,6 +9,8 @@ signal item_equipped(build_id: String, slot_id: StringName, item_instance_id: St
 signal enemy_killed(enemy_id: StringName, killer_build_id: String)
 signal experience_gained(build_id: String, amount: int)
 signal level_gained(build_id: String, new_level: int)
+signal class_point_awarded(build_id: String, source_id: String, amount: int, available_points: int)
+signal class_node_purchased(build_id: String, node_id: StringName, rank: int, cost: int, available_points: int)
 signal save_requested(build_id: String, reason: StringName)
 
 
