@@ -10,6 +10,7 @@ on:
       - "scripts/multiclass_main.gd"
       - "scripts/persistence/**"
       - "tests/test_persistent_level_flow.gd"
+      - "tests/test_class_tree_navigation.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   push:
@@ -23,6 +24,7 @@ on:
       - "scripts/multiclass_main.gd"
       - "scripts/persistence/**"
       - "tests/test_persistent_level_flow.gd"
+      - "tests/test_class_tree_navigation.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   workflow_dispatch:
@@ -68,6 +70,20 @@ jobs:
             exit 1
           fi
 
+      - name: Run class-tree navigation regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_class_tree_navigation.gd 2>&1 | tee class-tree-navigation-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' class-tree-navigation-tests.log; then
+            echo "Class-tree navigation regression failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Class tree navigation model' class-tree-navigation-tests.log; then
+            echo "Missing class-tree navigation PASS marker."
+            exit 1
+          fi
+
       - name: Run playable class smoke paths
         shell: bash
         run: |
@@ -100,6 +116,7 @@ jobs:
           name: persistent-level-flow-logs
           path: |
             persistent-level-flow-tests.log
+            class-tree-navigation-tests.log
             runtime-void_warlock.log
             runtime-penitent.log
           if-no-files-found: warn
