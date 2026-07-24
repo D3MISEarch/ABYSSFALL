@@ -13,6 +13,7 @@ on:
       - "tests/test_class_tree_navigation.gd"
       - "tests/test_class_tree_screen.gd"
       - "tests/test_playable_combat_projection.gd"
+      - "tests/test_playable_inventory_persistence.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   push:
@@ -29,6 +30,7 @@ on:
       - "tests/test_class_tree_navigation.gd"
       - "tests/test_class_tree_screen.gd"
       - "tests/test_playable_combat_projection.gd"
+      - "tests/test_playable_inventory_persistence.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   workflow_dispatch:
@@ -116,6 +118,20 @@ jobs:
             exit 1
           fi
 
+      - name: Run player-controlled inventory regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_playable_inventory_persistence.gd 2>&1 | tee playable-inventory-persistence-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' playable-inventory-persistence-tests.log; then
+            echo "Player-controlled inventory regression failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Player-controlled durable inventory' playable-inventory-persistence-tests.log; then
+            echo "Missing player-controlled inventory PASS marker."
+            exit 1
+          fi
+
       - name: Run playable class smoke paths
         shell: bash
         run: |
@@ -151,6 +167,7 @@ jobs:
             class-tree-navigation-tests.log
             class-tree-screen-tests.log
             playable-combat-projection-tests.log
+            playable-inventory-persistence-tests.log
             runtime-void_warlock.log
             runtime-penitent.log
           if-no-files-found: warn
