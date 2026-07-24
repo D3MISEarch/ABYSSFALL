@@ -71,9 +71,10 @@ func _test_rebind_disconnects_previous_character() -> void:
 	session.bind_character(character_a)
 	var inventory_a := session.inventory
 	var equipment_a := session.equipment
+	var progression_a := session.class_progression
 	character_a.state_changed.emit(&"before_rebind")
 	character_a.level_gained.emit(2)
-	_expect(rebound_state_events == 1, "Character A state event should reach the bus before rebinding")
+	_expect(rebound_state_events == 2, "Character A state and progression award events should reach the bus before rebinding")
 	_expect(rebound_level_events == 1, "Character A level event should reach the bus before rebinding")
 	_expect(last_rebound_state_build_id == character_a.build_id, "Pre-rebind state event should use character A build ID")
 	_expect(last_rebound_level_build_id == character_a.build_id, "Pre-rebind level event should use character A build ID")
@@ -86,9 +87,13 @@ func _test_rebind_disconnects_previous_character() -> void:
 	_expect(not inventory_a.item_added.is_connected(session._on_inventory_changed), "Character A inventory add signal should be disconnected after rebinding")
 	_expect(not inventory_a.item_removed.is_connected(session._on_inventory_changed), "Character A inventory remove signal should be disconnected after rebinding")
 	_expect(not equipment_a.equipment_changed.is_connected(session._on_equipment_changed), "Character A equipment signal should be disconnected after rebinding")
+	_expect(not progression_a.award_applied.is_connected(session._on_class_point_awarded), "Character A progression award signal should be disconnected after rebinding")
+	_expect(not progression_a.node_purchased.is_connected(session._on_class_node_purchased), "Character A progression purchase signal should be disconnected after rebinding")
 	_expect(session.inventory.item_added.is_connected(session._on_inventory_changed), "Character B inventory add signal should be connected after rebinding")
 	_expect(session.inventory.item_removed.is_connected(session._on_inventory_changed), "Character B inventory remove signal should be connected after rebinding")
 	_expect(session.equipment.equipment_changed.is_connected(session._on_equipment_changed), "Character B equipment signal should be connected after rebinding")
+	_expect(session.class_progression.award_applied.is_connected(session._on_class_point_awarded), "Character B progression award signal should be connected after rebinding")
+	_expect(session.class_progression.node_purchased.is_connected(session._on_class_node_purchased), "Character B progression purchase signal should be connected after rebinding")
 
 	character_a.state_changed.emit(&"stale_state")
 	character_a.level_gained.emit(3)
@@ -96,17 +101,17 @@ func _test_rebind_disconnects_previous_character() -> void:
 	inventory_a.item_added.emit(probe_item)
 	inventory_a.item_removed.emit(probe_item)
 	equipment_a.equipment_changed.emit(&"main_hand", probe_item, null)
-	_expect(rebound_state_events == 1, "Character A character and item-system events must not leak after rebinding")
+	_expect(rebound_state_events == 2, "Character A character, item-system, and progression events must not leak after rebinding")
 	_expect(rebound_level_events == 1, "Character A level event must not leak after rebinding")
 
 	session.inventory.item_added.emit(probe_item)
 	session.equipment.equipment_changed.emit(&"main_hand", probe_item, null)
-	_expect(rebound_state_events == 3, "Character B item-system events should reach the bus after rebinding")
+	_expect(rebound_state_events == 4, "Character B item-system events should reach the bus after rebinding")
 	_expect(last_rebound_state_build_id == character_b.build_id, "Active item-system events should use character B build ID")
 
 	character_b.state_changed.emit(&"active_state")
 	character_b.level_gained.emit(4)
-	_expect(rebound_state_events == 4, "Character B state event should reach the bus after rebinding")
+	_expect(rebound_state_events == 6, "Character B state and progression award events should reach the bus after rebinding")
 	_expect(rebound_level_events == 2, "Character B level event should reach the bus after rebinding")
 	_expect(last_rebound_state_build_id == character_b.build_id, "Post-rebind state event should use character B build ID")
 	_expect(last_rebound_level_build_id == character_b.build_id, "Post-rebind level event should use character B build ID")
