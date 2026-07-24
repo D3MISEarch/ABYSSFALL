@@ -73,6 +73,8 @@ jobs:
 
           run_suite res://scripts/runtime/tests/test_runtime_foundation.gd runtime-foundation-test.log
           run_suite res://scripts/runtime/tests/test_runtime_session.gd runtime-session-test.log
+          run_suite res://scripts/runtime/tests/test_class_progression.gd class-progression-test.log
+          run_suite res://scripts/runtime/tests/test_class_progression_restore_contract.gd class-progression-restore-contract-test.log
           run_suite res://scripts/runtime/tests/test_ability_execution.gd ability-execution-test.log
           run_suite res://scripts/runtime/tests/test_stage34_catalog_inventory.gd stage34-catalog-inventory-test.log
           run_suite res://scripts/runtime/tests/test_stage34_equipment_stats.gd stage34-equipment-stats-test.log
@@ -90,6 +92,8 @@ jobs:
           path: |
             runtime-foundation-test.log
             runtime-session-test.log
+            class-progression-test.log
+            class-progression-restore-contract-test.log
             ability-execution-test.log
             stage34-catalog-inventory-test.log
             stage34-equipment-stats-test.log

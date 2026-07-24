@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture that **currently exists in code**, verified against `scripts/runtime/`, `scripts/persistence/`, and the approved ADRs on draft PR #34 (`stage3/equipment-runtime-foundation`). It does not describe planned-but-unbuilt systems except where explicitly marked under **Future design**.
+This document describes the architecture that **currently exists in code**, verified against `scripts/runtime/`, `scripts/persistence/`, the merged Stages 3–5 foundation, and the approved ADRs through ADR-020. It does not describe planned-but-unbuilt systems except where explicitly marked under **Future design**.
 
 For *why* each boundary exists, see the linked ADR. This document describes *what exists*.
 
@@ -13,7 +13,9 @@ RuntimeSession
  ├── event_bus          : RuntimeEventBus
  ├── ability_executor    : AbilityExecutor       (constructed with event_bus)
  ├── item_catalog        : ItemCatalog
- ├── affix_catalog       : AffixCatalog
+ ├── affix_catalog        : AffixCatalog
+ ├── class_tree_catalog   : ClassTreeCatalog
+ ├── class_progression    : ClassProgressionState (constructed on bind)
  ├── item_identity        : ItemIdentityService
  ├── reward_service       : EnemyRewardService
  ├── character            : RuntimeCharacter      (bound via bind_character())
@@ -27,12 +29,13 @@ RuntimeSession
 
 `bind_character()` is the only path that attaches a `RuntimeCharacter` to a session. Binding is transactional:
 
-1. construct a candidate `ItemIdentityService`, inventory, and equipment manager without changing the active session;
-2. restore and validate the incoming character's pending inventory/equipment snapshots;
+1. construct candidate progression, identity, inventory, and equipment services without changing the active session;
+2. restore and validate the incoming character's class-tree, inventory, and equipment snapshots;
 3. reject inventory/equipment identity collisions before attachment;
 4. observe restored IDs so the candidate allocator cannot mint a collision;
-5. only after every step succeeds, disconnect the prior character/item systems and replace the active session references;
-6. connect the new signal chain and emit `build_loaded`.
+5. reconcile exactly-once level award sources and rebuild tree effects against the incoming character only;
+6. only after every step succeeds, disconnect the prior character/item/progression systems and replace the active session references;
+7. connect the new signal chain and emit `build_loaded`.
 
 A failed initial bind leaves the session unbound. A failed rebind preserves the previously active character, inventory, equipment, allocator state, stats, and signal connections. Candidate equipment is validated without a live `StatBlock`; modifiers are applied to the incoming character only after the full bind succeeds.
 
@@ -81,7 +84,7 @@ It owns:
 - `ClassResourcePool`;
 - unlocked abilities;
 - attached inventory/equipment references;
-- pending inventory, equipment, and allocator snapshots retained for binding/fallback serialization.
+- pending inventory, equipment, allocator, and class-tree snapshots retained for binding/fallback serialization.
 
 Before either item system is attached, `attach_item_systems()` checks that all non-empty inventory IDs are disjoint from all non-empty equipment IDs. Inventory and equipment then validate their own snapshots into temporary state. References are assigned only after both restores succeed.
 
@@ -89,7 +92,16 @@ Ability cooldown state is owned by `AbilityExecutor`, not `RuntimeCharacter`. Te
 
 ### RuntimeEventBus (`scripts/runtime/runtime_event_bus.gd`)
 
-A `Node` owned by exactly one `RuntimeSession`, never an autoload. It carries `build_loaded`, `runtime_state_changed`, `level_gained`, `enemy_killed`, `experience_gained`, `item_equipped`, and ability events. Separate sessions never share a bus. Persistent services remain outside it. ([ADR-016](../ADR/ADR-016-RUNTIME-EVENT-BUS-OWNERSHIP.md))
+A `Node` owned by exactly one `RuntimeSession`, never an autoload. It carries `build_loaded`, `runtime_state_changed`, `level_gained`, class-point and class-node events, `enemy_killed`, `experience_gained`, `item_equipped`, and ability events. Separate sessions never share a bus. Persistent services remain outside it. ([ADR-016](../ADR/ADR-016-RUNTIME-EVENT-BUS-OWNERSHIP.md))
+
+
+### ClassTreeCatalog / ClassProgressionState (`scripts/runtime/progression/`)
+
+`ClassTreeCatalog` stores defensive copies of immutable, versioned class-tree definitions. `ClassProgressionState` owns the mutable award ledger and node allocations for one bound build. Available points are always derived as awarded points minus allocation costs; no second mutable counter exists.
+
+Restoration validates the entire snapshot before replacing live state: source IDs and positive award amounts, known nodes, ranks, prerequisites, exclusions, and affordability. Level awards use stable `level:<n>` sources and are reconciled on bind, so loading an existing level or replaying a signal cannot duplicate points. Purchases are atomic and failed transactions emit no success event.
+
+Stat effects use deterministic `class_tree:<node>:<rank>:<effect>` source IDs. Rebuild first clears every source described by the active definition, then reprojects allocations in sorted node order. Rebinding and reloading therefore replace effects rather than stacking them. The current eight-node definitions are explicitly framework-proof content, not final class trees. ([ADR-020](../ADR/ADR-020-PERSISTENT-CLASS-TREE-AND-PROGRESSION-UI.md))
 
 ### AbilityExecutor (`scripts/runtime/abilities/ability_executor.gd`)
 
@@ -153,7 +165,7 @@ Construction deliberately leaves `instance_id` empty. Runtime creation paths mus
 ## Persistence boundaries
 
 ```text
-Gameplay State (RuntimeSession/RuntimeCharacter/InventoryContainer/EquipmentManager)
+Gameplay State (RuntimeSession/RuntimeCharacter/ClassProgressionState/InventoryContainer/EquipmentManager)
         │ durable_snapshot() — explicit, build-ID-scoped
         ▼
 PersistenceService
