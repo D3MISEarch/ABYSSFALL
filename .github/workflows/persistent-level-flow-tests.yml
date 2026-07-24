@@ -12,6 +12,7 @@ on:
       - "tests/test_persistent_level_flow.gd"
       - "tests/test_class_tree_navigation.gd"
       - "tests/test_class_tree_screen.gd"
+      - "tests/test_playable_combat_projection.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   push:
@@ -27,6 +28,7 @@ on:
       - "tests/test_persistent_level_flow.gd"
       - "tests/test_class_tree_navigation.gd"
       - "tests/test_class_tree_screen.gd"
+      - "tests/test_playable_combat_projection.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   workflow_dispatch:
@@ -100,6 +102,20 @@ jobs:
             exit 1
           fi
 
+      - name: Run playable combat-projection regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_playable_combat_projection.gd 2>&1 | tee playable-combat-projection-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' playable-combat-projection-tests.log; then
+            echo "Playable combat-projection regression failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Playable combat projection' playable-combat-projection-tests.log; then
+            echo "Missing playable combat-projection PASS marker."
+            exit 1
+          fi
+
       - name: Run playable class smoke paths
         shell: bash
         run: |
@@ -134,6 +150,7 @@ jobs:
             persistent-level-flow-tests.log
             class-tree-navigation-tests.log
             class-tree-screen-tests.log
+            playable-combat-projection-tests.log
             runtime-void_warlock.log
             runtime-penitent.log
           if-no-files-found: warn
