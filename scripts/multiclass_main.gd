@@ -1,6 +1,7 @@
 extends "res://scripts/main.gd"
 
 const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
+const CLASS_IDS = preload("res://scripts/shared/class_ids.gd")
 const FERVOR_SEAL_SCRIPT = preload("res://scripts/ui/fervor_seal.gd")
 const INPUT_PROMPT_PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
 
@@ -114,7 +115,7 @@ func _on_player_corruption_changed(current_value: float, maximum_value: float) -
 
 func preview_penitent_sacrament(cost: float = 40.0) -> Dictionary:
 	if (
-		selected_class_id != "penitent_placeholder"
+		selected_class_id != CLASS_IDS.PENITENT
 		or not is_instance_valid(player)
 		or not player.has_method("quote_sacrament_cost")
 	):
@@ -225,7 +226,7 @@ func _update_class_specific_copy() -> void:
 		if label.text.begins_with("VOID WARLOCK INVENTORY"):
 			label.text = "%s INVENTORY     —     I / ESC TO CLOSE" % display_name.to_upper()
 
-	if selected_class_id == "penitent_placeholder":
+	if selected_class_id == CLASS_IDS.PENITENT:
 		_install_penitent_resource_hud()
 
 	_refresh_control_hint(resource_name)
