@@ -27,7 +27,7 @@ func attach_stat_block(p_stat_block: StatBlock) -> bool:
 	return true
 
 
-func restore(snapshot: Dictionary) -> bool:
+func restore(snapshot: Dictionary, current_level: int = -1) -> bool:
 	if definition == null:
 		return false
 	if snapshot.is_empty():
@@ -36,7 +36,11 @@ func restore(snapshot: Dictionary) -> bool:
 		if stat_block != null:
 			rebuild_effects()
 		return true
-	if int(snapshot.get("schema_version", SCHEMA_VERSION)) != SCHEMA_VERSION:
+	if _positive_integer_value(snapshot.get("schema_version", null)) != SCHEMA_VERSION:
+		return false
+	if StringName(str(snapshot.get("definition_schema_id", ""))) != definition.schema_id:
+		return false
+	if _positive_integer_value(snapshot.get("definition_schema_version", null)) != definition.schema_version:
 		return false
 
 	var raw_awards: Variant = snapshot.get("award_ledger", {})
@@ -46,20 +50,26 @@ func restore(snapshot: Dictionary) -> bool:
 
 	var candidate_awards: Dictionary = {}
 	for raw_source: Variant in raw_awards:
-		var source_id := str(raw_source).strip_edges()
-		var amount := int(raw_awards[raw_source])
-		if source_id.is_empty() or amount <= 0:
+		var stored_source_id := str(raw_source)
+		var source_id := stored_source_id.strip_edges()
+		var amount := _positive_integer_value(raw_awards[raw_source])
+		if source_id.is_empty() or source_id != stored_source_id or candidate_awards.has(source_id):
+			return false
+		if amount <= 0 or not _award_source_is_valid(source_id, amount, current_level):
 			return false
 		candidate_awards[source_id] = amount
 
 	var candidate_allocations: Dictionary = {}
 	for raw_node_id: Variant in raw_allocations:
-		var node_id := StringName(str(raw_node_id))
-		var rank := int(raw_allocations[raw_node_id])
+		var stored_node_id := str(raw_node_id)
+		var node_id := StringName(stored_node_id)
+		var rank := _positive_integer_value(raw_allocations[raw_node_id])
 		var node := definition.get_node(node_id)
-		if node == null or rank <= 0 or rank > node.maximum_rank:
+		if stored_node_id.is_empty() or stored_node_id != stored_node_id.strip_edges():
 			return false
-		candidate_allocations[String(node_id)] = rank
+		if candidate_allocations.has(stored_node_id) or node == null or rank <= 0 or rank > node.maximum_rank:
+			return false
+		candidate_allocations[stored_node_id] = rank
 
 	if not _allocations_are_valid(candidate_allocations):
 		return false
@@ -155,6 +165,8 @@ func serialize() -> Dictionary:
 			serialized_allocations[str(node_id)] = rank
 	return {
 		"schema_version": SCHEMA_VERSION,
+		"definition_schema_id": String(definition.schema_id),
+		"definition_schema_version": definition.schema_version,
 		"award_ledger": serialized_awards,
 		"allocations": serialized_allocations,
 	}
@@ -239,6 +251,31 @@ func _exclusion_conflicts(node: ClassTreeNodeDefinition, candidate: Dictionary) 
 		if allocated_node != null and allocated_node.node_id != node.node_id and allocated_node.exclusion_group == node.exclusion_group:
 			return true
 	return false
+
+
+func _award_source_is_valid(source_id: String, amount: int, current_level: int) -> bool:
+	if not source_id.begins_with("level:"):
+		return true
+	var level_text := source_id.trim_prefix("level:")
+	if level_text.is_empty() or not level_text.is_valid_int():
+		return false
+	var reached_level := int(level_text)
+	if source_id != "level:%d" % reached_level:
+		return false
+	if reached_level < definition.first_level_award:
+		return false
+	if current_level >= 0 and reached_level > current_level:
+		return false
+	return amount == definition.point_award_for_level(reached_level) and amount > 0
+
+
+func _positive_integer_value(value: Variant) -> int:
+	if not (value is int or value is float):
+		return -1
+	var parsed := int(value)
+	if parsed <= 0 or float(value) != float(parsed):
+		return -1
+	return parsed
 
 
 func _total_awarded(ledger: Dictionary) -> int:

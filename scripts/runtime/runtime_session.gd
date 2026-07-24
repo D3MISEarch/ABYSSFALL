@@ -37,9 +37,9 @@ func bind_character(runtime_character: RuntimeCharacter, inventory_capacity: int
 	var next_progression := ClassProgressionState.new()
 	if not next_progression.configure(next_definition):
 		return false
-	if not next_progression.restore(runtime_character.pending_class_tree_snapshot()):
+	if not next_progression.restore(runtime_character.pending_class_tree_snapshot(), runtime_character.level):
 		return false
-	next_progression.reconcile_level_awards(runtime_character.level)
+	var reconciled_points := next_progression.reconcile_level_awards(runtime_character.level)
 
 	var next_identity := ItemIdentityService.new()
 	if not next_identity.configure(runtime_character.build_id, runtime_character.pending_item_identity_snapshot()):
@@ -74,6 +74,8 @@ func bind_character(runtime_character: RuntimeCharacter, inventory_capacity: int
 	class_progression.award_applied.connect(_on_class_point_awarded)
 	class_progression.node_purchased.connect(_on_class_node_purchased)
 	event_bus.build_loaded.emit(character.build_id)
+	if reconciled_points > 0:
+		event_bus.runtime_state_changed.emit(character.build_id, &"class_progression")
 	return true
 
 
