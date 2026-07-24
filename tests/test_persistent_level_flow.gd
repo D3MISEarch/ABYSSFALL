@@ -18,6 +18,7 @@ func _run() -> void:
 	_test_playable_leveling_no_longer_requests_cards(PENITENT_SCRIPT, "Penitent")
 	_test_playable_restore_and_contract()
 	_test_runtime_bridge_awards_and_spends()
+	_test_persistent_bridge_disk_round_trip()
 	if failures.is_empty():
 		print("PASS: Persistent non-blocking level flow")
 		quit(0)
@@ -93,6 +94,75 @@ func _test_runtime_bridge_awards_and_spends() -> void:
 	_expect(is_equal_approx(float(force_projection.get("power", 0.0)), 4.0), "Purchased force rank should project power into live combat")
 	_expect(bridge.available_points() == 0, "Projected purchase should still consume the authoritative point")
 	bridge.queue_free()
+
+
+func _test_persistent_bridge_disk_round_trip() -> void:
+	var service := PersistenceService.new()
+	_expect(service.initialize("Progression UI Disk Tester"), "Persistent UI test service should initialize")
+	if service.profile == null:
+		service.free()
+		return
+	var previous_selection := service.profile.selected_build_id
+	var test_build := service.create_and_select_build(
+		ClassIds.VOID_WARLOCK,
+		"Progression UI Disk %s" % str(Time.get_ticks_usec())
+	)
+	_expect(test_build != null, "Persistent UI test should create an isolated build")
+	if test_build == null:
+		_restore_previous_selection(service.profile, previous_selection)
+		service.free()
+		return
+	var test_build_id := test_build.build_id
+
+	var first_bridge := PROGRESSION_BRIDGE_SCRIPT.new() as PlayableProgressionBridge
+	root.add_child(first_bridge)
+	_expect(first_bridge.configure_persistent(ClassIds.VOID_WARLOCK, service, "Unused"), "Persistent bridge should bind the isolated build")
+	_expect(first_bridge.sync_playable_progress(3, 27), "Persistent bridge should save level and XP")
+	_expect(bool(first_bridge.purchase_node(&"proof_origin").get("success", false)), "Persistent bridge should save the root purchase")
+	_expect(bool(first_bridge.purchase_node(&"proof_force").get("success", false)), "Persistent bridge should save the force purchase")
+	_expect(first_bridge.flush("persistent_ui_round_trip") == OK, "Persistent bridge should flush its durable state")
+
+	var restored_service := PersistenceService.new()
+	_expect(restored_service.initialize("Progression UI Disk Tester"), "Reload service should initialize from real disk data")
+	var restored_bridge := PROGRESSION_BRIDGE_SCRIPT.new() as PlayableProgressionBridge
+	root.add_child(restored_bridge)
+	_expect(restored_bridge.configure_persistent(ClassIds.VOID_WARLOCK, restored_service, "Unused"), "Reload bridge should bind the saved build")
+	_expect(restored_bridge.current_level() == 3 and restored_bridge.current_experience() == 27, "Reload bridge should restore level and XP")
+	_expect(restored_bridge.available_points() == 0, "Reload bridge should restore derived available points")
+	var restored_tree := restored_bridge.tree_snapshot()
+	var restored_origin := _find_tree_node(restored_tree.get("nodes", []), "proof_origin")
+	var restored_force := _find_tree_node(restored_tree.get("nodes", []), "proof_force")
+	_expect(int(restored_origin.get("rank", 0)) == 1, "Reload tree should restore the root rank")
+	_expect(int(restored_force.get("rank", 0)) == 1, "Reload tree should restore the force rank")
+	var restored_projection := restored_bridge.combat_projection()
+	_expect(is_equal_approx(float(restored_projection.get("armor", 0.0)), 2.0), "Reload should rebuild projected armor")
+	_expect(is_equal_approx(float(restored_projection.get("power", 0.0)), 4.0), "Reload should rebuild projected power")
+
+	var screen := ClassTreeScreen.new()
+	screen.size = Vector2(930.0, 478.0)
+	root.add_child(screen)
+	_expect(screen.set_tree_snapshot(restored_tree), "Graphical tree should accept the real disk-restored snapshot")
+	_expect(screen.select_node(&"proof_force"), "Graphical tree should focus the restored purchased node")
+	_expect(screen.node_title.text == "Applied Force", "Graphical detail panel should identify the restored node")
+	_expect(screen.node_meta.text.contains("RANK 1 / 2"), "Graphical detail panel should display the restored rank")
+
+	screen.queue_free()
+	first_bridge.queue_free()
+	restored_bridge.queue_free()
+	restored_service.free()
+	_expect(SaveManager.delete_build(service.profile, test_build_id) == OK, "Persistent UI test should delete only its generated build")
+	_restore_previous_selection(service.profile, previous_selection)
+	service.free()
+
+
+func _restore_previous_selection(profile: ProfileData, previous_selection: String) -> void:
+	if profile == null:
+		return
+	if not previous_selection.is_empty() and profile.build_ids.has(previous_selection):
+		SaveManager.select_build(profile, previous_selection)
+	else:
+		profile.selected_build_id = ""
+		SaveManager.save_profile(profile)
 
 
 func _find_tree_node(nodes: Array, node_id: String) -> Dictionary:
