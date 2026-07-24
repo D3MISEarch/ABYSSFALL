@@ -38,6 +38,8 @@ var interaction_label: Label
 var inventory_panel: Control
 var inventory_equipment_box: VBoxContainer
 var inventory_backpack_box: VBoxContainer
+var inventory_item_buttons: Array[Button] = []
+var inventory_focus_index := 0
 var skill_panel: Control
 var skill_columns: HBoxContainer
 var level_up_panel: Control
@@ -966,6 +968,7 @@ func _toggle_inventory() -> void:
 	inventory_panel.visible = not inventory_panel.visible
 	if inventory_panel.visible:
 		_refresh_inventory()
+		_focus_inventory_item_deferred()
 	_update_pause_state()
 
 
@@ -1005,6 +1008,10 @@ func _refresh_inventory() -> void:
 		or inventory_backpack_box == null
 	):
 		return
+	var focus_owner := get_viewport().gui_get_focus_owner()
+	if focus_owner is Button and inventory_item_buttons.has(focus_owner):
+		inventory_focus_index = inventory_item_buttons.find(focus_owner)
+	inventory_item_buttons.clear()
 	_clear_container(inventory_equipment_box)
 	_clear_container(inventory_backpack_box)
 	var snapshot: Dictionary = player.get_inventory_snapshot()
@@ -1046,7 +1053,7 @@ func _refresh_inventory() -> void:
 
 	var pack_title := Label.new()
 	pack_title.text = (
-		"BACKPACK  %d / %d   — CLICK AN ITEM TO EQUIP"
+		"BACKPACK  %d / %d   — SELECT AN ITEM TO EQUIP"
 		% [backpack.size(), int(snapshot.get("capacity", 12))]
 	)
 	pack_title.add_theme_font_size_override("font_size", 22)
@@ -1076,13 +1083,36 @@ func _refresh_inventory() -> void:
 				]
 			)
 			button.modulate = _rarity_color(str(item.get("rarity", "Common")))
+			button.focus_mode = Control.FOCUS_ALL
 			button.pressed.connect(_on_inventory_item_pressed.bind(i))
 			inventory_backpack_box.add_child(button)
+			inventory_item_buttons.append(button)
+
+	if is_instance_valid(inventory_panel) and inventory_panel.visible:
+		_focus_inventory_item_deferred()
 
 
 func _on_inventory_item_pressed(index: int) -> void:
+	inventory_focus_index = maxi(0, index)
 	if is_instance_valid(player):
 		player.equip_inventory_index(index)
+
+
+func _focus_inventory_item_deferred() -> void:
+	if inventory_item_buttons.is_empty():
+		return
+	inventory_focus_index = clampi(inventory_focus_index, 0, inventory_item_buttons.size() - 1)
+	call_deferred("_focus_inventory_item", inventory_focus_index)
+
+
+func _focus_inventory_item(index: int) -> void:
+	if not is_instance_valid(inventory_panel) or not inventory_panel.visible:
+		return
+	if index < 0 or index >= inventory_item_buttons.size():
+		return
+	var button := inventory_item_buttons[index]
+	if is_instance_valid(button) and not button.disabled:
+		button.grab_focus()
 
 
 func _refresh_skill_tree() -> void:

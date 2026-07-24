@@ -6,12 +6,40 @@ const PROGRESSION_BRIDGE_SCRIPT = preload("res://scripts/ui/playable_progression
 const INVENTORY_BRIDGE_SCRIPT = preload("res://scripts/ui/playable_inventory_bridge.gd")
 const PLAYABLE_ITEM_CATALOG = preload("res://scripts/core/playable_item_catalog.gd")
 const ITEM_PICKUP_SCRIPT = preload("res://scripts/item_pickup.gd")
+const INVENTORY_FOCUS_HARNESS = preload("res://tests/playable_inventory_focus_harness.gd")
 
 class RejectingTarget:
 	extends Node3D
 
 	func try_add_item(_item: Dictionary) -> bool:
 		return false
+
+class InventoryFocusPlayer:
+	extends Node
+
+	signal inventory_changed
+
+	var backpack: Array[Dictionary] = []
+
+	func get_inventory_snapshot() -> Dictionary:
+		return {
+			"equipment": {
+				"Weapon": {},
+				"Hood": {},
+				"Chest": {},
+				"Gloves": {},
+				"Boots": {},
+				"Relic": {},
+			},
+			"backpack": backpack.duplicate(true),
+			"capacity": 12,
+		}
+
+	func equip_inventory_index(index: int) -> void:
+		if index < 0 or index >= backpack.size():
+			return
+		backpack.remove_at(index)
+		inventory_changed.emit()
 
 var failures: Array[String] = []
 
@@ -24,6 +52,7 @@ func _run() -> void:
 	_test_pickup_policy_swap_and_failure_atomicity()
 	_test_both_playable_classes_use_authoritative_inventory()
 	_test_rejected_world_pickup_remains()
+	await _test_controller_focus_survives_inventory_refresh()
 	_test_real_disk_round_trip_preserves_items_and_canary()
 	if failures.is_empty():
 		print("PASS: Player-controlled durable inventory")
@@ -133,6 +162,41 @@ func _test_rejected_world_pickup_remains() -> void:
 	_expect(not pickup.is_queued_for_deletion(), "A rejected full-backpack pickup must remain in the world")
 	pickup.free()
 	target.free()
+
+
+func _test_controller_focus_survives_inventory_refresh() -> void:
+	var harness = INVENTORY_FOCUS_HARNESS.new()
+	root.add_child(harness)
+	var player := InventoryFocusPlayer.new()
+	player.backpack = [
+		PLAYABLE_ITEM_CATALOG.item_data(&"void_scepter"),
+		PLAYABLE_ITEM_CATALOG.item_data(&"bonebound_grimoire"),
+	]
+	harness.add_child(player)
+	harness.player = player
+	harness.inventory_panel = Control.new()
+	harness.add_child(harness.inventory_panel)
+	harness.inventory_equipment_box = VBoxContainer.new()
+	harness.inventory_panel.add_child(harness.inventory_equipment_box)
+	harness.inventory_backpack_box = VBoxContainer.new()
+	harness.inventory_panel.add_child(harness.inventory_backpack_box)
+	harness.equipment_summary_label = Label.new()
+	harness.inventory_panel.add_child(harness.equipment_summary_label)
+	player.inventory_changed.connect(harness._refresh_inventory)
+	harness.inventory_panel.visible = true
+	harness._refresh_inventory()
+	await process_frame
+	await process_frame
+	_expect(harness.inventory_item_buttons.size() == 2, "Controller inventory test should build two focusable item buttons")
+	if harness.inventory_item_buttons.size() == 2:
+		_expect(harness.inventory_item_buttons[0].has_focus(), "Opening inventory should focus the first backpack item for controller input")
+		harness.inventory_item_buttons[0].pressed.emit()
+		await process_frame
+		await process_frame
+		_expect(harness.inventory_item_buttons.size() == 1, "Explicit equip should rebuild the backpack after removing the selected item")
+		if harness.inventory_item_buttons.size() == 1:
+			_expect(harness.inventory_item_buttons[0].has_focus(), "Inventory refresh after equip should preserve a valid controller focus target")
+	harness.free()
 
 
 func _test_real_disk_round_trip_preserves_items_and_canary() -> void:

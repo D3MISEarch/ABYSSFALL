@@ -188,6 +188,7 @@ Regression expectation:
 - Plant an unrelated canary build and prove the test does not modify it.
 - Assert the first pickup into an empty slot remains unequipped.
 - Assert a full-backpack rejection leaves both the incoming world pickup and all owned items intact.
+- Open the inventory with controller-style focus, equip an item, rebuild the list, and assert focus remains on a valid backpack action.
 
 ## Every gameplay bug gets a regression test
 

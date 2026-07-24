@@ -304,6 +304,7 @@ func _toggle_inventory() -> void:
 	inventory_panel.visible = not inventory_panel.visible
 	if inventory_panel.visible:
 		_refresh_inventory()
+		_focus_inventory_item_deferred()
 	_update_pause_state()
 
 
