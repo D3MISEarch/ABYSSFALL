@@ -4,6 +4,7 @@ const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
 const FERVOR_SEAL_SCRIPT = preload("res://scripts/ui/fervor_seal.gd")
 const INPUT_PROMPT_PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
 const PLAYABLE_PROGRESSION_BRIDGE_SCRIPT = preload("res://scripts/ui/playable_progression_bridge.gd")
+const PLAYABLE_INVENTORY_BRIDGE_SCRIPT = preload("res://scripts/ui/playable_inventory_bridge.gd")
 const CLASS_TREE_SCREEN_SCRIPT = preload("res://scripts/ui/class_tree_screen.gd")
 const GAMEPLAY_PAUSE_BOUNDARY = preload("res://scripts/ui/gameplay_pause_boundary.gd")
 
@@ -12,6 +13,7 @@ var selected_class_id := CHARACTER_FACTORY.DEFAULT_CLASS_ID
 var penitent_hud_installed := false
 var active_prompt_profile := INPUT_PROMPT_PROFILE.KEYBOARD_MOUSE
 var progression_bridge: PlayableProgressionBridge
+var inventory_bridge: PlayableInventoryBridge
 var class_tree_screen: ClassTreeScreen
 var class_point_label: Label
 var progression_notification_label: Label
@@ -232,7 +234,16 @@ func _initialize_progression_runtime() -> void:
 	if not progression_bridge.configure_persistent(selected_class_id, Persistence, build_name):
 		push_error("Could not initialize persistent class progression for %s." % selected_class_id)
 		return
+	inventory_bridge = PLAYABLE_INVENTORY_BRIDGE_SCRIPT.new() as PlayableInventoryBridge
+	inventory_bridge.name = "PlayableInventoryBridge"
+	add_child(inventory_bridge)
+	if not inventory_bridge.configure(progression_bridge):
+		push_error("Could not initialize persistent playable inventory for %s." % selected_class_id)
+		return
+	if player.has_method("bind_playable_inventory_bridge"):
+		player.call("bind_playable_inventory_bridge", inventory_bridge)
 	progression_bridge.restore_into_playable(player)
+	_refresh_inventory()
 	_refresh_skill_tree()
 
 
@@ -259,8 +270,8 @@ func _on_progression_state_changed(available_points: int) -> void:
 
 
 func _on_progression_persistence_failed(context: String, error: Error) -> void:
-	push_error("Class progression persistence failed in %s (error %d)." % [context, error])
-	_show_progression_notification("PROGRESSION SAVE FAILED", 2.4)
+	push_error("Playable runtime persistence failed in %s (error %d)." % [context, error])
+	_show_progression_notification("SAVE FAILED", 2.4)
 
 
 func _on_class_tree_combat_projection_changed(projection: Dictionary) -> void:
@@ -333,6 +344,8 @@ func _prepare_gameplay_pause_boundary() -> void:
 	var always_nodes: Array[Node] = []
 	if progression_bridge != null:
 		always_nodes.append(progression_bridge)
+	if inventory_bridge != null:
+		always_nodes.append(inventory_bridge)
 	GAMEPLAY_PAUSE_BOUNDARY.apply(self, always_nodes)
 
 

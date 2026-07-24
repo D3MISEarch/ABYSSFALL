@@ -8,6 +8,8 @@ signal persistence_failed(context: String, error: Error)
 signal combat_projection_changed(projection: Dictionary)
 
 const CLASS_TREE_LAYOUT_FIXTURES = preload("res://scripts/ui/class_tree_layout_fixtures.gd")
+const PLAYABLE_ITEM_CATALOG = preload("res://scripts/core/playable_item_catalog.gd")
+const PLAYABLE_INVENTORY_CAPACITY := 12
 
 const PROOF_DISPLAY_ORDER: Array[StringName] = [
 	&"proof_origin",
@@ -68,7 +70,7 @@ func sync_playable_progress(current_level: int, current_experience: int) -> bool
 	runtime_character.level = maxi(1, current_level)
 	runtime_character.experience = maxi(0, current_experience)
 	var added_points := session.class_progression.reconcile_level_awards(runtime_character.level)
-	var persisted := _persist(added_points > 0)
+	var persisted := _persist(added_points > 0, "class_progression_level")
 	var available := available_points()
 	if added_points > 0:
 		points_awarded.emit(runtime_character.level, added_points, available)
@@ -82,10 +84,16 @@ func purchase_node(node_id: StringName) -> Dictionary:
 		return {"success": false, "reason": &"unconfigured"}
 	var result := session.purchase_class_tree_node(node_id)
 	if bool(result.get("success", false)):
-		_persist(true)
+		_persist(true, "class_progression_purchase")
 		combat_projection_changed.emit(combat_projection())
 		state_changed.emit(available_points())
 	return result
+
+
+func persist_runtime_snapshot(flush_now: bool, context: String = "playable_runtime") -> bool:
+	if not _configured:
+		return false
+	return _persist(flush_now, context)
 
 
 func available_points() -> int:
@@ -204,7 +212,11 @@ func _bind_build(build: BuildData, persistent: bool) -> bool:
 	candidate_character.configure_from_build(build)
 	var candidate_session := RuntimeSession.new()
 	add_child(candidate_session)
-	if not candidate_session.bind_character(candidate_character):
+	if not PLAYABLE_ITEM_CATALOG.register_runtime_definitions(candidate_session.item_catalog):
+		remove_child(candidate_session)
+		candidate_session.queue_free()
+		return false
+	if not candidate_session.bind_character(candidate_character, PLAYABLE_INVENTORY_CAPACITY):
 		remove_child(candidate_session)
 		candidate_session.queue_free()
 		return false
@@ -213,7 +225,7 @@ func _bind_build(build: BuildData, persistent: bool) -> bool:
 	session = candidate_session
 	_persistent = persistent
 	_configured = true
-	if _persistent and not _persist(true):
+	if _persistent and not _persist(true, "playable_runtime_bind"):
 		_configured = false
 		_persistent = false
 		active_build = null
@@ -227,23 +239,18 @@ func _bind_build(build: BuildData, persistent: bool) -> bool:
 	return true
 
 
-func _persist(flush_now: bool) -> bool:
+func _persist(flush_now: bool, context: String) -> bool:
 	if not _persistent or persistence_service == null:
 		return true
-	var snapshot := {
-		"build_id": runtime_character.build_id,
-		"level": runtime_character.level,
-		"experience": runtime_character.experience,
-		"class_tree_state": session.class_progression.serialize(),
-	}
-	if not persistence_service.apply_active_build_snapshot(snapshot):
-		persistence_failed.emit("apply_class_progression_snapshot", ERR_INVALID_DATA)
+	var snapshot := session.durable_snapshot()
+	if snapshot.is_empty() or not persistence_service.apply_active_build_snapshot(snapshot):
+		persistence_failed.emit(context + "_apply", ERR_INVALID_DATA)
 		return false
 	if not flush_now:
 		return true
-	var error := persistence_service.flush_if_dirty("class_progression_ui")
+	var error := persistence_service.flush_if_dirty(context)
 	if error != OK:
-		persistence_failed.emit("flush_class_progression_snapshot", error)
+		persistence_failed.emit(context + "_flush", error)
 		return false
 	return true
 
