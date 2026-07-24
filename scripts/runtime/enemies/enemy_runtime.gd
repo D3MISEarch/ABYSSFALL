@@ -9,7 +9,11 @@ var maximum_health: float = 50.0
 var current_health: float = 50.0
 var armor: float = 0.0
 var experience_reward: int = 10
+var loot_entries: Array[Dictionary] = []
+var loot_seed: int = 0
+var minimum_loot_rarity: int = LootRarity.Tier.NORMAL
 var _death_emitted: bool = false
+var _rewards_claimed: bool = false
 
 
 func configure(data: Dictionary) -> void:
@@ -19,7 +23,17 @@ func configure(data: Dictionary) -> void:
 	current_health = maximum_health
 	armor = maxf(0.0, float(data.get("armor", 0.0)))
 	experience_reward = maxi(0, int(data.get("experience_reward", 10)))
+	loot_entries.clear()
+	var raw_entries: Variant = data.get("loot_entries", [])
+	if raw_entries is Array:
+		for raw_entry: Variant in raw_entries:
+			if raw_entry is Dictionary:
+				loot_entries.append(raw_entry.duplicate(true))
+	loot_seed = int(data.get("loot_seed", 0))
+	var configured_floor := int(data.get("minimum_loot_rarity", LootRarity.Tier.NORMAL))
+	minimum_loot_rarity = configured_floor if LootRarity.is_valid(configured_floor) else LootRarity.Tier.NORMAL
 	_death_emitted = false
+	_rewards_claimed = false
 
 
 func apply_damage(amount: float) -> float:
@@ -31,6 +45,15 @@ func apply_damage(amount: float) -> float:
 		_death_emitted = true
 		died.emit(enemy_id)
 	return applied
+
+
+func claim_rewards() -> bool:
+	if not is_dead() or _rewards_claimed:
+		return false
+	if not loot_entries.is_empty() and loot_seed == 0:
+		return false
+	_rewards_claimed = true
+	return true
 
 
 func is_dead() -> bool:
