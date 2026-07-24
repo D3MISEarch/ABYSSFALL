@@ -5,9 +5,7 @@ const REQUIRED_SIGNALS := [
 	"health_changed",
 	"resource_changed",
 	"experience_changed",
-	"level_up_requested",
 	"inventory_changed",
-	"skill_tree_changed",
 	"died",
 	"ability_message",
 	"loot_message",
@@ -23,11 +21,9 @@ const REQUIRED_METHODS := [
 	"add_class_resource",
 	"spend_class_resource",
 	"add_experience",
-	"get_level_up_choices",
-	"apply_level_up_choice",
+	"restore_persistent_progression",
 	"get_inventory_snapshot",
 	"equip_inventory_index",
-	"get_skill_tree_snapshot",
 	"take_damage",
 ]
 

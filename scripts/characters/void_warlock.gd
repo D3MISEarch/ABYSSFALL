@@ -12,6 +12,7 @@ const CLASS_ID := "void_warlock"
 const CLASS_DISPLAY_NAME := "Void Warlock"
 const RESOURCE_ID := "corruption"
 const RESOURCE_DISPLAY_NAME := "Corruption"
+const PERSISTENT_LEVEL_RULES = preload("res://scripts/core/persistent_level_rules.gd")
 
 
 func _ready() -> void:
@@ -67,6 +68,14 @@ func get_progression_snapshot() -> Dictionary:
 		"required_experience": experience_required,
 		"pending_level_ups": pending_level_ups,
 	}
+
+
+func add_experience(amount: int) -> void:
+	PERSISTENT_LEVEL_RULES.apply_experience(self, amount)
+
+
+func restore_persistent_progression(saved_level: int, saved_experience: int) -> void:
+	PERSISTENT_LEVEL_RULES.restore(self, saved_level, saved_experience)
 
 
 func add_class_resource(amount: float) -> void:
