@@ -61,6 +61,7 @@ func _launch_gameplay(class_id: String) -> void:
 	gameplay_root = GAMEPLAY_SCENE.instantiate()
 	gameplay_root.requested_class_id = class_id
 	add_child(gameplay_root)
+	print("ABYSSFALL_CLASS_LAUNCHED:%s" % class_id)
 
 
 func _get_command_line_class() -> String:
