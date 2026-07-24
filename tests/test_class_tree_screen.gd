@@ -42,6 +42,7 @@ func _test_graphical_tree_inspection_and_purchase_lock() -> void:
 	root.add_child(screen)
 	_expect(screen.set_tree_snapshot(bridge.tree_snapshot()), "Graphical tree should accept the framework snapshot")
 	_expect(screen.node_count() == 8, "Graphical tree should build all eight framework nodes")
+	_expect(screen.points_label.text.contains("ARMOR") and screen.points_label.text.contains("CRIT"), "Graphical header should expose the live combat projection")
 	_expect(screen.selected_node_id() == &"proof_origin", "Graphical tree should select the authored root first")
 	_expect(screen.board.is_node_focusable(&"proof_force"), "Locked nodes must remain focusable for inspection")
 	_expect(screen.select_node(&"proof_force"), "Controller focus should reach a locked child")

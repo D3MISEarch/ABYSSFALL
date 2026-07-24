@@ -13,6 +13,9 @@ const CLASS_DISPLAY_NAME := "Void Warlock"
 const RESOURCE_ID := "corruption"
 const RESOURCE_DISPLAY_NAME := "Corruption"
 const PERSISTENT_LEVEL_RULES = preload("res://scripts/core/persistent_level_rules.gd")
+const PLAYABLE_COMBAT_PROJECTION = preload("res://scripts/core/playable_combat_projection.gd")
+
+var class_tree_combat := PLAYABLE_COMBAT_PROJECTION.new() as PlayableCombatProjection
 
 
 func _ready() -> void:
@@ -93,3 +96,19 @@ func _forward_corruption_changed(current_value: float, maximum_value: float) -> 
 		current_value,
 		maximum_value
 	)
+
+
+func apply_class_tree_projection(snapshot: Dictionary) -> void:
+	class_tree_combat.configure(snapshot)
+
+
+func get_class_tree_combat_snapshot() -> Dictionary:
+	return class_tree_combat.snapshot()
+
+
+func _resolve_outgoing_damage(base_damage: int) -> int:
+	return class_tree_combat.resolve_outgoing_damage(base_damage)
+
+
+func _resolve_incoming_damage(base_damage: int) -> int:
+	return class_tree_combat.resolve_incoming_damage(base_damage)

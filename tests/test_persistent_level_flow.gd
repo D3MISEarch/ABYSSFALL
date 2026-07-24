@@ -77,6 +77,8 @@ func _test_runtime_bridge_awards_and_spends() -> void:
 	var purchase := bridge.purchase_node(&"proof_origin")
 	_expect(bool(purchase.get("success", false)), "Root node purchase should transact through RuntimeSession")
 	_expect(bridge.available_points() == 1, "Successful purchase should reduce derived availability")
+	var root_projection := bridge.combat_projection()
+	_expect(is_equal_approx(float(root_projection.get("armor", 0.0)), 2.0), "Purchased root should project its armor into live combat")
 	var after_purchase := bridge.tree_snapshot()
 	var origin_after := _find_tree_node(after_purchase.get("nodes", []), "proof_origin")
 	var force_after := _find_tree_node(after_purchase.get("nodes", []), "proof_force")
@@ -85,6 +87,11 @@ func _test_runtime_bridge_awards_and_spends() -> void:
 	var duplicate_rank := bridge.purchase_node(&"proof_origin")
 	_expect(not bool(duplicate_rank.get("success", false)), "Maximum-rank purchase should fail")
 	_expect(bridge.available_points() == 1, "Failed purchase must not change available points")
+	var force_purchase := bridge.purchase_node(&"proof_force")
+	_expect(bool(force_purchase.get("success", false)), "Unlocked force rank should purchase")
+	var force_projection := bridge.combat_projection()
+	_expect(is_equal_approx(float(force_projection.get("power", 0.0)), 4.0), "Purchased force rank should project power into live combat")
+	_expect(bridge.available_points() == 0, "Projected purchase should still consume the authoritative point")
 	bridge.queue_free()
 
 

@@ -5,6 +5,7 @@ signal configured(point_display_name: String, available_points: int, level: int)
 signal points_awarded(level: int, amount: int, available_points: int)
 signal state_changed(available_points: int)
 signal persistence_failed(context: String, error: Error)
+signal combat_projection_changed(projection: Dictionary)
 
 const CLASS_TREE_LAYOUT_FIXTURES = preload("res://scripts/ui/class_tree_layout_fixtures.gd")
 
@@ -71,6 +72,7 @@ func sync_playable_progress(current_level: int, current_experience: int) -> bool
 	var available := available_points()
 	if added_points > 0:
 		points_awarded.emit(runtime_character.level, added_points, available)
+	combat_projection_changed.emit(combat_projection())
 	state_changed.emit(available)
 	return persisted
 
@@ -81,6 +83,7 @@ func purchase_node(node_id: StringName) -> Dictionary:
 	var result := session.purchase_class_tree_node(node_id)
 	if bool(result.get("success", false)):
 		_persist(true)
+		combat_projection_changed.emit(combat_projection())
 		state_changed.emit(available_points())
 	return result
 
@@ -99,6 +102,16 @@ func point_display_name() -> String:
 
 func is_configured() -> bool:
 	return _configured
+
+
+func combat_projection() -> Dictionary:
+	if not _configured:
+		return {"armor": 0.0, "power": 0.0, "critical_chance": 0.0}
+	return {
+		"armor": session.class_progression.stat_block.get_value(&"armor", 0.0),
+		"power": session.class_progression.stat_block.get_value(&"power", 0.0),
+		"critical_chance": session.class_progression.stat_block.get_value(&"critical_chance", 0.0),
+	}
 
 
 func current_level() -> int:
@@ -157,6 +170,7 @@ func tree_snapshot() -> Dictionary:
 	return {
 		"point_display_name": definition.point_display_name,
 		"available_points": available_points(),
+		"combat_projection": combat_projection(),
 		"nodes": nodes,
 	}
 
@@ -209,6 +223,7 @@ func _bind_build(build: BuildData, persistent: bool) -> bool:
 		candidate_session.queue_free()
 		return false
 	configured.emit(point_display_name(), available_points(), runtime_character.level)
+	combat_projection_changed.emit(combat_projection())
 	return true
 
 

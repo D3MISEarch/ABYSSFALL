@@ -226,6 +226,7 @@ func _initialize_progression_runtime() -> void:
 	progression_bridge.points_awarded.connect(_on_progression_points_awarded)
 	progression_bridge.state_changed.connect(_on_progression_state_changed)
 	progression_bridge.persistence_failed.connect(_on_progression_persistence_failed)
+	progression_bridge.combat_projection_changed.connect(_on_class_tree_combat_projection_changed)
 	add_child(progression_bridge)
 	var build_name := "%s Build" % str(player.get_class_display_name())
 	if not progression_bridge.configure_persistent(selected_class_id, Persistence, build_name):
@@ -260,6 +261,11 @@ func _on_progression_state_changed(available_points: int) -> void:
 func _on_progression_persistence_failed(context: String, error: Error) -> void:
 	push_error("Class progression persistence failed in %s (error %d)." % [context, error])
 	_show_progression_notification("PROGRESSION SAVE FAILED", 2.4)
+
+
+func _on_class_tree_combat_projection_changed(projection: Dictionary) -> void:
+	if is_instance_valid(player) and player.has_method("apply_class_tree_projection"):
+		player.apply_class_tree_projection(projection)
 
 
 func _update_class_point_label(point_name: String, available_points: int) -> void:

@@ -47,9 +47,13 @@ func set_tree_snapshot(snapshot: Dictionary) -> bool:
 
 	_snapshot = snapshot.duplicate(true)
 	_nodes = candidate_nodes
-	points_label.text = "%s AVAILABLE: %d" % [
+	var projection: Dictionary = snapshot.get("combat_projection", {})
+	points_label.text = "%s: %d     ARMOR %.0f     POWER %.1f     CRIT %.1f%%" % [
 		str(snapshot.get("point_display_name", "Class Points")).to_upper(),
 		int(snapshot.get("available_points", 0)),
+		float(projection.get("armor", 0.0)),
+		float(projection.get("power", 0.0)),
+		float(projection.get("critical_chance", 0.0)) * 100.0,
 	]
 	_purchase_locked = false
 	if _selected_id == &"" or not _nodes.has(_selected_id):

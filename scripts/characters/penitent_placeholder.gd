@@ -319,10 +319,19 @@ func heal(amount: int) -> void:
 	health_changed.emit(health, max_health)
 
 
+func _resolve_outgoing_damage(base_damage: int) -> int:
+	return base_damage
+
+
+func _resolve_incoming_damage(base_damage: int) -> int:
+	return base_damage
+
+
 func take_damage(amount: int) -> void:
 	if not alive or invulnerability_time > 0.0 or amount <= 0:
 		return
-	health = maxi(health - amount, 0)
+	var resolved_amount := _resolve_incoming_damage(amount)
+	health = maxi(health - resolved_amount, 0)
 	health_changed.emit(health, max_health)
 	if health <= 0:
 		alive = false
@@ -340,7 +349,7 @@ func _debug_ritual_blade() -> void:
 		var offset: Vector3 = enemy.global_position - strike_center
 		offset.y = 0.0
 		if offset.length() <= 1.55:
-			enemy.take_damage(14)
+			enemy.take_damage(_resolve_outgoing_damage(14))
 			hit_count += 1
 	if hit_count > 0:
 		add_fervor(minf(6.0 + float(hit_count - 1) * 2.0, 12.0))

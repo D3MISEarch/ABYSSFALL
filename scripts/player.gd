@@ -294,7 +294,7 @@ func _mouse_ground_point() -> Vector3:
 
 
 func _cast_void_bolt() -> void:
-	var damage_value := bolt_damage
+	var damage_value := _resolve_outgoing_damage(bolt_damage)
 	if apotheosis and corruption >= max_corruption * 0.98:
 		damage_value = int(round(float(damage_value) * 1.38))
 	var splash_radius := 0.0
@@ -359,7 +359,7 @@ func _spawn_rift(
 		rift_radius * size_multiplier,
 		rift_duration,
 		rift_pull_strength,
-		int(round(float(rift_damage) * damage_multiplier)),
+		_resolve_outgoing_damage(int(round(float(rift_damage) * damage_multiplier))),
 		size_multiplier
 	)
 	get_tree().current_scene.add_child(rift)
@@ -609,10 +609,19 @@ func heal(amount: int) -> void:
 	health_changed.emit(health, max_health)
 
 
+func _resolve_outgoing_damage(base_damage: int) -> int:
+	return base_damage
+
+
+func _resolve_incoming_damage(base_damage: int) -> int:
+	return base_damage
+
+
 func take_damage(amount: int) -> void:
 	if not alive or invulnerability_time > 0.0:
 		return
-	health = maxi(health - amount, 0)
+	var resolved_amount := _resolve_incoming_damage(amount)
+	health = maxi(health - resolved_amount, 0)
 	health_changed.emit(health, max_health)
 	_damage_flash()
 	if health <= 0:

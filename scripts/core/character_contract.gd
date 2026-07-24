@@ -22,6 +22,7 @@ const REQUIRED_METHODS := [
 	"spend_class_resource",
 	"add_experience",
 	"restore_persistent_progression",
+	"apply_class_tree_projection",
 	"get_inventory_snapshot",
 	"equip_inventory_index",
 	"take_damage",
