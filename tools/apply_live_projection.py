@@ -19,7 +19,6 @@ for path, expected in EXPECTED.items():
     if actual != expected:
         raise SystemExit(f"hash mismatch for {path}: {actual} != {expected}")
 
-Path(".github/workflows/apply-live-projection.yml").unlink(missing_ok=True)
 for chunk in CHUNK_DIR.glob("chunk_*.txt"):
     chunk.unlink()
 CHUNK_DIR.rmdir()
