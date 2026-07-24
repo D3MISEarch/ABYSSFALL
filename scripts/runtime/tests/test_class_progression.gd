@@ -1,7 +1,5 @@
 extends SceneTree
 
-const TEST_ROOT_DIR := "user://abyssfall"
-
 var failures: Array[String] = []
 var point_event_count := 0
 var last_point_total := -1
@@ -140,14 +138,19 @@ func _test_json_round_trip() -> void:
 
 
 func _test_disk_round_trip() -> void:
-	_cleanup()
 	var service := PersistenceService.new()
 	_expect(service.initialize("Progression Disk Tester"), "Persistence service should initialize")
-	var build := service.create_and_select_build(ClassIds.VOID_WARLOCK, "Disk Progression")
-	_expect(build != null, "Persistence service should create a durable build")
+	if service.profile == null:
+		service.free()
+		return
+	var previous_selected_build_id := service.profile.selected_build_id
+	var build := service.create_and_select_build(
+		ClassIds.VOID_WARLOCK,
+		"Class Progression Test %d" % Time.get_ticks_usec()
+	)
+	_expect(build != null, "Persistence service should create a uniquely identified durable test build")
 	if build == null:
 		service.free()
-		_cleanup()
 		return
 	build.level = 4
 	var character := RuntimeCharacter.new()
@@ -178,8 +181,8 @@ func _test_disk_round_trip() -> void:
 		_expect(loaded_session.class_progression.serialize() == expected_progression, "Disk-restored runtime state should match the saved progression")
 		loaded_session.queue_free()
 	session.queue_free()
+	_cleanup_test_build(service.profile, build.build_id, previous_selected_build_id)
 	service.free()
-	_cleanup()
 
 
 func _test_multi_level_awards() -> void:
@@ -242,28 +245,15 @@ func _on_point_awarded(_build_id: String, _source_id: String, _amount: int, avai
 	last_point_total = available_points
 
 
-func _cleanup() -> void:
-	if DirAccess.dir_exists_absolute(TEST_ROOT_DIR):
-		_remove_tree(TEST_ROOT_DIR)
-
-
-func _remove_tree(path: String) -> void:
-	var directory := DirAccess.open(path)
-	if directory == null:
+func _cleanup_test_build(profile: ProfileData, build_id: String, previous_selected_build_id: String) -> void:
+	if profile == null or build_id.is_empty():
 		return
-	directory.list_dir_begin()
-	var entry := directory.get_next()
-	while not entry.is_empty():
-		if entry != "." and entry != "..":
-			var child := path.path_join(entry)
-			if directory.current_is_dir():
-				_remove_tree(child)
-			else:
-				DirAccess.remove_absolute(child)
-		entry = directory.get_next()
-	directory.list_dir_end()
-	directory = null
-	DirAccess.remove_absolute(path)
+	_expect(SaveManager.delete_build(profile, build_id) == OK, "Progression test build should delete without touching unrelated saves")
+	if not previous_selected_build_id.is_empty() and profile.build_ids.has(previous_selected_build_id):
+		_expect(SaveManager.select_build(profile, previous_selected_build_id) == OK, "Progression test cleanup should restore the previously selected build")
+	elif previous_selected_build_id.is_empty():
+		profile.selected_build_id = ""
+		_expect(SaveManager.save_profile(profile) == OK, "Progression test cleanup should restore an empty prior selection")
 
 
 func _expect(condition: bool, message: String) -> void:
