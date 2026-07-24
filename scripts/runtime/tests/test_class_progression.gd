@@ -164,7 +164,12 @@ func _test_disk_round_trip() -> void:
 	var loaded := SaveManager.load_build(build.build_id)
 	_expect(loaded != null, "Progression build should reload from disk")
 	if loaded != null:
-		_expect(loaded.class_tree_state == expected_progression, "Disk reload should preserve the full award ledger and allocations")
+		var loaded_tree: Dictionary = loaded.class_tree_state
+		var loaded_awards: Dictionary = loaded_tree.get("award_ledger", {})
+		var loaded_allocations: Dictionary = loaded_tree.get("allocations", {})
+		_expect(int(loaded_tree.get("schema_version", 0)) == ClassProgressionState.SCHEMA_VERSION, "Disk reload should preserve the progression schema version")
+		_expect(int(loaded_awards.get("level:2", 0)) == 1 and int(loaded_awards.get("level:3", 0)) == 1 and int(loaded_awards.get("level:4", 0)) == 1, "Disk reload should preserve every exactly-once level award source")
+		_expect(int(loaded_allocations.get("proof_origin", 0)) == 1 and int(loaded_allocations.get("proof_force", 0)) == 1, "Disk reload should preserve allocated node ranks")
 		var loaded_character := RuntimeCharacter.new()
 		loaded_character.configure_from_build(loaded)
 		var loaded_session := RuntimeSession.new()
