@@ -6,6 +6,8 @@ signal points_awarded(level: int, amount: int, available_points: int)
 signal state_changed(available_points: int)
 signal persistence_failed(context: String, error: Error)
 
+const CLASS_TREE_LAYOUT_FIXTURES = preload("res://scripts/ui/class_tree_layout_fixtures.gd")
+
 const PROOF_DISPLAY_ORDER: Array[StringName] = [
 	&"proof_origin",
 	&"proof_force",
@@ -111,6 +113,7 @@ func tree_snapshot() -> Dictionary:
 	if not _configured:
 		return {}
 	var definition := session.class_progression.definition
+	var layout_map := CLASS_TREE_LAYOUT_FIXTURES.framework_map()
 	var nodes: Array[Dictionary] = []
 	for node_id: StringName in _ordered_node_ids(definition):
 		var node := definition.get_node(node_id)
@@ -123,6 +126,7 @@ func tree_snapshot() -> Dictionary:
 		var next_cost := -1 if at_maximum else node.cost_for_rank(rank + 1)
 		var affordable := next_cost > 0 and available_points() >= next_cost
 		var can_purchase := not at_maximum and prerequisites_met and not excluded and affordable
+		var layout: Dictionary = layout_map.get(String(node_id), {})
 		var visual_state := "available"
 		if at_maximum:
 			visual_state = "max_rank"
@@ -142,7 +146,11 @@ func tree_snapshot() -> Dictionary:
 			"maximum_rank": node.maximum_rank,
 			"next_cost": next_cost,
 			"prerequisites": _prerequisite_text(node, definition),
+			"prerequisite_ids": _prerequisite_ids(node),
 			"effects": _effect_text(node),
+			"position": layout.get("position", Vector2.ZERO),
+			"neighbors": layout.get("neighbors", {}).duplicate(true),
+			"affordable": affordable,
 			"visual_state": visual_state,
 			"can_purchase": can_purchase,
 		})
@@ -191,6 +199,15 @@ func _bind_build(build: BuildData, persistent: bool) -> bool:
 	session = candidate_session
 	_persistent = persistent
 	_configured = true
+	if _persistent and not _persist(true):
+		_configured = false
+		_persistent = false
+		active_build = null
+		runtime_character = null
+		session = null
+		remove_child(candidate_session)
+		candidate_session.queue_free()
+		return false
 	configured.emit(point_display_name(), available_points(), runtime_character.level)
 	return true
 
@@ -263,6 +280,14 @@ func _prerequisite_text(
 		parts.append("%s Rank %d" % [display_name, int(node.prerequisites[raw_id])])
 	parts.sort()
 	return ", ".join(PackedStringArray(parts))
+
+
+func _prerequisite_ids(node: ClassTreeNodeDefinition) -> Array[String]:
+	var result: Array[String] = []
+	for raw_id: Variant in node.prerequisites:
+		result.append(str(raw_id))
+	result.sort()
+	return result
 
 
 func _effect_text(node: ClassTreeNodeDefinition) -> String:

@@ -4,12 +4,15 @@ const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
 const FERVOR_SEAL_SCRIPT = preload("res://scripts/ui/fervor_seal.gd")
 const INPUT_PROMPT_PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
 const PLAYABLE_PROGRESSION_BRIDGE_SCRIPT = preload("res://scripts/ui/playable_progression_bridge.gd")
+const CLASS_TREE_SCREEN_SCRIPT = preload("res://scripts/ui/class_tree_screen.gd")
+const GAMEPLAY_PAUSE_BOUNDARY = preload("res://scripts/ui/gameplay_pause_boundary.gd")
 
 var requested_class_id := ""
 var selected_class_id := CHARACTER_FACTORY.DEFAULT_CLASS_ID
 var penitent_hud_installed := false
 var active_prompt_profile := INPUT_PROMPT_PROFILE.KEYBOARD_MOUSE
 var progression_bridge: PlayableProgressionBridge
+var class_tree_screen: ClassTreeScreen
 var class_point_label: Label
 var progression_notification_label: Label
 var progression_notification_token := 0
@@ -200,6 +203,18 @@ func _install_progression_hud() -> void:
 		for child in skill_panel.get_children():
 			if child is Label and str(child.text).begins_with("THE THREE FORBIDDEN PATHS"):
 				child.text = "CLASS PROGRESSION     —     T / ESC TO CLOSE"
+		if is_instance_valid(skill_columns):
+			var legacy_scroll := skill_columns.get_parent() as Control
+			if legacy_scroll != null:
+				legacy_scroll.visible = false
+		class_tree_screen = CLASS_TREE_SCREEN_SCRIPT.new() as ClassTreeScreen
+		if class_tree_screen == null:
+			push_error("Could not create the graphical class-tree screen.")
+			return
+		class_tree_screen.position = Vector2(35.0, 62.0)
+		class_tree_screen.size = Vector2(930.0, 478.0)
+		class_tree_screen.purchase_requested.connect(_on_class_tree_node_pressed)
+		skill_panel.add_child(class_tree_screen)
 
 
 func _initialize_progression_runtime() -> void:
@@ -282,6 +297,8 @@ func _toggle_skill_tree() -> void:
 	skill_panel.visible = not skill_panel.visible
 	if skill_panel.visible:
 		_refresh_skill_tree()
+		if class_tree_screen != null:
+			class_tree_screen.call_deferred("focus_initial")
 	_update_pause_state()
 
 
@@ -299,68 +316,27 @@ func _update_pause_state() -> void:
 		should_pause = true
 	if is_instance_valid(skill_panel) and skill_panel.visible:
 		should_pause = true
+	_prepare_gameplay_pause_boundary()
 	get_tree().paused = should_pause
 
 
+func _prepare_gameplay_pause_boundary() -> void:
+	# main.gd remains ALWAYS so it can close menus while paused. The dedicated
+	# boundary keeps Canvas UI and persistence/progression plumbing responsive,
+	# while every direct gameplay subtree becomes genuinely pausable.
+	var always_nodes: Array[Node] = []
+	if progression_bridge != null:
+		always_nodes.append(progression_bridge)
+	GAMEPLAY_PAUSE_BOUNDARY.apply(self, always_nodes)
+
+
 func _refresh_skill_tree() -> void:
-	if skill_columns == null:
+	if class_tree_screen == null:
 		return
-	_clear_container(skill_columns)
 	if progression_bridge == null or not progression_bridge.is_configured():
-		var unavailable := Label.new()
-		unavailable.text = "CLASS PROGRESSION IS NOT YET BOUND"
-		unavailable.custom_minimum_size = Vector2(900.0, 80.0)
-		unavailable.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		skill_columns.add_child(unavailable)
+		class_tree_screen.show_unavailable("CLASS PROGRESSION IS NOT YET BOUND")
 		return
-
-	var snapshot := progression_bridge.tree_snapshot()
-	var available := int(snapshot.get("available_points", 0))
-	var point_name := str(snapshot.get("point_display_name", "Class Points"))
-	var left_column := VBoxContainer.new()
-	var right_column := VBoxContainer.new()
-	left_column.custom_minimum_size = Vector2(440.0, 430.0)
-	right_column.custom_minimum_size = Vector2(440.0, 430.0)
-	left_column.add_theme_constant_override("separation", 10)
-	right_column.add_theme_constant_override("separation", 10)
-	skill_columns.add_child(left_column)
-	skill_columns.add_child(right_column)
-
-	var summary := Label.new()
-	summary.text = "%s AVAILABLE: %d     —     CLICK AN AVAILABLE NODE TO PURCHASE" % [point_name.to_upper(), available]
-	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	summary.add_theme_font_size_override("font_size", 17)
-	summary.modulate = Color(0.88, 0.78, 1.0)
-	summary.custom_minimum_size = Vector2(440.0, 48.0)
-	left_column.add_child(summary)
-
-	var nodes: Array = snapshot.get("nodes", [])
-	for index in range(nodes.size()):
-		var node: Dictionary = nodes[index]
-		var target := left_column if index % 2 == 0 else right_column
-		var button := Button.new()
-		button.custom_minimum_size = Vector2(430.0, 92.0)
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		var rank := int(node.get("rank", 0))
-		var maximum_rank := int(node.get("maximum_rank", 1))
-		var next_cost := int(node.get("next_cost", -1))
-		var cost_text := "MAXIMUM RANK" if next_cost < 0 else "NEXT COST %d" % next_cost
-		button.text = (
-			"%s     %s     RANK %d/%d     %s\n%s\nREQUIRES: %s"
-			% [
-				str(node.get("display_name", "Unknown Node")),
-				str(node.get("node_type", "Node")).to_upper(),
-				rank,
-				maximum_rank,
-				cost_text,
-				str(node.get("effects", "")),
-				str(node.get("prerequisites", "None")),
-			]
-		)
-		button.disabled = not bool(node.get("can_purchase", false))
-		button.modulate = _class_tree_state_color(str(node.get("visual_state", "locked")))
-		button.pressed.connect(_on_class_tree_node_pressed.bind(StringName(str(node.get("node_id", "")))))
-		target.add_child(button)
+	class_tree_screen.set_tree_snapshot(progression_bridge.tree_snapshot())
 
 
 func _on_class_tree_node_pressed(node_id: StringName) -> void:
@@ -380,23 +356,6 @@ func _on_class_tree_node_pressed(node_id: StringName) -> void:
 			1.4
 		)
 	_refresh_skill_tree()
-
-
-func _class_tree_state_color(state: String) -> Color:
-	match state:
-		"max_rank":
-			return Color(0.54, 1.0, 0.35)
-		"purchased":
-			return Color(0.80, 0.58, 1.0)
-		"available":
-			return Color(1.0, 0.90, 0.55)
-		"unaffordable":
-			return Color(0.74, 0.44, 0.30)
-		"excluded":
-			return Color(0.82, 0.16, 0.22)
-		_:
-			return Color(0.38, 0.35, 0.44)
-
 
 
 func _update_class_specific_copy() -> void:
