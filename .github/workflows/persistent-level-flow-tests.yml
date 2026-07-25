@@ -14,6 +14,8 @@ on:
       - "tests/test_class_tree_screen.gd"
       - "tests/test_playable_combat_projection.gd"
       - "tests/test_playable_inventory_persistence.gd"
+      - "tests/test_front_end_save_flow.gd"
+      - "tests/front_end_gameplay_harness.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   push:
@@ -31,6 +33,8 @@ on:
       - "tests/test_class_tree_screen.gd"
       - "tests/test_playable_combat_projection.gd"
       - "tests/test_playable_inventory_persistence.gd"
+      - "tests/test_front_end_save_flow.gd"
+      - "tests/front_end_gameplay_harness.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   workflow_dispatch:
@@ -132,6 +136,20 @@ jobs:
             exit 1
           fi
 
+      - name: Run front-end and visible-save regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_front_end_save_flow.gd 2>&1 | tee front-end-save-flow-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' front-end-save-flow-tests.log; then
+            echo "Front-end and visible-save regression failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Front end and visible save flow' front-end-save-flow-tests.log; then
+            echo "Missing front-end save-flow PASS marker."
+            exit 1
+          fi
+
       - name: Run playable class smoke paths
         shell: bash
         run: |
@@ -168,6 +186,7 @@ jobs:
             class-tree-screen-tests.log
             playable-combat-projection-tests.log
             playable-inventory-persistence-tests.log
+            front-end-save-flow-tests.log
             runtime-void_warlock.log
             runtime-penitent.log
           if-no-files-found: warn
