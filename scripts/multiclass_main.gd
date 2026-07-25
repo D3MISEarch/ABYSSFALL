@@ -256,7 +256,8 @@ func _initialize_progression_runtime() -> void:
 	progression_bridge.combat_projection_changed.connect(_on_class_tree_combat_projection_changed)
 	add_child(progression_bridge)
 	var build_name := "%s Build" % str(player.get_class_display_name())
-	if not progression_bridge.configure_persistent(selected_class_id, Persistence, build_name):
+	var persistence_service := get_node_or_null("/root/Persistence") as PersistenceService
+	if persistence_service == null or not progression_bridge.configure_persistent(selected_class_id, persistence_service, build_name):
 		push_error("Could not initialize persistent class progression for %s." % selected_class_id)
 		return
 	inventory_bridge = PLAYABLE_INVENTORY_BRIDGE_SCRIPT.new() as PlayableInventoryBridge
