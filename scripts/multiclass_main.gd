@@ -1,5 +1,7 @@
 extends "res://scripts/main.gd"
 
+signal exit_to_front_end_requested
+
 const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
 const FERVOR_SEAL_SCRIPT = preload("res://scripts/ui/fervor_seal.gd")
 const INPUT_PROMPT_PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
@@ -7,6 +9,7 @@ const PLAYABLE_PROGRESSION_BRIDGE_SCRIPT = preload("res://scripts/ui/playable_pr
 const PLAYABLE_INVENTORY_BRIDGE_SCRIPT = preload("res://scripts/ui/playable_inventory_bridge.gd")
 const CLASS_TREE_SCREEN_SCRIPT = preload("res://scripts/ui/class_tree_screen.gd")
 const GAMEPLAY_PAUSE_BOUNDARY = preload("res://scripts/ui/gameplay_pause_boundary.gd")
+const GAMEPLAY_PAUSE_MENU_SCRIPT = preload("res://scripts/ui/gameplay_pause_menu.gd")
 
 var requested_class_id := ""
 var selected_class_id := CHARACTER_FACTORY.DEFAULT_CLASS_ID
@@ -18,6 +21,27 @@ var class_tree_screen: ClassTreeScreen
 var class_point_label: Label
 var progression_notification_label: Label
 var progression_notification_token := 0
+var pause_menu: GameplayPauseMenu
+
+
+func _install_input_map() -> void:
+	super._install_input_map()
+	_bind_joy_button("menu_close", JOY_BUTTON_START)
+
+
+func _process(delta: float) -> void:
+	if pause_menu != null and pause_menu.visible:
+		if Input.is_action_just_pressed("menu_close"):
+			_close_pause_menu()
+		return
+	if (
+		Input.is_action_just_pressed("menu_close")
+		and not (is_instance_valid(inventory_panel) and inventory_panel.visible)
+		and not (is_instance_valid(skill_panel) and skill_panel.visible)
+	):
+		_open_pause_menu()
+		return
+	super._process(delta)
 
 
 func _spawn_player() -> void:
@@ -75,6 +99,7 @@ func _spawn_player() -> void:
 
 	_disable_legacy_level_panel()
 	_install_progression_hud()
+	_install_pause_menu()
 	_initialize_progression_runtime()
 
 
@@ -298,6 +323,8 @@ func _show_progression_notification(text: String, duration: float) -> void:
 
 
 func _toggle_inventory() -> void:
+	if pause_menu != null and pause_menu.visible:
+		return
 	if not is_instance_valid(inventory_panel) or not is_instance_valid(skill_panel):
 		return
 	skill_panel.visible = false
@@ -309,6 +336,8 @@ func _toggle_inventory() -> void:
 
 
 func _toggle_skill_tree() -> void:
+	if pause_menu != null and pause_menu.visible:
+		return
 	if not is_instance_valid(inventory_panel) or not is_instance_valid(skill_panel):
 		return
 	inventory_panel.visible = false
@@ -334,8 +363,68 @@ func _update_pause_state() -> void:
 		should_pause = true
 	if is_instance_valid(skill_panel) and skill_panel.visible:
 		should_pause = true
+	if pause_menu != null and pause_menu.visible:
+		should_pause = true
 	_prepare_gameplay_pause_boundary()
 	get_tree().paused = should_pause
+
+
+func _install_pause_menu() -> void:
+	if pause_menu != null or not is_instance_valid(xp_label):
+		return
+	var canvas := xp_label.get_parent()
+	if canvas == null:
+		return
+	pause_menu = GAMEPLAY_PAUSE_MENU_SCRIPT.new() as GameplayPauseMenu
+	if pause_menu == null:
+		push_error("Could not create gameplay pause menu.")
+		return
+	pause_menu.name = "GameplayPauseMenu"
+	pause_menu.resume_requested.connect(_close_pause_menu)
+	pause_menu.save_continue_requested.connect(_on_save_continue_requested)
+	pause_menu.save_exit_requested.connect(_on_save_exit_requested)
+	canvas.add_child(pause_menu)
+
+
+func _open_pause_menu() -> void:
+	if pause_menu == null:
+		return
+	pause_menu.open_menu()
+	_update_pause_state()
+
+
+func _close_pause_menu() -> void:
+	if pause_menu == null:
+		return
+	pause_menu.close_menu()
+	_update_pause_state()
+
+
+func _on_save_continue_requested() -> void:
+	_save_runtime(false)
+
+
+func _on_save_exit_requested() -> void:
+	_save_runtime(true)
+
+
+func _save_runtime(exit_after_save: bool) -> void:
+	if pause_menu == null or progression_bridge == null or not progression_bridge.is_configured():
+		if pause_menu != null:
+			pause_menu.show_status("SAVE UNAVAILABLE", true)
+		return
+	pause_menu.set_busy(true)
+	pause_menu.show_status("SAVING...")
+	var context := "manual_save_exit" if exit_after_save else "manual_save_continue"
+	var saved := progression_bridge.persist_runtime_snapshot(true, context)
+	pause_menu.set_busy(false)
+	if not saved:
+		pause_menu.show_status("SAVE FAILED", true)
+		return
+	pause_menu.show_status("SAVED")
+	if exit_after_save:
+		get_tree().paused = false
+		exit_to_front_end_requested.emit()
 
 
 func _prepare_gameplay_pause_boundary() -> void:
