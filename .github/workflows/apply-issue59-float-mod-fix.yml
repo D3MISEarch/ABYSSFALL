@@ -1,0 +1,35 @@
+name: Apply Issue 59 parser correction
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/apply-issue59-float-mod-fix.yml"
+      - "tools/apply_issue59_float_mod_fix.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-issue59-float-mod-fix-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'feature/issue59-art-pass0-sunken-crypts'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/issue59-art-pass0-sunken-crypts
+          fetch-depth: 0
+      - name: Apply parser correction
+        run: python tools/apply_issue59_float_mod_fix.py
+      - name: Commit corrected Art Pass 0 source
+        run: |
+          set -euo pipefail
+          git config user.name "AbyssFall Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add scripts/art/sunken_crypts_art_pass0.gd tools/apply_issue59_float_mod_fix.py
+          git commit -m "fix: use integer modulo for Art Pass 0 rotations"
+          git push origin HEAD:feature/issue59-art-pass0-sunken-crypts
