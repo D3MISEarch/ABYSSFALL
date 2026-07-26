@@ -23,6 +23,12 @@ func _init() -> void:
 	_expect(_count_collision_objects(art_pass) == 0, "Art pass must remain visual-only with no collision objects")
 	_expect(_count_meshes(art_pass) >= 140, "Art pass should build a meaningful modular visual shell")
 	_expect(_count_lights(art_pass) >= 3, "Art pass should install controlled lighting")
+	var legacy_disc := host.get_node_or_null("RoomFoundationDisc_8") as MeshInstance3D
+	_expect(legacy_disc != null and not legacy_disc.visible, "Legacy full-room disc should be hidden so new floor art can read")
+	var legacy_light := _find_retuned_legacy_light(host)
+	_expect(legacy_light != null, "Legacy room glow light should be retuned")
+	if legacy_light != null:
+		_expect(legacy_light.light_energy <= 0.16, "Legacy room glow should no longer dominate the courtyard")
 
 	host.queue_free()
 	if failures.is_empty():
@@ -40,6 +46,14 @@ func _install_base_visual_fixture(host: Node3D) -> void:
 	host.add_child(world_environment)
 	var moon := DirectionalLight3D.new()
 	host.add_child(moon)
+	var legacy_disc := MeshInstance3D.new()
+	legacy_disc.name = "RoomFoundationDisc_8"
+	legacy_disc.mesh = CylinderMesh.new()
+	host.add_child(legacy_disc)
+	var legacy_room_light := OmniLight3D.new()
+	legacy_room_light.omni_range = 3.8
+	legacy_room_light.light_energy = 0.72
+	host.add_child(legacy_room_light)
 	for body_name in ["CryptFloor", "WestOuterWall", "EastOuterWall", "SouthSeal", "NorthThroneWall", "CryptPillar_8_0"]:
 		var body := StaticBody3D.new()
 		body.name = body_name
@@ -47,6 +61,13 @@ func _install_base_visual_fixture(host: Node3D) -> void:
 		mesh_instance.mesh = BoxMesh.new()
 		body.add_child(mesh_instance)
 		host.add_child(body)
+
+
+func _find_retuned_legacy_light(root_node: Node) -> OmniLight3D:
+	for child: Node in root_node.get_children():
+		if child is OmniLight3D and child.has_meta("art_pass0_retuned_legacy_room_light"):
+			return child as OmniLight3D
+	return null
 
 
 func _count_collision_objects(root_node: Node) -> int:
