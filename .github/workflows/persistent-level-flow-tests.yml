@@ -9,6 +9,10 @@ on:
       - "scripts/runtime/**"
       - "scripts/ui/**"
       - "scripts/main.gd"
+      - "scripts/player.gd"
+      - "scripts/void_bolt.gd"
+      - "scripts/grasping_rift.gd"
+      - "scripts/shadow_step_vfx.gd"
       - "scripts/multiclass_main.gd"
       - "scripts/persistence/**"
       - "tests/test_persistent_level_flow.gd"
@@ -19,6 +23,7 @@ on:
       - "tests/test_front_end_save_flow.gd"
       - "tests/front_end_gameplay_harness.gd"
       - "tests/test_art_pass0_visual_contract.gd"
+      - "tests/test_voidbringer_vfx_pass0b.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   push:
@@ -31,6 +36,10 @@ on:
       - "scripts/runtime/**"
       - "scripts/ui/**"
       - "scripts/main.gd"
+      - "scripts/player.gd"
+      - "scripts/void_bolt.gd"
+      - "scripts/grasping_rift.gd"
+      - "scripts/shadow_step_vfx.gd"
       - "scripts/multiclass_main.gd"
       - "scripts/persistence/**"
       - "tests/test_persistent_level_flow.gd"
@@ -41,6 +50,7 @@ on:
       - "tests/test_front_end_save_flow.gd"
       - "tests/front_end_gameplay_harness.gd"
       - "tests/test_art_pass0_visual_contract.gd"
+      - "tests/test_voidbringer_vfx_pass0b.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   workflow_dispatch:
@@ -170,6 +180,20 @@ jobs:
             exit 1
           fi
 
+      - name: Run Voidbringer Art Pass 0B VFX contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_vfx_pass0b.gd 2>&1 | tee voidbringer-vfx-pass0b-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' voidbringer-vfx-pass0b-tests.log; then
+            echo "Voidbringer Art Pass 0B VFX contract failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Voidbringer Art Pass 0B VFX contract' voidbringer-vfx-pass0b-tests.log; then
+            echo "Missing Voidbringer VFX PASS marker."
+            exit 1
+          fi
+
       - name: Run playable class smoke paths
         shell: bash
         run: |
@@ -208,6 +232,7 @@ jobs:
             playable-inventory-persistence-tests.log
             front-end-save-flow-tests.log
             art-pass0-visual-contract-tests.log
+            voidbringer-vfx-pass0b-tests.log
             runtime-void_warlock.log
             runtime-penitent.log
           if-no-files-found: warn
