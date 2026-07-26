@@ -12,6 +12,7 @@ const ITEM_PICKUP_SCRIPT = preload("res://scripts/item_pickup.gd")
 const BOUND_WRETCH_SCRIPT = preload("res://scripts/bound_wretch.gd")
 const CORRUPTION_METER_SCRIPT = preload("res://scripts/corruption_meter.gd")
 const PLAYABLE_ITEM_CATALOG = preload("res://scripts/core/playable_item_catalog.gd")
+const SUNKEN_CRYPTS_ART_PASS0_SCRIPT = preload("res://scripts/art/sunken_crypts_art_pass0.gd")
 
 const EQUIPMENT_SLOTS := ["Weapon", "Hood", "Chest", "Gloves", "Boots", "Relic"]
 const ITEM_POOL := PLAYABLE_ITEM_CATALOG.ITEM_POOL
@@ -60,6 +61,7 @@ var gates: Dictionary = {}
 var boss
 var hidden_relic_claimed := false
 var relic_altar: Node3D
+var sunken_crypts_art_pass0: SunkenCryptsArtPass0
 
 const MAX_ACTIVE_ENEMIES := 32
 const COURTYARD_GENERATORS := [Vector3(-6.5, 0.0, 10.0), Vector3(6.5, 0.0, 7.0)]
@@ -74,6 +76,7 @@ func _ready() -> void:
 	_install_input_map()
 	_build_environment()
 	_build_arena()
+	_install_sunken_crypts_art_pass0()
 	_build_hud()
 	_spawn_player()
 	_start_courtyard()
@@ -297,6 +300,18 @@ func _build_arena() -> void:
 	_build_relic_alcove()
 
 
+func _install_sunken_crypts_art_pass0() -> void:
+	if sunken_crypts_art_pass0 != null:
+		return
+	sunken_crypts_art_pass0 = SUNKEN_CRYPTS_ART_PASS0_SCRIPT.new() as SunkenCryptsArtPass0
+	if sunken_crypts_art_pass0 == null:
+		push_error("Could not create Sunken Crypts Art Pass 0 controller.")
+		return
+	add_child(sunken_crypts_art_pass0)
+	if not sunken_crypts_art_pass0.install(self):
+		push_error("Could not install Sunken Crypts Art Pass 0 controller.")
+
+
 func _create_gate(gate_name: String, position_value: Vector3) -> StaticBody3D:
 	var gate := StaticBody3D.new()
 	gate.name = gate_name
@@ -338,10 +353,11 @@ func _decorate_room(center: Vector3, radius: float, glow_color: Color, pillar_co
 	disc_mesh.top_radius = radius
 	disc_mesh.bottom_radius = radius
 	disc_mesh.height = 0.035
+	disc.name = "RoomFoundationDisc_%d" % int(abs(center.z))
 	disc.mesh = disc_mesh
-	disc.position = center + Vector3(0.0, 0.04, 0.0)
+	disc.position = center + Vector3(0.0, 0.025, 0.0)
 	disc.material_override = _make_material(
-		Color(glow_color.r * 0.18, glow_color.g * 0.18, glow_color.b * 0.18), true
+		Color(glow_color.r * 0.055, glow_color.g * 0.055, glow_color.b * 0.055), false
 	)
 	add_child(disc)
 	for i in range(pillar_count):
@@ -358,7 +374,7 @@ func _decorate_room(center: Vector3, radius: float, glow_color: Color, pillar_co
 		var light := OmniLight3D.new()
 		light.position = pillar_position + Vector3(0.0, 1.45, 0.0)
 		light.light_color = glow_color
-		light.light_energy = 1.35
+		light.light_energy = 0.72
 		light.omni_range = 3.8
 		add_child(light)
 
