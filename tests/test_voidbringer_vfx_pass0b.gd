@@ -8,13 +8,19 @@ var failures: Array[String] = []
 
 
 func _init() -> void:
+	call_deferred("_run_tests")
+
+
+func _run_tests() -> void:
 	var host := Node3D.new()
 	host.name = "VoidbringerVfxTestHost"
 	root.add_child(host)
-	_test_void_bolt(host)
-	_test_grasping_rift(host)
-	_test_shadow_step(host)
+	await process_frame
+	await _test_void_bolt(host)
+	await _test_grasping_rift(host)
+	await _test_shadow_step(host)
 	host.queue_free()
+	await process_frame
 	if failures.is_empty():
 		print("PASS: Voidbringer Art Pass 0B VFX contract")
 		quit(0)
@@ -29,8 +35,9 @@ func _test_void_bolt(host: Node3D) -> void:
 	source.name = "BoltSource"
 	host.add_child(source)
 	var bolt := VOID_BOLT_SCRIPT.new()
-	host.add_child(bolt)
 	bolt.setup(Vector3(1.0, 0.0, 0.0), 22.0, 18, source, 2.1, 9)
+	host.add_child(bolt)
+	await process_frame
 	_expect(is_equal_approx(bolt.move_speed, 22.0), "Void Bolt speed must remain unchanged")
 	_expect(bolt.damage == 18, "Void Bolt damage must remain unchanged")
 	_expect(is_equal_approx(bolt.splash_radius, 2.1), "Void Bolt splash radius should preserve setup input")
@@ -45,6 +52,7 @@ func _test_void_bolt(host: Node3D) -> void:
 	_expect(_count_collision_shapes(bolt) == 1, "Void Bolt should retain exactly one projectile collision shape")
 	bolt.queue_free()
 	source.queue_free()
+	await process_frame
 
 
 func _test_grasping_rift(host: Node3D) -> void:
@@ -54,6 +62,7 @@ func _test_grasping_rift(host: Node3D) -> void:
 	var rift := GRASPING_RIFT_SCRIPT.new()
 	rift.setup(source, 6.0, 2.2, 7.4, 30, 1.0)
 	host.add_child(rift)
+	await process_frame
 	_expect(is_equal_approx(rift.pull_radius, 6.0), "Rift radius must remain unchanged")
 	_expect(is_equal_approx(rift.pull_duration, 2.2), "Rift duration must remain unchanged")
 	_expect(is_equal_approx(rift.pull_strength, 7.4), "Rift pull strength must remain unchanged")
@@ -70,13 +79,15 @@ func _test_grasping_rift(host: Node3D) -> void:
 	var starting_radius := 0.0
 	if first_shard != null:
 		starting_radius = Vector2(first_shard.position.x, first_shard.position.z).length()
-	rift._physics_process(1.1)
+	rift.elapsed = 1.1
+	rift._update_orbit_debris(0.5)
 	if first_shard != null:
 		var progressed_radius := Vector2(first_shard.position.x, first_shard.position.z).length()
 		_expect(progressed_radius < starting_radius, "Rift debris should visibly accelerate inward during the pull")
 	_expect(_count_collision_objects(rift) == 0, "Rift VFX must remain visual-only")
 	rift.queue_free()
 	source.queue_free()
+	await process_frame
 
 
 func _test_shadow_step(host: Node3D) -> void:
@@ -85,6 +96,7 @@ func _test_shadow_step(host: Node3D) -> void:
 	host.add_child(source)
 	var effect = SHADOW_STEP_VFX_SCRIPT.new()
 	host.add_child(effect)
+	await process_frame
 	effect.setup(source, Vector3.ZERO, Vector3(1.0, 0.0, 0.0), 0.16)
 	_expect(effect.get_node_or_null("ShadowStepDeparture") != null, "Shadow Step should create a departure distortion")
 	_expect(effect.get_node_or_null("ShadowStepDeparture/ShadowStepDirectionStreak") != null, "Shadow Step should show travel direction")
@@ -98,6 +110,7 @@ func _test_shadow_step(host: Node3D) -> void:
 	_expect(_count_collision_objects(effect) == 0, "Shadow Step VFX must remain visual-only")
 	effect.queue_free()
 	source.queue_free()
+	await process_frame
 
 
 func _count_collision_objects(root_node: Node) -> int:
