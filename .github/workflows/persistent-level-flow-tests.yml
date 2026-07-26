@@ -3,10 +3,12 @@ name: Persistent Level Flow Tests
 on:
   pull_request:
     paths:
+      - "scripts/art/**"
       - "scripts/characters/**"
       - "scripts/core/**"
       - "scripts/runtime/**"
       - "scripts/ui/**"
+      - "scripts/main.gd"
       - "scripts/multiclass_main.gd"
       - "scripts/persistence/**"
       - "tests/test_persistent_level_flow.gd"
@@ -16,16 +18,19 @@ on:
       - "tests/test_playable_inventory_persistence.gd"
       - "tests/test_front_end_save_flow.gd"
       - "tests/front_end_gameplay_harness.gd"
+      - "tests/test_art_pass0_visual_contract.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   push:
     branches:
       - main
     paths:
+      - "scripts/art/**"
       - "scripts/characters/**"
       - "scripts/core/**"
       - "scripts/runtime/**"
       - "scripts/ui/**"
+      - "scripts/main.gd"
       - "scripts/multiclass_main.gd"
       - "scripts/persistence/**"
       - "tests/test_persistent_level_flow.gd"
@@ -35,6 +40,7 @@ on:
       - "tests/test_playable_inventory_persistence.gd"
       - "tests/test_front_end_save_flow.gd"
       - "tests/front_end_gameplay_harness.gd"
+      - "tests/test_art_pass0_visual_contract.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   workflow_dispatch:
@@ -50,7 +56,7 @@ jobs:
   persistent-level-flow:
     name: Godot 4.4.1 Persistent Level Flow
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
 
     steps:
       - name: Check out exact commit
@@ -150,6 +156,20 @@ jobs:
             exit 1
           fi
 
+      - name: Run Art Pass 0 visual contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_art_pass0_visual_contract.gd 2>&1 | tee art-pass0-visual-contract-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' art-pass0-visual-contract-tests.log; then
+            echo "Art Pass 0 visual contract failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Sunken Crypts Art Pass 0 visual contract' art-pass0-visual-contract-tests.log; then
+            echo "Missing Art Pass 0 PASS marker."
+            exit 1
+          fi
+
       - name: Run playable class smoke paths
         shell: bash
         run: |
@@ -187,6 +207,7 @@ jobs:
             playable-combat-projection-tests.log
             playable-inventory-persistence-tests.log
             front-end-save-flow-tests.log
+            art-pass0-visual-contract-tests.log
             runtime-void_warlock.log
             runtime-penitent.log
           if-no-files-found: warn
