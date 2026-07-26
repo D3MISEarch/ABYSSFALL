@@ -20,6 +20,7 @@ func install(host: Node3D) -> bool:
 	host_root = host
 	name = "SunkenCryptsArtPass0"
 	_configure_world()
+	_suppress_legacy_room_treatment()
 	_retint_base_geometry()
 	_build_courtyard_floor()
 	_build_ritual_fractures()
@@ -42,13 +43,29 @@ func _configure_world() -> void:
 			if environment != null:
 				environment.background_color = PALETTE.ABYSS_BLACK
 				environment.ambient_light_color = Color(0.16, 0.17, 0.23)
-				environment.ambient_light_energy = 0.58
+				environment.ambient_light_energy = 0.72
 				environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 		elif child is DirectionalLight3D:
 			var moon := child as DirectionalLight3D
 			moon.light_color = Color(0.47, 0.55, 0.78)
-			moon.light_energy = 0.92
+			moon.light_energy = 1.12
 			moon.shadow_enabled = true
+
+
+func _suppress_legacy_room_treatment() -> void:
+	if host_root == null:
+		return
+	for child: Node in host_root.get_children():
+		if child is MeshInstance3D and child.name.begins_with("RoomFoundationDisc_"):
+			var legacy_disc := child as MeshInstance3D
+			legacy_disc.visible = false
+			legacy_disc.set_meta("art_pass0_hidden_legacy_disc", true)
+		elif child is OmniLight3D:
+			var legacy_light := child as OmniLight3D
+			if is_equal_approx(legacy_light.omni_range, 3.8) and is_equal_approx(legacy_light.light_energy, 0.72):
+				legacy_light.light_color = Color(0.47, 0.55, 0.78)
+				legacy_light.light_energy = 0.16
+				legacy_light.set_meta("art_pass0_retuned_legacy_room_light", true)
 
 
 func _retint_base_geometry() -> void:
@@ -91,10 +108,10 @@ func _build_courtyard_floor() -> void:
 			mesh.size = Vector3(tile_size - inset, 0.035, tile_size - inset)
 			tile.mesh = mesh
 			tile.position = Vector3(x, 0.018 + float((x_index + z_index) % 2) * 0.002, z)
-			var variation := float((x_index * 11 + z_index * 5) % 5) * 0.007
+			var variation := float((x_index * 11 + z_index * 5) % 5) * 0.008
 			tile.material_override = PALETTE.stone(
-				Color(0.046 + variation, 0.049 + variation, 0.057 + variation),
-				0.35 + variation * 5.0
+				Color(0.072 + variation, 0.076 + variation, 0.088 + variation),
+				0.24 + variation * 4.0
 			)
 			floor_root.add_child(tile)
 			z += tile_size
@@ -110,7 +127,7 @@ func _build_courtyard_floor() -> void:
 	slab_mesh.height = 0.055
 	central_slab.mesh = slab_mesh
 	central_slab.position = COURTYARD_CENTER + Vector3(0.0, 0.045, 0.0)
-	central_slab.material_override = PALETTE.stone(Color(0.028, 0.029, 0.037), 0.62)
+	central_slab.material_override = PALETTE.stone(Color(0.050, 0.052, 0.064), 0.48)
 	floor_root.add_child(central_slab)
 
 
@@ -167,8 +184,8 @@ func _build_wall_bay(parent: Node3D, position_value: Vector3, yaw: float) -> voi
 	bay.position = position_value
 	bay.rotation_degrees.y = yaw
 	parent.add_child(bay)
-	var stone_material := PALETTE.stone(Color(0.058, 0.055, 0.067), 0.12)
-	var inset_material := PALETTE.stone(Color(0.018, 0.017, 0.024), 0.02)
+	var stone_material := PALETTE.stone(Color(0.082, 0.079, 0.093), 0.18)
+	var inset_material := PALETTE.stone(Color(0.030, 0.029, 0.038), 0.04)
 	_add_box(bay, Vector3(-1.28, 1.45, 0.0), Vector3(0.48, 3.15, 0.72), stone_material)
 	_add_box(bay, Vector3(1.28, 1.45, 0.0), Vector3(0.48, 3.15, 0.72), stone_material)
 	_add_box(bay, Vector3(0.0, 2.85, 0.0), Vector3(3.05, 0.42, 0.78), stone_material)
@@ -180,7 +197,7 @@ func _build_wall_bay(parent: Node3D, position_value: Vector3, yaw: float) -> voi
 	coffin_mesh.size = Vector3(0.72, 1.72, 0.26)
 	coffin.mesh = coffin_mesh
 	coffin.position = Vector3(0.0, 1.23, -0.34)
-	coffin.material_override = PALETTE.stone(Color(0.073, 0.066, 0.075), 0.08)
+	coffin.material_override = PALETTE.stone(Color(0.102, 0.094, 0.108), 0.10)
 	bay.add_child(coffin)
 
 
