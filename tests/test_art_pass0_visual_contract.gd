@@ -20,11 +20,17 @@ func _init() -> void:
 	_expect(art_pass.get_node_or_null("ArtPass0_RestraintMachinery") != null, "Restraint machinery should exist")
 	_expect(art_pass.get_node_or_null("ArtPass0_HangingCages") != null, "Hanging cages should exist")
 	_expect(art_pass.get_node_or_null("ArtPass0_CorruptionResidue") != null, "Corruption residue should exist")
+	_expect(art_pass.get_node_or_null("ArtPass0_GeneratorChamber") != null, "Generator chamber art should exist")
+	_expect(art_pass.get_node_or_null("ArtPass0_CollapsedCatacombs") != null, "Collapsed catacombs art should exist")
+	_expect(art_pass.get_node_or_null("ArtPass0_HungryHall") != null, "Hungry hall art should exist")
+	_expect(art_pass.get_node_or_null("ArtPass0_AbyssalThrone") != null, "Abyssal throne art should exist")
+	_expect(art_pass.get_node_or_null("ArtPass0_RouteLighting") != null, "Route lighting should exist")
 	_expect(_count_collision_objects(art_pass) == 0, "Art pass must remain visual-only with no collision objects")
-	_expect(_count_meshes(art_pass) >= 140, "Art pass should build a meaningful modular visual shell")
-	_expect(_count_lights(art_pass) >= 3, "Art pass should install controlled lighting")
-	var legacy_disc := host.get_node_or_null("RoomFoundationDisc_8") as MeshInstance3D
-	_expect(legacy_disc != null and not legacy_disc.visible, "Legacy full-room disc should be hidden so new floor art can read")
+	_expect(_count_meshes(art_pass) >= 550, "Art pass should dress the complete playable route")
+	_expect(_count_lights(art_pass) >= 12, "Art pass should install room-specific controlled lighting")
+	for disc_name in ["RoomFoundationDisc_8", "RoomFoundationDisc_20", "RoomFoundationDisc_46", "RoomFoundationDisc_73", "RoomFoundationDisc_103"]:
+		var legacy_disc := host.get_node_or_null(disc_name) as MeshInstance3D
+		_expect(legacy_disc != null and not legacy_disc.visible, "%s should be hidden so new floor art can read" % disc_name)
 	var legacy_light := _find_retuned_legacy_light(host)
 	_expect(legacy_light != null, "Legacy room glow light should be retuned")
 	if legacy_light != null:
@@ -46,10 +52,11 @@ func _install_base_visual_fixture(host: Node3D) -> void:
 	host.add_child(world_environment)
 	var moon := DirectionalLight3D.new()
 	host.add_child(moon)
-	var legacy_disc := MeshInstance3D.new()
-	legacy_disc.name = "RoomFoundationDisc_8"
-	legacy_disc.mesh = CylinderMesh.new()
-	host.add_child(legacy_disc)
+	for disc_name in ["RoomFoundationDisc_8", "RoomFoundationDisc_20", "RoomFoundationDisc_46", "RoomFoundationDisc_73", "RoomFoundationDisc_103"]:
+		var legacy_disc := MeshInstance3D.new()
+		legacy_disc.name = disc_name
+		legacy_disc.mesh = CylinderMesh.new()
+		host.add_child(legacy_disc)
 	var legacy_room_light := OmniLight3D.new()
 	legacy_room_light.omni_range = 3.8
 	legacy_room_light.light_energy = 0.72
