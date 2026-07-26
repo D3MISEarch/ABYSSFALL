@@ -1,0 +1,35 @@
+name: Apply Issue 64 Shadow Step VFX hook
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/apply-issue64-shadow-step-hook.yml"
+      - "tools/apply_issue64_shadow_step_hook.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-issue64-shadow-step-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'feature/issue64-voidbringer-vfx-pass0b'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/issue64-voidbringer-vfx-pass0b
+          fetch-depth: 0
+      - name: Apply exact guarded player hook
+        run: python tools/apply_issue64_shadow_step_hook.py
+      - name: Commit permanent Shadow Step hook
+        run: |
+          set -euo pipefail
+          git config user.name "AbyssFall Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A scripts/player.gd tools/apply_issue64_shadow_step_hook.py
+          git commit -m "feat: connect Shadow Step VFX to the playable dodge"
+          git push origin HEAD:feature/issue64-voidbringer-vfx-pass0b
