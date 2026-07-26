@@ -333,7 +333,7 @@ func _build_rubble_and_bones() -> void:
 		)
 		rubble.mesh = rubble_mesh
 		rubble.position = COURTYARD_CENTER + Vector3(cos(angle) * radius, 0.10, sin(angle) * radius)
-		rubble.rotation_degrees = Vector3(float(i * 17) % 30.0, float(i * 47) % 180.0, float(i * 23) % 25.0)
+		rubble.rotation_degrees = Vector3(float((i * 17) % 30), float((i * 47) % 180), float((i * 23) % 25))
 		rubble.material_override = stone_material
 		dressing_root.add_child(rubble)
 	for i in range(9):
@@ -346,7 +346,7 @@ func _build_rubble_and_bones() -> void:
 		var angle := TAU * float(i) / 9.0 + 0.3
 		var radius := 6.2 + float(i % 4) * 1.25
 		bone.position = COURTYARD_CENTER + Vector3(cos(angle) * radius, 0.08, sin(angle) * radius)
-		bone.rotation_degrees = Vector3(90.0, float(i * 37) % 180.0, 18.0)
+		bone.rotation_degrees = Vector3(90.0, float((i * 37) % 180), 18.0)
 		bone.material_override = bone_material
 		dressing_root.add_child(bone)
 
