@@ -83,6 +83,19 @@ func equip_inventory_index(index: int) -> void:
 	loot_message.emit("EQUIPPED: %s" % str(equipped_item.get("name", "Unknown Relic")))
 
 
+func unequip_slot(slot: String) -> bool:
+	if playable_inventory_bridge == null:
+		return false
+	var result := playable_inventory_bridge.unequip_slot(slot)
+	if not bool(result.get("success", false)):
+		loot_message.emit("UNEQUIP BLOCKED: %s" % str(result.get("reason", &"invalid")).replace("_", " ").to_upper())
+		return false
+	_apply_persistent_inventory_snapshot(playable_inventory_bridge.snapshot())
+	var unequipped_item: Dictionary = result.get("item", {})
+	loot_message.emit("UNEQUIPPED: %s" % str(unequipped_item.get("name", "Unknown Relic")))
+	return true
+
+
 func get_inventory_snapshot() -> Dictionary:
 	if playable_inventory_bridge != null and playable_inventory_bridge.is_configured():
 		return playable_inventory_bridge.snapshot()
