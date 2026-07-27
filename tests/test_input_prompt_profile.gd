@@ -27,7 +27,7 @@ func _run_tests() -> void:
 		printerr("Input prompt profile tests failed: %d" % failures)
 		quit(1)
 		return
-	print("Input prompt profile tests passed.")
+	print("PASS: Input prompt profiles")
 	quit(0)
 
 
