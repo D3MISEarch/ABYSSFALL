@@ -169,7 +169,7 @@ func _test_real_inventory_layout_wraps_without_horizontal_overflow() -> void:
 		_expect(backpack_scroll.scroll_horizontal == 0, "Backpack should remain pinned to its left edge")
 	if equipment_scroll != null:
 		_expect(equipment_scroll.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED, "Equipment should be vertical-only")
-	var backpack_children := gameplay.inventory_backpack_box.get_children()
+	var backpack_children: Array[Node] = gameplay.inventory_backpack_box.get_children()
 	_expect(backpack_children.size() >= 2, "Real inventory fixture should build a heading and item")
 	if backpack_children.size() >= 2:
 		var heading := backpack_children[0] as Label
