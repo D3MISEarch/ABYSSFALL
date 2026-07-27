@@ -40,13 +40,22 @@ static func choose_focus(
 
 
 static func prepare_scroll(scroll: ScrollContainer) -> void:
-	if is_instance_valid(scroll):
-		scroll.follow_focus = true
+	if not is_instance_valid(scroll):
+		return
+	# Inventory is a two-column controller surface, not a horizontally panning
+	# document. Keep focus-following vertical only so long labels can never push
+	# either column sideways and hide the beginning of item descriptions.
+	scroll.follow_focus = true
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.scroll_horizontal = 0
 
 
 static func reveal(scroll: ScrollContainer, control: Control) -> void:
-	if is_instance_valid(scroll) and is_instance_valid(control):
-		scroll.ensure_control_visible(control)
+	if not is_instance_valid(scroll) or not is_instance_valid(control):
+		return
+	scroll.scroll_horizontal = 0
+	scroll.ensure_control_visible(control)
+	scroll.scroll_horizontal = 0
 
 
 static func _wire_vertical(buttons: Array[Button]) -> void:
