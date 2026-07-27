@@ -91,6 +91,44 @@ func equip_inventory_index(index: int) -> Dictionary:
 	}
 
 
+func unequip_slot(playable_slot: String) -> Dictionary:
+	if not _configured:
+		return {"success": false, "reason": &"unconfigured"}
+	var runtime_slot := PLAYABLE_ITEM_CATALOG.runtime_slot_for_playable(playable_slot)
+	if runtime_slot == &"":
+		return {"success": false, "reason": &"invalid_slot"}
+	var inventory := runtime_bridge.session.inventory
+	var equipment := runtime_bridge.session.equipment
+	var equipped_item: ItemInstance = equipment.equipped.get(runtime_slot)
+	if equipped_item == null:
+		return {"success": false, "reason": &"empty_slot"}
+	var definition := runtime_bridge.session.item_catalog.get_definition(equipped_item.definition_id)
+	if definition == null:
+		return {"success": false, "reason": &"invalid_definition"}
+	if definition.max_stack == 1 and inventory.items.size() >= inventory.capacity:
+		return {"success": false, "reason": &"inventory_full"}
+
+	var inventory_before := inventory.serialize()
+	var equipment_before := equipment.serialize()
+	var removed := equipment.unequip(runtime_slot)
+	if removed == null:
+		return {"success": false, "reason": &"unequip_failed"}
+	if not inventory.add_item(removed, definition):
+		_restore_transaction(inventory_before, equipment_before)
+		return {"success": false, "reason": &"inventory_return_failed"}
+
+	var persisted := runtime_bridge.persist_runtime_snapshot(false, "playable_inventory_unequip")
+	var projected := PLAYABLE_ITEM_CATALOG.project_item(removed)
+	state_changed.emit(snapshot())
+	return {
+		"success": true,
+		"reason": &"unequipped",
+		"persisted": persisted,
+		"slot": playable_slot,
+		"item": projected,
+	}
+
+
 func snapshot() -> Dictionary:
 	var result_equipment: Dictionary = {}
 	for playable_slot: String in PLAYABLE_SLOTS:
