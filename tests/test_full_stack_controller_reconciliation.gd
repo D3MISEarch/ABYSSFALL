@@ -11,6 +11,28 @@ const PENITENT_SCRIPT = preload("res://scripts/characters/penitent_playable.gd")
 const FULL_STACK_MAIN_SCRIPT = preload("res://scripts/full_stack_controller_main.gd")
 const GAMEPLAY_SCENE = preload("res://gameplay.tscn")
 
+class InventoryLayoutPlayer:
+	extends Node
+
+	func get_inventory_snapshot() -> Dictionary:
+		var long_item := PLAYABLE_ITEM_CATALOG.item_data(&"wretch_bell")
+		long_item["description"] = (
+			"A deliberately long inventory description that must wrap inside the backpack "
+			+ "column instead of widening the ScrollContainer and hiding its opening words."
+		)
+		return {
+			"equipment": {
+				"Weapon": PLAYABLE_ITEM_CATALOG.item_data(&"void_scepter"),
+				"Hood": {},
+				"Chest": {},
+				"Gloves": {},
+				"Boots": {},
+				"Relic": {},
+			},
+			"backpack": [long_item],
+			"capacity": 12,
+		}
+
 var failures: Array[String] = []
 
 
@@ -23,6 +45,7 @@ func _run() -> void:
 	_test_controller_actions_and_start_pause()
 	_test_controller_facing_retention()
 	await _test_inventory_navigation_scrolls_with_focus()
+	_test_real_inventory_layout_wraps_without_horizontal_overflow()
 	_test_durable_unequip_transaction()
 	_test_both_classes_expose_unequip()
 	if failures.is_empty():
@@ -116,17 +139,47 @@ func _test_inventory_navigation_scrolls_with_focus() -> void:
 	INVENTORY_FOCUS_NAVIGATOR.wire_columns([], buttons)
 	await process_frame
 	await process_frame
+	scroll.scroll_horizontal = 120
 	buttons[buttons.size() - 1].grab_focus()
 	INVENTORY_FOCUS_NAVIGATOR.reveal(scroll, buttons[buttons.size() - 1])
 	await process_frame
 	await process_frame
 	_expect(scroll.follow_focus, "Inventory ScrollContainer should follow controller focus")
+	_expect(scroll.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED, "Inventory must disable horizontal scrolling")
+	_expect(scroll.scroll_horizontal == 0, "Controller focus must never shift an inventory column sideways")
 	_expect(scroll.scroll_vertical > 0, "Focusing a lower inventory item should scroll it into view")
 	_expect(
 		buttons[0].focus_neighbor_bottom == buttons[0].get_path_to(buttons[1]),
 		"Inventory D-pad navigation should have deterministic vertical neighbors"
 	)
 	host.free()
+
+
+func _test_real_inventory_layout_wraps_without_horizontal_overflow() -> void:
+	var gameplay = FULL_STACK_MAIN_SCRIPT.new()
+	var layout_player := InventoryLayoutPlayer.new()
+	gameplay.player = layout_player
+	gameplay._build_hud()
+	gameplay._refresh_inventory()
+	var backpack_scroll := gameplay.inventory_backpack_box.get_parent() as ScrollContainer
+	var equipment_scroll := gameplay.inventory_equipment_box.get_parent() as ScrollContainer
+	_expect(backpack_scroll != null and equipment_scroll != null, "Real inventory should retain both scroll columns")
+	if backpack_scroll != null:
+		_expect(backpack_scroll.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED, "Backpack should be vertical-only")
+		_expect(backpack_scroll.scroll_horizontal == 0, "Backpack should remain pinned to its left edge")
+	if equipment_scroll != null:
+		_expect(equipment_scroll.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED, "Equipment should be vertical-only")
+	var backpack_children := gameplay.inventory_backpack_box.get_children()
+	_expect(backpack_children.size() >= 2, "Real inventory fixture should build a heading and item")
+	if backpack_children.size() >= 2:
+		var heading := backpack_children[0] as Label
+		var item_button := backpack_children[1] as Button
+		_expect(heading != null and heading.autowrap_mode != TextServer.AUTOWRAP_OFF, "Backpack heading should wrap inside its column")
+		_expect(item_button != null and item_button.autowrap_mode != TextServer.AUTOWRAP_OFF, "Item descriptions should wrap inside the backpack")
+		if item_button != null:
+			_expect(is_zero_approx(item_button.custom_minimum_size.x), "Backpack items must not force a wider horizontal canvas")
+	gameplay.free()
+	layout_player.free()
 
 
 func _test_durable_unequip_transaction() -> void:
