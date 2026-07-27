@@ -39,8 +39,13 @@ func _test_scene_routes_preserve_full_stack() -> void:
 	var boot := MAIN_SCENE.instantiate()
 	var gameplay := GAMEPLAY_SCENE.instantiate()
 	_expect(
-		str(boot.get_script().resource_path) == "res://scripts/full_stack_controller_boot.gd",
-		"Main scene should preserve the front end through the reconciled boot layer"
+		str(boot.get_script().resource_path) == "res://scripts/boot.gd",
+		"Main scene should preserve the original full-stack front end"
+	)
+	_expect(
+		str(ProjectSettings.get_setting("autoload/ControllerUiBootstrap", ""))
+		== "*res://scripts/controller_ui_bootstrap.gd",
+		"Controller UI mappings should install through an early autoload"
 	)
 	_expect(
 		str(gameplay.get_script().resource_path) == "res://scripts/full_stack_controller_main.gd",
