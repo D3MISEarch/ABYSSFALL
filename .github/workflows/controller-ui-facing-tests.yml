@@ -4,12 +4,12 @@ on:
   pull_request:
     paths:
       - "scripts/boot.gd"
-      - "scripts/player.gd"
+      - "gameplay.tscn"
+      - "scripts/controller_fixed_multiclass_main.gd"
       - "scripts/characters/**"
       - "scripts/core/controller_ui_input_map.gd"
       - "scripts/core/playable_aim_resolver.gd"
       - "scripts/ui/inventory_focus_navigator.gd"
-      - "scripts/multiclass_main.gd"
       - "tests/test_controller_ui_and_facing.gd"
       - ".github/workflows/controller-ui-facing-tests.yml"
   workflow_dispatch:
