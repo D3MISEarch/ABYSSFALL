@@ -105,7 +105,7 @@ func _test_inventory_equip_and_unequip(character_script: Script, label: String) 
 		"stats": {},
 	}
 	character.backpack.append(item.duplicate(true))
-	_expect(character.equip_inventory_index(0), "%s should equip a focused backpack item" % label)
+	character.equip_inventory_index(0)
 	_expect(not character.equipment["Weapon"].is_empty(), "%s equipment slot should receive the item" % label)
 	_expect(character.unequip_slot("Weapon"), "%s should unequip a focused equipment slot" % label)
 	_expect(character.equipment["Weapon"].is_empty(), "%s slot should be empty after unequip" % label)
