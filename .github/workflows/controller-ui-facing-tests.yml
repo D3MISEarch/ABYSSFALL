@@ -1,0 +1,81 @@
+name: Controller UI and Facing Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/boot.gd"
+      - "gameplay.tscn"
+      - "scripts/controller_fixed_multiclass_main.gd"
+      - "scripts/characters/**"
+      - "scripts/core/controller_ui_input_map.gd"
+      - "scripts/core/playable_aim_resolver.gd"
+      - "scripts/ui/inventory_focus_navigator.gd"
+      - "tests/test_controller_ui_and_facing.gd"
+      - ".github/workflows/controller-ui-facing-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  controller-ui-facing:
+    name: Godot 4.4.1 Controller UI and Facing
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+
+      - name: Run controller UI and facing regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_controller_ui_and_facing.gd 2>&1 | tee controller-ui-facing-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' controller-ui-facing-tests.log; then
+            echo "Controller UI and facing regression failed."
+            exit 1
+          fi
+          grep -Eq '^PASS: Controller UI and facing regression' controller-ui-facing-tests.log
+
+      - name: Smoke playable classes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for class_id in void_warlock penitent; do
+            log="runtime-${class_id}.log"
+            set +e
+            timeout 20s godot --headless --path . -- "--class=${class_id}" > "$log" 2>&1
+            status=$?
+            set -e
+            cat "$log"
+            if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' "$log"; then
+              exit 1
+            fi
+            if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+              exit "$status"
+            fi
+            grep -Fq "ABYSSFALL_CLASS_LAUNCHED:${class_id}" "$log"
+          done
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: controller-ui-facing-logs
+          path: |
+            controller-ui-facing-tests.log
+            runtime-void_warlock.log
+            runtime-penitent.log
+          if-no-files-found: warn
+          retention-days: 14
