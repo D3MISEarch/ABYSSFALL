@@ -1,0 +1,162 @@
+name: Full-Stack Windows Package
+
+on:
+  pull_request:
+    paths:
+      - "project.godot"
+      - "main.tscn"
+      - "gameplay.tscn"
+      - "scripts/controller_ui_bootstrap.gd"
+      - "scripts/full_stack_controller_main.gd"
+      - "scripts/core/controller_ui_input_map.gd"
+      - "scripts/core/playable_aim_resolver.gd"
+      - "scripts/ui/inventory_focus_navigator.gd"
+      - "scripts/ui/playable_inventory_bridge.gd"
+      - "scripts/characters/void_warlock.gd"
+      - "scripts/characters/penitent_playable.gd"
+      - "tests/test_full_stack_controller_reconciliation.gd"
+      - ".github/workflows/full-stack-windows-package.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-package:
+    name: Full-stack Windows playtest package
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+
+    steps:
+      - name: Check out exact review commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot 4.4.1 and Windows export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="4.4.1"
+          ENGINE="Godot_v${VERSION}-stable_linux.x86_64.zip"
+          TEMPLATES="Godot_v${VERSION}-stable_export_templates.tpz"
+          RELEASE="https://github.com/godotengine/godot/releases/download/${VERSION}-stable"
+
+          curl --fail --location --retry 3 "$RELEASE/$ENGINE" --output /tmp/godot.zip
+          curl --fail --location --retry 3 "$RELEASE/$TEMPLATES" --output /tmp/templates.tpz
+
+          mkdir -p "$HOME/godot"
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          BIN="$(find "$HOME/godot" -maxdepth 1 -type f -name 'Godot_v*-stable_linux.x86_64' | head -n 1)"
+          chmod +x "$BIN"
+          ln -s "$BIN" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -q /tmp/templates.tpz -d /tmp/export-templates
+          cp -a /tmp/export-templates/templates/. "$TEMPLATE_DIR/"
+          test -f "$TEMPLATE_DIR/windows_release_x86_64.exe"
+
+      - name: Generate exact package metadata
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REVIEW_BRANCH: ${{ github.head_ref || github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${REVIEW_SHA:0:7}"
+          BUILT_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          PACKAGE_NAME="AbyssFall-FullStack-ControllerFix-${SHORT_SHA}"
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
+
+          cat > BUILD_INFO.cfg <<EOF
+          [build]
+          name="AbyssFall full-stack controller playtest"
+          commit="${REVIEW_SHA}"
+          short_commit="${SHORT_SHA}"
+          branch="${REVIEW_BRANCH}"
+          workflow_run="${RUN_ID}"
+          built_at_utc="${BUILT_AT}"
+          EOF
+
+          mkdir -p "dist/$PACKAGE_NAME"
+          cat > "dist/$PACKAGE_NAME/BUILD_INFO.txt" <<EOF
+          AbyssFall Full-Stack Controller Playtest
+          Commit: ${REVIEW_SHA}
+          Short commit: ${SHORT_SHA}
+          Branch: ${REVIEW_BRANCH}
+          Workflow run: ${RUN_ID}
+          Built UTC: ${BUILT_AT}
+          Toggle diagnostics in game: F3
+          EOF
+          cp docs/WINDOWS_PLAYTEST_HANDOFF.md "dist/$PACKAGE_NAME/README.txt"
+
+      - name: Import project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --quit 2>&1 | tee windows-import.log
+
+      - name: Run full-stack controller regression
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_full_stack_controller_reconciliation.gd 2>&1 | tee windows-controller-test.log
+
+      - name: Export Windows executable
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --export-release "Windows Desktop" "dist/$PACKAGE_NAME/AbyssFall.exe" 2>&1 | tee windows-export.log
+          test -s "dist/$PACKAGE_NAME/AbyssFall.exe"
+          test -s "dist/$PACKAGE_NAME/AbyssFall.pck"
+
+      - name: Reject hidden Godot errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat windows-import.log windows-controller-test.log windows-export.log > windows-combined.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|Compile Error:|Failed to load script|ERROR:|Invalid access|Invalid set index|Cannot call method|Condition .* is true|ASSERTION FAILED|^FAIL:" windows-combined.log; then
+            echo "Godot emitted an import, test, export, parser, script, or runtime error."
+            exit 1
+          fi
+          grep -Eq '^PASS: Full-stack controller reconciliation' windows-controller-test.log
+
+      - name: Audit extracted package contents
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          cd "dist/$PACKAGE_NAME"
+          sha256sum AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README.txt > SHA256SUMS.txt
+          grep -F "$REVIEW_SHA" BUILD_INFO.txt
+          sha256sum --check SHA256SUMS.txt
+          find . -maxdepth 1 -type f -printf '%f\n' | sort | tee ../package-contents.log
+          for required in AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README.txt SHA256SUMS.txt; do
+            grep -Fx "$required" ../package-contents.log
+          done
+
+      - name: Upload full-stack Windows playtest
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}
+          path: dist/${{ env.PACKAGE_NAME }}/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload package audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-stack-windows-package-audit-logs
+          path: |
+            windows-import.log
+            windows-controller-test.log
+            windows-export.log
+            windows-combined.log
+            dist/package-contents.log
+          if-no-files-found: warn
+          retention-days: 90
