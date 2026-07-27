@@ -58,7 +58,7 @@ func _run_tests() -> void:
 		printerr("Canonical Penitent class gate tests failed: %d" % failures)
 		quit(1)
 		return
-	print("Canonical Penitent class gate tests passed.")
+	print("PASS: Canonical Penitent class gates")
 	quit(0)
 
 
