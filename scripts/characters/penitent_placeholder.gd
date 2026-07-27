@@ -274,11 +274,13 @@ func add_item(item: Dictionary) -> void:
 	inventory_changed.emit()
 
 
-func equip_inventory_index(index: int) -> void:
+func equip_inventory_index(index: int) -> bool:
 	if index < 0 or index >= backpack.size():
-		return
+		return false
 	var new_item: Dictionary = backpack[index]
 	var slot: String = str(new_item.get("slot", "Relic"))
+	if not EQUIPMENT_SLOTS.has(slot):
+		return false
 	var old_item: Dictionary = equipment.get(slot, {})
 	equipment[slot] = new_item
 	if old_item.is_empty():
@@ -286,6 +288,24 @@ func equip_inventory_index(index: int) -> void:
 	else:
 		backpack[index] = old_item
 	inventory_changed.emit()
+	loot_message.emit("EQUIPPED: %s" % str(new_item.get("name", "Unknown Relic")))
+	return true
+
+
+func unequip_slot(slot: String) -> bool:
+	if not EQUIPMENT_SLOTS.has(slot):
+		return false
+	var equipped_item: Dictionary = equipment.get(slot, {})
+	if equipped_item.is_empty():
+		return false
+	if backpack.size() >= MAX_BACKPACK_SIZE:
+		loot_message.emit("BACKPACK FULL — CANNOT UNEQUIP")
+		return false
+	backpack.append(equipped_item)
+	equipment[slot] = {}
+	inventory_changed.emit()
+	loot_message.emit("UNEQUIPPED: %s" % str(equipped_item.get("name", "Unknown Relic")))
+	return true
 
 
 func get_inventory_snapshot() -> Dictionary:
