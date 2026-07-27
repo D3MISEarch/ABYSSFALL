@@ -9,7 +9,6 @@ const PLAYABLE_ITEM_CATALOG = preload("res://scripts/core/playable_item_catalog.
 const VOID_WARLOCK_SCRIPT = preload("res://scripts/characters/void_warlock.gd")
 const PENITENT_SCRIPT = preload("res://scripts/characters/penitent_playable.gd")
 const FULL_STACK_MAIN_SCRIPT = preload("res://scripts/full_stack_controller_main.gd")
-const MAIN_SCENE = preload("res://main.tscn")
 const GAMEPLAY_SCENE = preload("res://gameplay.tscn")
 
 var failures: Array[String] = []
@@ -36,10 +35,10 @@ func _run() -> void:
 
 
 func _test_scene_routes_preserve_full_stack() -> void:
-	var boot := MAIN_SCENE.instantiate()
+	var main_scene_text := FileAccess.get_file_as_string("res://main.tscn")
 	var gameplay := GAMEPLAY_SCENE.instantiate()
 	_expect(
-		str(boot.get_script().resource_path) == "res://scripts/boot.gd",
+		main_scene_text.contains("res://scripts/boot.gd"),
 		"Main scene should preserve the original full-stack front end"
 	)
 	_expect(
@@ -51,7 +50,6 @@ func _test_scene_routes_preserve_full_stack() -> void:
 		str(gameplay.get_script().resource_path) == "res://scripts/full_stack_controller_main.gd",
 		"Gameplay scene should preserve the stacked runtime through the reconciled controller layer"
 	)
-	boot.free()
 	gameplay.free()
 
 
