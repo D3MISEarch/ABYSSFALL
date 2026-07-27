@@ -1,5 +1,6 @@
 extends SceneTree
 
+const CLASS_IDS = preload("res://scripts/shared/class_ids.gd")
 const PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
 
 var failures := 0
@@ -14,12 +15,12 @@ func _run_tests() -> void:
 	_assert_equal(PROFILE.profile_for_joy_name("Sony Interactive Entertainment Wireless Controller"), PROFILE.PLAYSTATION, "Sony controller resolves to PlayStation prompts")
 	_assert_equal(PROFILE.profile_for_joy_name("Xbox Wireless Controller"), PROFILE.XBOX, "Xbox controller keeps Xbox prompts")
 
-	var penitent_ps := PROFILE.build_hint("penitent_placeholder", PROFILE.PLAYSTATION, "Fervor")
+	var penitent_ps := PROFILE.build_hint(CLASS_IDS.PENITENT, PROFILE.PLAYSTATION, "Fervor")
 	_assert_true(penitent_ps.contains("R1: BLADE"), "PlayStation Penitent hint uses R1")
 	_assert_true(penitent_ps.contains("CROSS: DODGE"), "PlayStation Penitent hint uses Cross")
 	_assert_true(not penitent_ps.contains("RB:"), "PlayStation hint does not leak Xbox attack labels")
 
-	var warlock_keyboard := PROFILE.build_hint("void_warlock", PROFILE.KEYBOARD_MOUSE, "Corruption")
+	var warlock_keyboard := PROFILE.build_hint(CLASS_IDS.VOID_WARLOCK, PROFILE.KEYBOARD_MOUSE, "Corruption")
 	_assert_true(warlock_keyboard.contains("LMB: VOID BOLT"), "Keyboard Warlock hint keeps mouse attack")
 
 	if failures > 0:
