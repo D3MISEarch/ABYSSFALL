@@ -51,9 +51,15 @@ func _refresh_inventory() -> void:
 	var backpack_scroll := inventory_backpack_box.get_parent() as ScrollContainer
 	INVENTORY_FOCUS_NAVIGATOR.prepare_scroll(equipment_scroll)
 	INVENTORY_FOCUS_NAVIGATOR.prepare_scroll(backpack_scroll)
+	inventory_equipment_box.custom_minimum_size.x = 0.0
+	inventory_equipment_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inventory_backpack_box.custom_minimum_size.x = 0.0
+	inventory_backpack_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var title := Label.new()
 	title.text = "EQUIPPED RELICS"
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.add_theme_font_size_override("font_size", 22)
 	inventory_equipment_box.add_child(title)
 
@@ -66,7 +72,8 @@ func _refresh_inventory() -> void:
 		slot_button.focus_mode = Control.FOCUS_ALL
 		slot_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		slot_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		slot_button.custom_minimum_size = Vector2(360.0, 54.0)
+		slot_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		slot_button.custom_minimum_size = Vector2(0.0, 54.0)
 		slot_button.focus_entered.connect(
 			_on_inventory_focus_entered.bind(slot_button, focus_key, equipment_scroll)
 		)
@@ -77,7 +84,7 @@ func _refresh_inventory() -> void:
 			summary_lines.append("%s: Empty" % slot)
 		else:
 			var rarity: String = str(item.get("rarity", "Common"))
-			slot_button.custom_minimum_size = Vector2(360.0, 88.0)
+			slot_button.custom_minimum_size = Vector2(0.0, 96.0)
 			slot_button.text = (
 				"%s  •  %s\n%s\n%s\nCROSS / A / CLICK: UNEQUIP"
 				% [
@@ -100,6 +107,9 @@ func _refresh_inventory() -> void:
 		"BACKPACK  %d / %d   — CROSS / A / CLICK AN ITEM TO EQUIP"
 		% [backpack.size(), int(snapshot.get("capacity", 12))]
 	)
+	pack_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pack_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pack_title.custom_minimum_size.y = 50.0
 	pack_title.add_theme_font_size_override("font_size", 22)
 	inventory_backpack_box.add_child(pack_title)
 
@@ -107,7 +117,8 @@ func _refresh_inventory() -> void:
 		var empty_label := Label.new()
 		empty_label.text = "No unequipped items. Elite Reavers and shattered generators can drop gear."
 		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		empty_label.custom_minimum_size = Vector2(500.0, 70.0)
+		empty_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		empty_label.custom_minimum_size = Vector2(0.0, 70.0)
 		empty_label.modulate = Color(0.70, 0.67, 0.76)
 		inventory_backpack_box.add_child(empty_label)
 	else:
@@ -117,8 +128,10 @@ func _refresh_inventory() -> void:
 			var focus_key := "backpack:%d" % index
 			button.set_meta("inventory_focus_key", focus_key)
 			button.focus_mode = Control.FOCUS_ALL
-			button.custom_minimum_size = Vector2(510.0, 92.0)
+			button.custom_minimum_size = Vector2(0.0, 110.0)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			button.text = (
 				"%s  •  %s  •  %s\n%s\n%s"
 				% [
