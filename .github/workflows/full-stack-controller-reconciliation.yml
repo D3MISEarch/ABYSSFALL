@@ -1,0 +1,107 @@
+name: Full-Stack Controller Reconciliation
+
+on:
+  pull_request:
+    paths:
+      - "main.tscn"
+      - "gameplay.tscn"
+      - "scripts/full_stack_controller_boot.gd"
+      - "scripts/full_stack_controller_main.gd"
+      - "scripts/core/controller_ui_input_map.gd"
+      - "scripts/core/playable_aim_resolver.gd"
+      - "scripts/ui/inventory_focus_navigator.gd"
+      - "scripts/ui/playable_inventory_bridge.gd"
+      - "scripts/characters/void_warlock.gd"
+      - "scripts/characters/penitent_playable.gd"
+      - "tests/test_full_stack_controller_reconciliation.gd"
+      - ".github/workflows/full-stack-controller-reconciliation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-stack-controller:
+    name: Godot 4.4.1 Full-Stack Controller
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+
+      - name: Run full-stack controller reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_full_stack_controller_reconciliation.gd 2>&1 | tee full-stack-controller.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' full-stack-controller.log; then
+            exit 1
+          fi
+          grep -Eq '^PASS: Full-stack controller reconciliation' full-stack-controller.log
+
+      - name: Run inherited front-end, inventory, progression, art, and VFX regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          suites=(
+            test_front_end_save_flow
+            test_playable_inventory_persistence
+            test_persistent_level_flow
+            test_art_pass0_visual_contract
+            test_voidbringer_vfx_pass0b
+          )
+          for suite in "${suites[@]}"; do
+            log="${suite}.log"
+            godot --headless --path . --script "res://tests/${suite}.gd" 2>&1 | tee "$log"
+            if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' "$log"; then
+              exit 1
+            fi
+          done
+
+      - name: Smoke both playable classes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for class_id in void_warlock penitent; do
+            log="runtime-${class_id}.log"
+            set +e
+            timeout 20s godot --headless --path . -- "--class=${class_id}" > "$log" 2>&1
+            status=$?
+            set -e
+            cat "$log"
+            if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' "$log"; then
+              exit 1
+            fi
+            if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+              exit "$status"
+            fi
+            grep -Fq "ABYSSFALL_CLASS_LAUNCHED:${class_id}" "$log"
+          done
+
+      - name: Upload focused logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-stack-controller-reconciliation-logs
+          path: |
+            full-stack-controller.log
+            test_front_end_save_flow.log
+            test_playable_inventory_persistence.log
+            test_persistent_level_flow.log
+            test_art_pass0_visual_contract.log
+            test_voidbringer_vfx_pass0b.log
+            runtime-void_warlock.log
+            runtime-penitent.log
+          if-no-files-found: warn
+          retention-days: 14
