@@ -6,8 +6,10 @@ on:
       - "project.godot"
       - "main.tscn"
       - "gameplay.tscn"
+      - "scripts/multiclass_main.gd"
       - "scripts/controller_ui_bootstrap.gd"
       - "scripts/full_stack_controller_main.gd"
+      - "scripts/shared/class_ids.gd"
       - "scripts/core/controller_ui_input_map.gd"
       - "scripts/core/playable_aim_resolver.gd"
       - "scripts/ui/inventory_focus_navigator.gd"
@@ -15,6 +17,9 @@ on:
       - "scripts/characters/void_warlock.gd"
       - "scripts/characters/penitent_playable.gd"
       - "tests/test_full_stack_controller_reconciliation.gd"
+      - "tests/test_penitent_class_gates.gd"
+      - "tests/test_input_prompt_profile.gd"
+      - ".github/workflows/godot-hotfix3-validation.yml"
       - ".github/workflows/full-stack-windows-package.yml"
   workflow_dispatch:
 
@@ -105,6 +110,13 @@ jobs:
           set -o pipefail
           godot --headless --path . --script res://tests/test_full_stack_controller_reconciliation.gd 2>&1 | tee windows-controller-test.log
 
+      - name: Run canonical Penitent and prompt regressions
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_penitent_class_gates.gd 2>&1 | tee windows-penitent-class-gates.log
+          godot --headless --path . --script res://tests/test_input_prompt_profile.gd 2>&1 | tee windows-input-prompt-profile.log
+
       - name: Export Windows executable
         shell: bash
         run: |
@@ -117,12 +129,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat windows-import.log windows-controller-test.log windows-export.log > windows-combined.log
+          cat windows-import.log windows-controller-test.log windows-penitent-class-gates.log windows-input-prompt-profile.log windows-export.log > windows-combined.log
           if grep -E "SCRIPT ERROR:|Parse Error:|Compile Error:|Failed to load script|ERROR:|Invalid access|Invalid set index|Cannot call method|Condition .* is true|ASSERTION FAILED|^FAIL:" windows-combined.log; then
             echo "Godot emitted an import, test, export, parser, script, or runtime error."
             exit 1
           fi
           grep -Eq '^PASS: Full-stack controller reconciliation' windows-controller-test.log
+          grep -Eq '^PASS: Canonical Penitent class gates' windows-penitent-class-gates.log
+          grep -Eq '^PASS: Input prompt profiles' windows-input-prompt-profile.log
 
       - name: Audit extracted package contents
         shell: bash
@@ -155,6 +169,8 @@ jobs:
           path: |
             windows-import.log
             windows-controller-test.log
+            windows-penitent-class-gates.log
+            windows-input-prompt-profile.log
             windows-export.log
             windows-combined.log
             dist/package-contents.log

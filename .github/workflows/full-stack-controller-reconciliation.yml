@@ -5,8 +5,10 @@ on:
     paths:
       - "main.tscn"
       - "gameplay.tscn"
+      - "scripts/multiclass_main.gd"
       - "scripts/full_stack_controller_boot.gd"
       - "scripts/full_stack_controller_main.gd"
+      - "scripts/shared/class_ids.gd"
       - "scripts/core/controller_ui_input_map.gd"
       - "scripts/core/playable_aim_resolver.gd"
       - "scripts/ui/inventory_focus_navigator.gd"
@@ -14,6 +16,9 @@ on:
       - "scripts/characters/void_warlock.gd"
       - "scripts/characters/penitent_playable.gd"
       - "tests/test_full_stack_controller_reconciliation.gd"
+      - "tests/test_penitent_class_gates.gd"
+      - "tests/test_input_prompt_profile.gd"
+      - ".github/workflows/godot-hotfix3-validation.yml"
       - ".github/workflows/full-stack-controller-reconciliation.yml"
   workflow_dispatch:
 
@@ -49,6 +54,19 @@ jobs:
             exit 1
           fi
           grep -Eq '^PASS: Full-stack controller reconciliation' full-stack-controller.log
+
+      - name: Run canonical class-gate and prompt regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_penitent_class_gates.gd 2>&1 | tee test_penitent_class_gates.log
+          godot --headless --path . --script res://tests/test_input_prompt_profile.gd 2>&1 | tee test_input_prompt_profile.log
+          cat test_penitent_class_gates.log test_input_prompt_profile.log > canonical-class-ui.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:|ASSERTION FAILED|^FAIL:' canonical-class-ui.log; then
+            exit 1
+          fi
+          grep -Eq '^PASS: Canonical Penitent class gates' test_penitent_class_gates.log
+          grep -Eq '^PASS: Input prompt profiles' test_input_prompt_profile.log
 
       - name: Run inherited front-end, inventory, progression, art, and VFX regressions
         shell: bash
@@ -96,6 +114,9 @@ jobs:
           name: full-stack-controller-reconciliation-logs
           path: |
             full-stack-controller.log
+            test_penitent_class_gates.log
+            test_input_prompt_profile.log
+            canonical-class-ui.log
             test_front_end_save_flow.log
             test_playable_inventory_persistence.log
             test_persistent_level_flow.log
