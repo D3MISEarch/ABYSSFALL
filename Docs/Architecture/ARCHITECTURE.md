@@ -156,6 +156,14 @@ Owned one-per-active-build by `RuntimeSession`. It scopes IDs to the durable bui
 
 The next unused sequence persists in `build_specific_progress.item_identity`. Restoration observes inventory/equipment IDs before any new mint. Only one authoritative session may mint for a build at a time; multiplayer requires future network authority. ([ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md))
 
+### Playable prototype inventory adapter (`scripts/ui/playable_inventory_bridge.gd`)
+
+The current graphical prototype still renders its inventory through legacy dictionaries, but those dictionaries are now read-only compatibility projections. `PlayableInventoryBridge` shares the already-bound `RuntimeSession` created by `PlayableProgressionBridge`; it does not create a second session, inventory, equipment set, allocator, or persistence owner.
+
+Pickup and explicit equip requests are translated into `InventoryContainer` and `EquipmentManager` transactions. Physical identity comes only from the session's `ItemIdentityService`. The bridge then projects authoritative items back into the existing Void Warlock/Penitent inventory screen shape. Full durable saves use `RuntimeSession.durable_snapshot()` through `PersistenceService`, so equipped slots, backpack order, item identities, and allocator continuation restore through the same JSON contract as the runtime foundation.
+
+The fixed prototype item data is centralized in `PlayableItemCatalog`. It registers immutable compatibility definitions before character binding so restoration can validate equipment transactionally. This adapter is a migration boundary for the current prototype UI, not a second item model.
+
 ### ItemInstance (`scripts/runtime/items/item_instance.gd`)
 
 Mutable per-item data: identity, definition ID, quantity, rarity, item level, generation seed, affixes, and durability.

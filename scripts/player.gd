@@ -12,6 +12,7 @@ signal loot_message(message: String)
 
 const VOID_BOLT_SCRIPT = preload("res://scripts/void_bolt.gd")
 const GRASPING_RIFT_SCRIPT = preload("res://scripts/grasping_rift.gd")
+const SHADOW_STEP_VFX_SCRIPT = preload("res://scripts/shadow_step_vfx.gd")
 
 const EQUIPMENT_SLOTS := ["Weapon", "Hood", "Chest", "Gloves", "Boots", "Relic"]
 const MAX_BACKPACK_SIZE := 12
@@ -245,6 +246,7 @@ func _physics_process(delta: float) -> void:
 		velocity = dodge_direction * 19.0
 		if infected_step:
 			_damage_enemies_around(dash_origin, 2.15, 20)
+		_spawn_shadow_step_vfx(dash_origin, dodge_direction, dodge_time)
 		move_and_slide()
 		_pulse_shadow_step()
 		return
@@ -643,6 +645,16 @@ func _damage_enemies_around(center: Vector3, radius: float, damage: int) -> void
 		offset.y = 0.0
 		if offset.length() <= radius:
 			enemy.take_damage(damage)
+
+
+func _spawn_shadow_step_vfx(origin: Vector3, direction: Vector3, duration: float) -> void:
+	if not is_instance_valid(get_tree().current_scene):
+		return
+	var effect = SHADOW_STEP_VFX_SCRIPT.new()
+	if effect == null:
+		return
+	get_tree().current_scene.add_child(effect)
+	effect.setup(self, origin, direction, duration)
 
 
 func _pulse_shadow_step() -> void:

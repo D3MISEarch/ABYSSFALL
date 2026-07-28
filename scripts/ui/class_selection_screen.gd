@@ -2,6 +2,7 @@ extends Control
 class_name ClassSelectionScreen
 
 signal class_confirmed(class_id: String)
+signal back_requested
 
 const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
 
@@ -21,6 +22,7 @@ var strengths_label: Label
 var risks_label: Label
 var unlock_label: Label
 var confirm_button: Button
+var back_button: Button
 var footer_label: Label
 
 
@@ -42,9 +44,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_right"):
 		_select_index(_wrap_index(selected_index + 1))
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_accept"):
-		_confirm_selection()
+	elif event.is_action_pressed("ui_cancel") or event.is_action_pressed("menu_close"):
+		back_requested.emit()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_accept"):
+		var focus_owner := get_viewport().gui_get_focus_owner()
+		if focus_owner == confirm_button or card_buttons.has(focus_owner):
+			_confirm_selection()
+			get_viewport().set_input_as_handled()
 
 
 func select_class_id(class_id: String) -> void:
@@ -191,8 +198,14 @@ func _build_interface() -> void:
 	confirm_button.pressed.connect(_confirm_selection)
 	main_column.add_child(confirm_button)
 
+	back_button = Button.new()
+	back_button.custom_minimum_size = Vector2(0.0, 42.0)
+	back_button.text = "BACK"
+	back_button.pressed.connect(func(): back_requested.emit())
+	main_column.add_child(back_button)
+
 	footer_label = Label.new()
-	footer_label.text = "← / → OR LEFT STICK: SELECT     ENTER / A: CONFIRM"
+	footer_label.text = "← / → OR LEFT STICK: SELECT     ENTER / A: CONFIRM     ESC / B: BACK"
 	footer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer_label.add_theme_font_size_override("font_size", 13)
 	footer_label.modulate = Color(0.47, 0.44, 0.52)
