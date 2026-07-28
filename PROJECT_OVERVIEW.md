@@ -17,9 +17,13 @@ The target experience is fast, readable, controller-friendly combat where player
 
 ## Current playable baseline
 
-The authoritative build is **`main` at `ff35886b582e534edf01fe0b8f826c3223322099`**, running in Godot 4.4.1. It reproduces the owner-approved full-stack Sunken Crypts build and passed all eight repository-wide merge-candidate workflows before consolidation. The exact approved source/result tree is `80b9e5883442b1bdc3030d16111994f07c198b0d`.
+The authoritative approved build is **`main` at `7b4bde25940d1941c54857471efdc581c6b9b150`**, running in Godot 4.4.1. It contains the consolidated owner-approved full-stack Sunken Crypts foundation.
 
-Implemented and verified in the current baseline:
+Draft PR #82 at frozen head `8d5958e51f499d966a790cc9feb479b339b29964` is a technically verified but unmerged Voidbringer impact/payoff candidate. It is waiting for the owner Windows playtest and is not an approved dependency base. After it passes and merges, Issue #83 completes the Grasping Rift micro-sprint from the exact resulting `main` SHA.
+
+The owner-authorized roadmap is tracked by Issue #96. After Issue #83, Issue #97 must approve the transient combat-state/force/charge ownership ADR; Issues #89 through #95 then prove and migrate the foundational `Anchor → Load → Bend → Collapse` kit one slice at a time. Hollow King Issue #86 resumes only after Issue #95 unless the owner explicitly reprioritizes.
+
+Implemented and verified in the approved baseline:
 
 - smooth fixed-camera 3D movement, controller aiming, retained facing, and camera follow;
 - Void Bolt, Shadow Step, and Grasping Rift with procedural Voidbringer VFX;
@@ -123,7 +127,8 @@ Prototype systems:
 
 - Tune movement, hit feel, enemy density, resource economy, XP pacing, and drops
 - Improve Sunken Crypts room flow
-- Refine Hollow King mechanics and reward
+- Prove the foundational Voidbringer `Anchor → Load → Bend → Collapse` combat identity
+- Refine Hollow King mechanics and reward after that class loop is proven
 - Add class-specific sound language
 - Add stronger VFX and screen feedback
 - Replace the roughest placeholder geometry
@@ -185,6 +190,7 @@ Only one implementation agent edits an owning system at a time. Additional agent
 
 - One focused feature or fix per branch
 - Branch from current `main`; normal work stays one PR deep, with two levels allowed only for a real dependency
+- Maximum one active gameplay implementation PR and one non-overlapping docs/tooling PR
 - Every branch must have explicit acceptance criteria
 - Every pull request must show tests and limitations
 - No feature branch may silently change another class
@@ -194,14 +200,14 @@ Only one implementation agent edits an owning system at a time. Additional agent
 
 ## Immediate next actions
 
-1. Merge this source-of-truth update and treat `Docs/Roadmap/CURRENT_SLICE.md` as the mandatory task entry point.
-2. Freeze the current movement, camera, controller, persistence, front-end, Art Pass 0, and VFX behavior as protected baseline contracts.
-3. Begin the first Voidbringer combat-polish micro-sprint: Void Bolt impact, enemy hit reaction, death feedback, and Corruption payoff.
-4. Follow with Grasping Rift setup/combination feedback and one deliberately tuned combat encounter.
-5. Polish the Hollow King encounter only after the basic Voidbringer combat loop feels excellent.
+1. Owner Windows-playtest the exact PR #82 package and record PASS or actionable findings; merge only after explicit approval.
+2. Implement Issue #83 from the exact `main` SHA produced after PR #82 merges, then complete its verification and owner playtest.
+3. Write, independently review, owner-approve, and merge Issue #97's architecture ADR without overlapping the active PR #88 documentation lane.
+4. Build Issues #89 through #95 sequentially from the exact `main` produced by each prior merge, proving the foundational ranged-geometry and close-range Worldshear loops.
+5. Resume Hollow King Issue #86 after Issue #95 unless the owner explicitly reprioritizes.
 6. Expand meaningful loot and one focused repeatable endgame loop after the class combat foundation is proven.
-7. Keep co-op, additional classes, engine migration, and broad content expansion postponed.
+7. Keep co-op, additional classes, Dead Star, engine migration, and broad content expansion postponed.
 
 ## Definition of success for the current major milestone
 
-A player can launch AbyssFall, continue a durable Voidbringer build, enter a visually coherent Sunken Crypts slice, immediately feel the difference between basic casting and intentional Voidbringer setup, make meaningful class-tree and gear choices, defeat a polished Hollow King encounter, save safely, and want to repeat the run.
+A player can launch AbyssFall, continue a durable Voidbringer build, enter a visually coherent Sunken Crypts slice, immediately feel the difference between basic casting and intentional spatial setup, build and Collapse anchors through a credible ranged or close-range direction, make meaningful class-tree and gear choices, defeat a polished Hollow King encounter, save safely, and want to repeat the run.
