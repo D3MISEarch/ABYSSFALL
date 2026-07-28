@@ -15,25 +15,24 @@ The target experience is fast, readable, controller-friendly combat where player
 5. **Dark original identity** — cracked obsidian, ritual metal, blood sigils, void portals, wet organic corruption, bone masks, chains, and neon contamination.
 6. **Expandable co-op foundation** — single-player first, then local co-op, then online multiplayer after the core combat and architecture are stable.
 
-## Current playable prototype
+## Current playable baseline
 
-The latest local build is **Void Warlock v0.4 Hotfix 3: The Sunken Crypts**.
+The authoritative build is **`main` at `ff35886b582e534edf01fe0b8f826c3223322099`**, running in Godot 4.4.1. It reproduces the owner-approved full-stack Sunken Crypts build and passed all eight repository-wide merge-candidate workflows before consolidation. The exact approved source/result tree is `80b9e5883442b1bdc3030d16111994f07c198b0d`.
 
-Implemented or prototyped locally:
+Implemented and verified in the current baseline:
 
-- Fixed-camera 3D action combat
-- Void Bolt, Shadow Step, and Grasping Rift
-- Living biomechanical Corruption meter
-- Soul pickups and Corruption Essence
-- Enemy generators
-- Skeleton Reavers, Bone Archers, and Crypt Brutes
-- XP, level-ups, three-choice upgrades, and a skill tree
-- Inventory, equipment slots, rarity tiers, and named items
-- Connected Sunken Crypts level flow
-- Traps, gates, hidden relic room, and objectives
-- Three-phase Hollow King boss encounter
+- smooth fixed-camera 3D movement, controller aiming, retained facing, and camera follow;
+- Void Bolt, Shadow Step, and Grasping Rift with procedural Voidbringer VFX;
+- living biomechanical Corruption resource;
+- persistent XP, levels, class points, and manually opened graphical class tree;
+- backpack-first loot, explicit equip/unequip, stable item identity, and full save/relaunch persistence;
+- controller-friendly inventory navigation, scrolling, focus restoration, and wrapped item descriptions;
+- home screen, Continue, New Character, Select Character, Start/Options pause, visible save, and safe return-to-menu;
+- connected Sunken Crypts route with traps, generators, enemies, hidden relic room, objectives, and Hollow King encounter;
+- complete-route procedural Art Pass 0 with decorative-only collision boundaries;
+- automated regression coverage for runtime, persistence, progression, inventory, front end, controller behavior, art, VFX, and class gates.
 
-The project has progressed beyond compiler errors into runtime testing, but Hotfix 3 still needs to be launched and verified on the home PC.
+**Active production scope is Voidbringer only.** Penitent mechanics remain preserved and regression-tested, but further Penitent graphical, content, and balance work is deferred until the class roster milestone is intentionally reopened.
 
 ## Playable class direction
 
@@ -59,7 +58,7 @@ The project has progressed beyond compiler errors into runtime testing, but Hotf
 - Visual language: ritual black, blood crimson, bone ivory, black iron, and neon venom green
 - Core loop: mark enemies, place sigils, reposition targets, complete the pattern, and activate the ritual
 
-Penitent skill branches:
+Penitent skill branches (preserved prototype; production deferred):
 
 - **Brands** — spreading marks, echoed damage, and chain reactions
 - **Circles** — battlefield geometry, bindings, traps, and ritual networks
@@ -67,11 +66,7 @@ Penitent skill branches:
 
 ## Class selection and hidden paths
 
-The class-selection screen presents heroes as large fantasy-first character cards. The Void Warlock and The Penitent are selectable. Future classes remain visible as chained silhouettes labeled as unknown paths, with a lore hint and unlock requirement rather than being completely hidden.
-
-This gives players something to chase and makes the roster feel larger before every class is playable.
-
-Potential future archetypes remain intentionally undecided until the first two classes prove the shared architecture.
+The class-selection framework can present multiple durable builds and classes, but the current production milestone is intentionally centered on Voidbringer. Penitent remains available as preserved prototype coverage; it is not an active content target. Future classes and Unknown Path presentation are postponed until the Voidbringer vertical slice is fun, stable, and visually coherent.
 
 ## Roadmap
 
@@ -176,67 +171,20 @@ Prototype systems:
 
 ## Agent workflow
 
-Agents are used as narrow specialists, not as an unsupervised studio.
+Agents are narrow specialists operating on one authoritative `main` baseline.
 
-### Agent 1 — Runtime and QA
+- **Owner / Game Director:** final authority over feel, visuals, scope, and merge approval.
+- **ChatGPT / Technical Director:** architecture, production packets, acceptance criteria, integration planning, and merge control.
+- **Claude Code / implementation lane:** one tightly scoped gameplay feature at a time after the production packet is approved.
+- **Codex / repository lane:** mechanical repository work, migrations, CI, integration, and consistency audits.
+- **Claude / independent verifier:** read-only verification of frozen exact commits; never co-authors the implementation being reviewed.
 
-Responsibilities:
-
-- Reproduce errors in Godot 4.4.1
-- Run headless validation and runtime smoke tests
-- Fix parser, compiler, resource, scene-tree, and startup errors
-- Document every command and final result
-- Add no gameplay features
-
-This agent must finish first.
-
-### Agent 2 — Character architecture
-
-Responsibilities:
-
-- Refactor the existing Warlock-centric code into reusable systems
-- Create clear interfaces/components for resources, abilities, stats, equipment, XP, and HUD data
-- Keep Warlock behavior unchanged
-- Prove a second placeholder class can spawn without modifying the main level controller
-
-This agent starts only after the clean baseline passes.
-
-### Agent 3 — Penitent gameplay
-
-Responsibilities:
-
-- Implement the Penitent vertical slice on its own branch
-- Build marks, sigils, Fervor, chains, Sacrament, and the first six nodes
-- Use placeholder art
-- Preserve the Void Warlock
-- Add focused playtest documentation
-
-This agent starts after the architecture is ready.
-
-### Agent 4 — UI and class selection
-
-Responsibilities:
-
-- Build the reusable class-selection screen
-- Add selectable Warlock and Penitent cards
-- Add chained Unknown Path slots for future characters
-- Create signal-driven resource and ability HUD framework
-- Implement Penitent Fervor seal, Rite Mark indicators, sigil capacity, and health-sacrifice preview
-- Support controller, keyboard/mouse, and future mobile focus/input
-
-### Agent 5 — Reviewer and integrator
-
-Responsibilities:
-
-- Review pull requests for regressions, hard-coded assumptions, and duplicate systems
-- Verify acceptance criteria and test outputs
-- Reject claims that are not backed by Godot runs
-- Check that branches remain focused
-- Merge only approved, tested work in dependency order
+Only one implementation agent edits an owning system at a time. Additional agents are added only for a genuinely separate specialty, such as Blender rigging and Godot technical-art import.
 
 ## Branch and review policy
 
 - One focused feature or fix per branch
+- Branch from current `main`; normal work stays one PR deep, with two levels allowed only for a real dependency
 - Every branch must have explicit acceptance criteria
 - Every pull request must show tests and limitations
 - No feature branch may silently change another class
@@ -246,15 +194,14 @@ Responsibilities:
 
 ## Immediate next actions
 
-1. At home, copy v0.4 Hotfix 3 into the cloned GitHub repository.
-2. Commit and push the full Godot project.
-3. Run Agent 1 against issue #1 until the baseline passes.
-4. Review and merge the QA pull request.
-5. Run Agent 2 for multi-class architecture.
-6. Run Agent 4 for the class-selection and HUD framework.
-7. Run Agent 3 for The Penitent vertical slice.
-8. Playtest both classes before expanding the realm or adding a third character.
+1. Merge this source-of-truth update and treat `Docs/Roadmap/CURRENT_SLICE.md` as the mandatory task entry point.
+2. Freeze the current movement, camera, controller, persistence, front-end, Art Pass 0, and VFX behavior as protected baseline contracts.
+3. Begin the first Voidbringer combat-polish micro-sprint: Void Bolt impact, enemy hit reaction, death feedback, and Corruption payoff.
+4. Follow with Grasping Rift setup/combination feedback and one deliberately tuned combat encounter.
+5. Polish the Hollow King encounter only after the basic Voidbringer combat loop feels excellent.
+6. Expand meaningful loot and one focused repeatable endgame loop after the class combat foundation is proven.
+7. Keep co-op, additional classes, engine migration, and broad content expansion postponed.
 
-## Definition of success for the first major milestone
+## Definition of success for the current major milestone
 
-A player can launch AbyssFall, choose either the Void Warlock or The Penitent, clear a short Sunken Crypts run, make meaningful level-up and gear choices, defeat the Hollow King, and immediately understand why the two classes feel fundamentally different.
+A player can launch AbyssFall, continue a durable Voidbringer build, enter a visually coherent Sunken Crypts slice, immediately feel the difference between basic casting and intentional Voidbringer setup, make meaningful class-tree and gear choices, defeat a polished Hollow King encounter, save safely, and want to repeat the run.

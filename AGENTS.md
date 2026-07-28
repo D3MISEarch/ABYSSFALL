@@ -8,8 +8,9 @@ For contribution mechanics (branching, PR expectations, placeholder-art norms), 
 
 - **AbyssFall** — a dark-fantasy action dungeon crawler / ARPG.
 - **Engine:** Godot 4.4.1, GDScript.
-- **Current playable prototype:** Void Warlock v0.4 Hotfix 3 ("The Sunken Crypts"). The Penitent is the second class under active construction. See `PROJECT_OVERVIEW.md` and [`Docs/Design/CLASS_DESIGN.md`](Docs/Design/CLASS_DESIGN.md).
-- **Current architecture stage:** Stages 3–5 (durable ARPG loop plus deterministic procedural item generation) are integrated on draft PR #34 and undergoing focused verification. See [`Docs/Roadmap/STAGE_3_4_GAMEPLAY_LOOP.md`](Docs/Roadmap/STAGE_3_4_GAMEPLAY_LOOP.md) and [`Docs/Roadmap/STAGE_5_LOOT_AFFIXES.md`](Docs/Roadmap/STAGE_5_LOOT_AFFIXES.md).
+- **Known-good playable baseline:** `main` at `ff35886b582e534edf01fe0b8f826c3223322099` (Godot 4.4.1). This is the owner-approved full-stack Sunken Crypts build with front end, durable inventory, persistent class progression, controller reconciliation, Art Pass 0, and Voidbringer VFX. See [`Docs/Roadmap/CURRENT_SLICE.md`](Docs/Roadmap/CURRENT_SLICE.md).
+- **Active production class:** Voidbringer only. Penitent mechanics remain preserved and regression-tested, but further Penitent graphical/content work is deferred until the roster milestone is intentionally reopened.
+- **Current architecture stage:** consolidated single-line production from `main`; the active milestone is the first polished Voidbringer combat vertical slice. Historical Stage 3–5 documents remain architectural background, not the current work queue.
 
 ## Required reading order
 
@@ -18,7 +19,7 @@ For contribution mechanics (branching, PR expectations, placeholder-art norms), 
 3. Any [`Docs/ADR/`](Docs/ADR/) entries relevant to the system you're touching.
 4. [`Docs/Architecture/ARCHITECTURE.md`](Docs/Architecture/ARCHITECTURE.md) — how the ADRs became actual runtime code.
 5. The relevant [`Docs/Standards/`](Docs/Standards/) document (`GDSCRIPT.md`, `TESTING.md`, `NAMING.md`, `DOCUMENTATION.md`).
-6. The current [`Docs/Roadmap/`](Docs/Roadmap/) stage document, so you know what's already in flight.
+6. [`Docs/Roadmap/CURRENT_SLICE.md`](Docs/Roadmap/CURRENT_SLICE.md), then any deeper roadmap document relevant to the task.
 7. If you are an AI contributor, also read [`Docs/Governance/AI_GUIDELINES.md`](Docs/Governance/AI_GUIDELINES.md) for your specific role's obligations. Claude Code specifically must also read [`CLAUDE.md`](CLAUDE.md).
 
 ## Documentation map
@@ -41,6 +42,8 @@ Runtime and persistence regression suites run headlessly under Godot 4.4.1 and a
 
 - [`.github/workflows/runtime-foundation-tests.yml`](.github/workflows/runtime-foundation-tests.yml) — runs every explicitly listed `scripts/runtime/tests/*.gd` suite.
 - [`.github/workflows/persistence-tests.yml`](.github/workflows/persistence-tests.yml) — runs `scripts/persistence/tests/test_save_manager.gd`.
+- [`.github/workflows/full-stack-controller-reconciliation.yml`](.github/workflows/full-stack-controller-reconciliation.yml) — protects the integrated controller, front-end, inventory, progression, art, VFX, and class-gate path.
+- [`.github/workflows/full-stack-windows-package.yml`](.github/workflows/full-stack-windows-package.yml) — exports and audits the exact Windows playtest candidate.
 
 Full command reference, PASS-marker convention, and failure rules live in [`Docs/Standards/TESTING.md`](Docs/Standards/TESTING.md). Do not claim a fix works without actually running Godot headlessly.
 
@@ -50,6 +53,8 @@ Full command reference, PASS-marker convention, and failure rules live in [`Docs
 - If your change alters a public system contract (a class's owned responsibilities, an ADR's rules, an event contract), update the relevant documentation in the same change. See [`Docs/Standards/DOCUMENTATION.md`](Docs/Standards/DOCUMENTATION.md).
 - Keep CI green. A red pipeline blocks merge; fix the cause, never the test's ability to detect it.
 - Keep feature work on separate branches and submit reviewable pull requests, one focused feature or fix per branch.
+- Start from current `main`. Normal work stays one PR deep; two levels require an explicit dependency, and deeper stacks must be consolidated before more feature work.
+- Only one implementation agent may edit an owning system at a time. Independent verification must use a frozen exact commit and must not co-author the implementation.
 
 ## Detailed character Codex
 
