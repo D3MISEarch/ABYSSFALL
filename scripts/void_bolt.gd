@@ -76,8 +76,8 @@ func _on_body_entered(body: Node3D) -> void:
 		body.take_damage(damage)
 		if _health_value(body) < health_before:
 			_present_enemy_impact(body, true)
-			if splash_radius > 0.0 and splash_damage > 0:
-				_splash_damage(body)
+		if splash_radius > 0.0 and splash_damage > 0:
+			_splash_damage(body)
 	_impact_burst()
 
 
