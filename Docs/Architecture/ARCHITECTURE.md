@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture that **currently exists in code**, verified against `scripts/runtime/`, `scripts/persistence/`, the merged Stages 3–5 foundation, and the approved ADRs through ADR-020. It does not describe planned-but-unbuilt systems except where explicitly marked under **Future design**.
+This document describes the architecture that **currently exists in code**, verified against `scripts/runtime/`, `scripts/persistence/`, the merged Stages 3–5 foundation, and the repository ADR record through ADR-020. It does not describe planned-but-unbuilt systems except where explicitly marked under **Future design**.
 
 For *why* each boundary exists, see the linked ADR. This document describes *what exists*.
 
@@ -205,6 +205,26 @@ Godot typed arrays do not survive JSON stringify/parse with their static type. `
 Allocator snapshots also round-trip through JSON. A restored service resumes from the next unused sequence and observes live restored IDs as a collision safety net.
 
 ## Future design — not yet implemented
+
+### Proposed Voidbringer combat-state boundary
+
+[ADR-021](../ADR/ADR-021-VOIDBRINGER-COMBAT-STATE-ABILITY-CHARGE-AND-FORCE-OWNERSHIP.md) proposes the ownership boundary required before Issue #89. It is not current implementation and grants no authority while its status remains proposed.
+
+Under that proposal:
+
+- `VoidWarlockCharacter` composes one character-combat-scoped `VoidbringerController` only after the existing `RuntimeSession`/`RuntimeCharacter` bind succeeds;
+- the controller composes one `AnchorManager`, `FoldLineManager`, and `InstabilityController` and owns only Voidbringer transient state/orchestration;
+- `RuntimeSession`, `RuntimeEventBus`, `AbilityExecutor`, `RuntimeCharacter`, persistence, damage targets and locomotion targets remain the existing generic authorities;
+- `AbilityExecutor`/`AbilityRuntime` gain generic, backward-compatible charge, sequential recharge and source-keyed recharge-rate state;
+- class command/loadout/target preflight remains outside the executor, while generic unlock/resource/cooldown/charge validation remains inside it;
+- Instability mutates synchronously once after successful executor commit and is never persisted;
+- a pure `ForceResolver` returns immutable results that target-owned locomotion/consequence systems apply;
+- a generation token and ordered teardown reject stale effects across death, rebind, menu return and scene replacement;
+- the durable compatibility ID remains `void_warlock`, and no save-schema migration is part of the foundation.
+
+The controller/managers, charge extension and force vocabulary must remain described here as future design until their own implementation PRs merge. If ADR-021 is rejected or revised, this subsection must change with it.
+
+### Other deferred architecture
 
 Do not build against these until a dedicated ADR approves them:
 
