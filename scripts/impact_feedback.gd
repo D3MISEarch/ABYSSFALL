@@ -14,6 +14,7 @@ var _local_recoil := Vector3.ZERO
 var _elapsed := 0.0
 var _mode: StringName = &"contact"
 var _lethal := false
+var _contact_active := true
 
 
 static func reaction_profile(tier: StringName, primary_hit: bool) -> Dictionary:
@@ -58,6 +59,8 @@ static func play_contact(
 		return null
 	var existing := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
 	if is_instance_valid(existing):
+		existing.cancel_and_restore()
+		visual_root.remove_child(existing)
 		existing.queue_free()
 	var feedback := ImpactFeedback.new()
 	feedback.name = "VoidbringerImpactFeedback"
@@ -102,6 +105,18 @@ func _configure_contact(
 	_build_contact_visual(primary_hit)
 
 
+func cancel_and_restore() -> void:
+	if _mode != &"contact" or not _contact_active:
+		return
+	_contact_active = false
+	if is_instance_valid(_visual_root):
+		_visual_root.position = _base_position
+		_visual_root.scale = _base_scale
+		_visual_root.rotation_degrees = _base_rotation
+	_visual_root = null
+	set_process(false)
+
+
 func _configure_death(tier: StringName) -> void:
 	_mode = &"death"
 	_profile = reaction_profile(tier, true)
@@ -117,6 +132,8 @@ func _process(delta: float) -> void:
 
 
 func _process_contact() -> void:
+	if not _contact_active:
+		return
 	if not is_instance_valid(_visual_root):
 		queue_free()
 		return

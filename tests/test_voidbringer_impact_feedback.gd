@@ -26,6 +26,7 @@ func _run_tests() -> void:
 	await process_frame
 	await _test_void_bolt_collision_and_contact(host)
 	await _test_presentation_boundary_and_profiles(host)
+	await _test_interrupted_contact_restoration(host)
 	await _test_lethal_feedback_cleanup(host)
 	await _test_soul_and_corruption_payoff(host)
 	host.queue_free()
@@ -159,6 +160,77 @@ func _test_presentation_boundary_and_profiles(host: Node3D) -> void:
 		_count_collision_objects(light_visual) == 0 and _count_collision_objects(heavy_visual) == 0,
 		"Feedback descendants must remain collision-free"
 	)
+
+
+func _test_interrupted_contact_restoration(host: Node3D) -> void:
+	var enemy: Variant = await _spawn_enemy(host, SKELETON_SCRIPT, "InterruptedReactionTarget", Vector3(11.0, 0.0, 0.0))
+	var visual_root: Node3D = enemy.get("visual_root")
+	var original_position: Vector3 = visual_root.position
+	var original_scale: Vector3 = visual_root.scale
+	var original_rotation: Vector3 = visual_root.rotation_degrees
+	var enemy_position: Vector3 = enemy.global_position
+	var collision_before := _collision_snapshot(enemy)
+	var health_before := int(enemy.health)
+
+	enemy.present_void_bolt_impact(Vector3.FORWARD, true, false)
+	var canceled_feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
+	_expect(canceled_feedback != null, "Primary contact should create interruptible impact feedback.")
+	if canceled_feedback != null:
+		canceled_feedback._process(0.08)
+	_expect(
+		visual_root.position != original_position
+			or visual_root.scale != original_scale
+			or visual_root.rotation_degrees != original_rotation,
+		"Contact feedback should visibly deform the decorative visual root before interruption."
+	)
+
+	enemy.present_void_bolt_impact(Vector3.RIGHT, true, false)
+	var replacement_feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
+	_expect(
+		_count_nodes_named(visual_root, "VoidbringerImpactFeedback") == 1,
+		"Interrupted contact must leave exactly one active feedback child."
+	)
+	_expect(
+		replacement_feedback != null and replacement_feedback != canceled_feedback,
+		"Interrupted contact must replace the canceled feedback instance."
+	)
+	if replacement_feedback != null:
+		replacement_feedback._process(0.06)
+	var replacement_position: Vector3 = visual_root.position
+	var replacement_scale: Vector3 = visual_root.scale
+	var replacement_rotation: Vector3 = visual_root.rotation_degrees
+	if canceled_feedback != null:
+		canceled_feedback._process(0.24)
+	_expect(visual_root.position == replacement_position, "Canceled feedback must not write position after replacement begins.")
+	_expect(visual_root.scale == replacement_scale, "Canceled feedback must not write scale after replacement begins.")
+	_expect(visual_root.rotation_degrees == replacement_rotation, "Canceled feedback must not write rotation after replacement begins.")
+
+	for direction in [Vector3.LEFT, Vector3.BACK, Vector3.RIGHT]:
+		enemy.present_void_bolt_impact(direction, true, false)
+		_expect(
+			_count_nodes_named(visual_root, "VoidbringerImpactFeedback") == 1,
+			"Repeated interruptions must keep one active feedback child."
+		)
+		var active_feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
+		_expect(active_feedback != null, "Repeated interruptions must preserve a replacement feedback instance.")
+		if active_feedback != null:
+			active_feedback._process(0.06)
+
+	var final_feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
+	_expect(final_feedback != null, "Final interrupted contact should remain available for cleanup.")
+	if final_feedback != null:
+		final_feedback._process(1.0)
+	await process_frame
+	_expect(
+		_count_nodes_named(visual_root, "VoidbringerImpactFeedback") == 0,
+		"Completed replacement feedback should clean itself up."
+	)
+	_expect(visual_root.position == original_position, "Interrupted contact feedback must restore the exact original visual position.")
+	_expect(visual_root.scale == original_scale, "Interrupted contact feedback must restore the exact original visual scale.")
+	_expect(visual_root.rotation_degrees == original_rotation, "Interrupted contact feedback must restore the exact original visual rotation.")
+	_expect(enemy.global_position == enemy_position, "Interrupted presentation feedback must not move the authoritative enemy body.")
+	_expect(_collision_snapshot(enemy) == collision_before, "Interrupted presentation feedback must not alter collision state.")
+	_expect(int(enemy.health) == health_before, "Interrupted presentation feedback must not alter enemy health.")
 
 
 func _test_lethal_feedback_cleanup(host: Node3D) -> void:
