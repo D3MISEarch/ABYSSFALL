@@ -1,10 +1,17 @@
 # AbyssFall — Current Production Slice
 
-**Status date:** 27 July 2026  
+**Status date:** 28 July 2026  
 **Authoritative branch:** `main`  
-**Known-good baseline:** `ff35886b582e534edf01fe0b8f826c3223322099`  
-**Approved source/result tree:** `80b9e5883442b1bdc3030d16111994f07c198b0d`  
+**Approved main baseline:** `7b4bde25940d1941c54857471efdc581c6b9b150`  
+**Active human-gated candidate:** [PR #82](https://github.com/D3MISEarch/ABYSSFALL/pull/82) at frozen head `8d5958e51f499d966a790cc9feb479b339b29964`  
+**Next dependent slice:** [Issue #83](https://github.com/D3MISEarch/ABYSSFALL/issues/83), blocked until PR #82 passes owner playtest and merges  
 **Engine:** Godot 4.4.1
+
+## Current gate
+
+PR #82 is draft, unmerged, technically verified, and waiting for the owner Windows playtest. Its frozen head is not approved `main` and must not be used as a dependency base until the owner records PASS and the PR merges.
+
+Issue #83 may be refined as implementation-ready preproduction, but no implementation branch may be created until the exact post-merge `main` SHA is recorded.
 
 ## Active production target
 
@@ -32,13 +39,18 @@ The following behavior is approved and must not drift without an explicit task a
 4. Meaningful build-changing loot.
 5. One focused repeatable endgame loop.
 
-## Next approved micro-sprint
+## Current micro-sprint
 
 **Voidbringer impact and payoff pass**
 
 Player-facing loop:
 
 `cast Void Bolt → readable hit and enemy reaction → satisfying death feedback → visible Corruption payoff → Grasping Rift creates an intentional setup → follow-up cast feels stronger because of the setup`
+
+Current sequence:
+
+1. PR #82 — Void Bolt contact, enemy reaction, death consequence, soul travel, and Corruption payoff; owner Windows playtest required.
+2. Issue #83 — Grasping Rift setup/collapse readability and one isolated grouping/payoff encounter; starts only from the exact post-merge `main` SHA.
 
 Required outcomes:
 
@@ -70,10 +82,10 @@ Explicitly out of scope:
 
 ## Known follow-ups that do not block the slice
 
-- Add `scripts/core/character_factory.gd` to the full-stack workflow trigger paths.
 - Decide whether freeze branches should trigger workflows on push.
 - Decide and document the Godot 4.4 `*.gd.uid` policy.
 - Resolve or formally contain the `Docs/` and `docs/` casing overlap before a packaging path touches both.
+- Keep PR frozen-head metadata synchronized after correction passes; tracked by [Issue #84](https://github.com/D3MISEarch/ABYSSFALL/issues/84).
 
 ## Deferred milestones
 
