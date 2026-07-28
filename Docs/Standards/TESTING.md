@@ -167,6 +167,29 @@ Regression expectation:
 - Attempt a corrupted rebind while a valid character is active and assert the active session is unchanged.
 - Assert failed splits do not mutate quantity, emit signals, or invent identity.
 
+### Split-brain playable state and partial durable snapshots
+
+Observed failures:
+
+- The graphical prototype mutated local equipment/backpack dictionaries while the authoritative `RuntimeSession` inventory and equipment remained empty.
+- A focused progression snapshot saved level and class-tree state but omitted gear, so relaunch restored progression while silently rebuilding a fresh prototype loadout.
+- Empty equipment slots auto-equipped drops before the player made a choice.
+
+Prevention:
+
+- Route playable item mutations through the existing session-owned `InventoryContainer`, `EquipmentManager`, and `ItemIdentityService`.
+- Treat legacy UI dictionaries as projections only, never durable owners.
+- Persist the complete `RuntimeSession.durable_snapshot()` whenever a playable durable subsystem changes.
+- Pickups enter inventory first; explicit equip is a separate atomic transaction.
+
+Regression expectation:
+
+- Capture equipped and backpack instance IDs before a real disk flush, construct fresh persistence/runtime/UI objects, and assert exact slot/order/identity restoration.
+- Plant an unrelated canary build and prove the test does not modify it.
+- Assert the first pickup into an empty slot remains unequipped.
+- Assert a full-backpack rejection leaves both the incoming world pickup and all owned items intact.
+- Open the inventory with controller-style focus, equip an item, rebuild the list, and assert focus remains on a valid backpack action.
+
 ## Every gameplay bug gets a regression test
 
 Per the [Engineering Constitution](../Governance/ENGINEERING_CONSTITUTION.md), every gameplay bug found by CI, independent review, or playtest receives a regression before the fix is complete.

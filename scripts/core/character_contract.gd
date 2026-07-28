@@ -23,6 +23,8 @@ const REQUIRED_METHODS := [
 	"add_experience",
 	"restore_persistent_progression",
 	"apply_class_tree_projection",
+	"bind_playable_inventory_bridge",
+	"try_add_item",
 	"get_inventory_snapshot",
 	"equip_inventory_index",
 	"take_damage",
