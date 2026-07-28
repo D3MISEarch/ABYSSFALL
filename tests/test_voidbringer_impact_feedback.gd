@@ -4,6 +4,7 @@ const VOID_BOLT_SCRIPT = preload("res://scripts/void_bolt.gd")
 const SKELETON_SCRIPT = preload("res://scripts/skeleton.gd")
 const BONE_ARCHER_SCRIPT = preload("res://scripts/bone_archer.gd")
 const CRYPT_BRUTE_SCRIPT = preload("res://scripts/crypt_brute.gd")
+const HOLLOW_KING_SCRIPT = preload("res://scripts/hollow_king.gd")
 const SOUL_PICKUP_SCRIPT = preload("res://scripts/soul_pickup.gd")
 const PLAYER_SCRIPT = preload("res://scripts/player.gd")
 const CORRUPTION_METER_SCRIPT = preload("res://scripts/corruption_meter.gd")
@@ -25,6 +26,7 @@ func _run_tests() -> void:
 	root.add_child(host)
 	await process_frame
 	await _test_void_bolt_collision_and_contact(host)
+	await _test_phase_locked_primary_still_splashes(host)
 	await _test_presentation_boundary_and_profiles(host)
 	await _test_interrupted_contact_restoration(host)
 	await _test_lethal_feedback_cleanup(host)
@@ -101,6 +103,38 @@ func _test_void_bolt_collision_and_contact(host: Node3D) -> void:
 	_expect(
 		int(primary.get("health")) != primary_health - 27,
 		"Splash must exclude the primary target"
+	)
+	await process_frame
+
+
+func _test_phase_locked_primary_still_splashes(host: Node3D) -> void:
+	var source := Node3D.new()
+	source.name = "PhaseLockSplashSource"
+	host.add_child(source)
+	var primary: Variant = await _spawn_enemy(
+		host, HOLLOW_KING_SCRIPT, "PhaseLockedHollowKing", Vector3(20.0, 0.0, 0.0)
+	)
+	var secondary: Variant = await _spawn_enemy(
+		host, SKELETON_SCRIPT, "PhaseLockSplashSecondary", Vector3(21.2, 0.0, 0.0)
+	)
+	primary.set("phase_lock", true)
+	var primary_health := int(primary.get("health"))
+	var secondary_health := int(secondary.get("health"))
+	var contact_bolt: Variant = _make_bolt(host, source, 2.1, 9)
+	contact_bolt.global_position = primary.global_position
+	contact_bolt._on_body_entered(primary)
+	_expect(
+		int(primary.get("health")) == primary_health,
+		"Phase-locked Hollow King must preserve its authoritative health gate"
+	)
+	_expect(
+		int(secondary.get("health")) == secondary_health - 9,
+		"Confirmed primary contact must still resolve valid splash targets while the primary health gate blocks damage"
+	)
+	contact_bolt._on_body_entered(primary)
+	_expect(
+		int(secondary.get("health")) == secondary_health - 9,
+		"Phase-lock splash regression must preserve once-only impact behavior"
 	)
 	await process_frame
 
