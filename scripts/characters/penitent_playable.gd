@@ -70,17 +70,17 @@ func try_add_item(item: Dictionary) -> bool:
 	return false
 
 
-func equip_inventory_index(index: int) -> void:
+func equip_inventory_index(index: int) -> bool:
 	if playable_inventory_bridge == null:
-		super.equip_inventory_index(index)
-		return
+		return super.equip_inventory_index(index)
 	var result := playable_inventory_bridge.equip_inventory_index(index)
 	if not bool(result.get("success", false)):
 		loot_message.emit("EQUIP BLOCKED: %s" % str(result.get("reason", &"invalid")).replace("_", " ").to_upper())
-		return
+		return false
 	_apply_persistent_inventory_snapshot(playable_inventory_bridge.snapshot())
 	var equipped_item: Dictionary = result.get("item", {})
 	loot_message.emit("EQUIPPED: %s" % str(equipped_item.get("name", "Unknown Relic")))
+	return true
 
 
 func unequip_slot(slot: String) -> bool:
