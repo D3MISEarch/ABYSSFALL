@@ -1,0 +1,157 @@
+name: Persistent Level Flow Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/characters/**"
+      - "scripts/core/**"
+      - "scripts/runtime/**"
+      - "scripts/ui/**"
+      - "scripts/multiclass_main.gd"
+      - "scripts/persistence/**"
+      - "tests/test_persistent_level_flow.gd"
+      - "tests/test_class_tree_navigation.gd"
+      - "tests/test_class_tree_screen.gd"
+      - "tests/test_playable_combat_projection.gd"
+      - "project.godot"
+      - ".github/workflows/persistent-level-flow-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/characters/**"
+      - "scripts/core/**"
+      - "scripts/runtime/**"
+      - "scripts/ui/**"
+      - "scripts/multiclass_main.gd"
+      - "scripts/persistence/**"
+      - "tests/test_persistent_level_flow.gd"
+      - "tests/test_class_tree_navigation.gd"
+      - "tests/test_class_tree_screen.gd"
+      - "tests/test_playable_combat_projection.gd"
+      - "project.godot"
+      - ".github/workflows/persistent-level-flow-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: persistent-level-flow-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  persistent-level-flow:
+    name: Godot 4.4.1 Persistent Level Flow
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+
+      - name: Run persistent level-flow regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_persistent_level_flow.gd 2>&1 | tee persistent-level-flow-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' persistent-level-flow-tests.log; then
+            echo "Persistent level-flow regression failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Persistent non-blocking level flow' persistent-level-flow-tests.log; then
+            echo "Missing persistent level-flow PASS marker."
+            exit 1
+          fi
+
+      - name: Run class-tree navigation regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_class_tree_navigation.gd 2>&1 | tee class-tree-navigation-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' class-tree-navigation-tests.log; then
+            echo "Class-tree navigation regression failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Class tree navigation model' class-tree-navigation-tests.log; then
+            echo "Missing class-tree navigation PASS marker."
+            exit 1
+          fi
+
+      - name: Run graphical class-tree regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_class_tree_screen.gd 2>&1 | tee class-tree-screen-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' class-tree-screen-tests.log; then
+            echo "Graphical class-tree regression failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Graphical class tree shell' class-tree-screen-tests.log; then
+            echo "Missing graphical class-tree PASS marker."
+            exit 1
+          fi
+
+      - name: Run playable combat-projection regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_playable_combat_projection.gd 2>&1 | tee playable-combat-projection-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' playable-combat-projection-tests.log; then
+            echo "Playable combat-projection regression failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Playable combat projection' playable-combat-projection-tests.log; then
+            echo "Missing playable combat-projection PASS marker."
+            exit 1
+          fi
+
+      - name: Run playable class smoke paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_smoke() {
+            local class_id="$1"
+            local log="runtime-${class_id}.log"
+            set +e
+            timeout 20s godot --headless --path . -- "--class=${class_id}" > "$log" 2>&1
+            local status=$?
+            set -e
+            cat "$log"
+            if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid access|Condition .* is true|ERROR:' "$log"; then
+              echo "Godot reported an error in ${class_id}."
+              exit 1
+            fi
+            if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+              echo "${class_id} exited unexpectedly with status ${status}."
+              exit "$status"
+            fi
+            grep -Fq "ABYSSFALL_CLASS_LAUNCHED:${class_id}" "$log"
+          }
+          run_smoke void_warlock
+          run_smoke penitent
+
+      - name: Upload focused logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: persistent-level-flow-logs
+          path: |
+            persistent-level-flow-tests.log
+            class-tree-navigation-tests.log
+            class-tree-screen-tests.log
+            playable-combat-projection-tests.log
+            runtime-void_warlock.log
+            runtime-penitent.log
+          if-no-files-found: warn
+          retention-days: 7

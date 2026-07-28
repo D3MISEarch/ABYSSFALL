@@ -3,11 +3,19 @@ extends "res://scripts/main.gd"
 const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
 const FERVOR_SEAL_SCRIPT = preload("res://scripts/ui/fervor_seal.gd")
 const INPUT_PROMPT_PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
+const PLAYABLE_PROGRESSION_BRIDGE_SCRIPT = preload("res://scripts/ui/playable_progression_bridge.gd")
+const CLASS_TREE_SCREEN_SCRIPT = preload("res://scripts/ui/class_tree_screen.gd")
+const GAMEPLAY_PAUSE_BOUNDARY = preload("res://scripts/ui/gameplay_pause_boundary.gd")
 
 var requested_class_id := ""
 var selected_class_id := CHARACTER_FACTORY.DEFAULT_CLASS_ID
 var penitent_hud_installed := false
 var active_prompt_profile := INPUT_PROMPT_PROFILE.KEYBOARD_MOUSE
+var progression_bridge: PlayableProgressionBridge
+var class_tree_screen: ClassTreeScreen
+var class_point_label: Label
+var progression_notification_label: Label
+var progression_notification_token := 0
 
 
 func _spawn_player() -> void:
@@ -24,9 +32,7 @@ func _spawn_player() -> void:
 	player.health_changed.connect(_on_player_health_changed)
 	player.resource_changed.connect(_on_player_resource_changed)
 	player.experience_changed.connect(_on_player_experience_changed)
-	player.level_up_requested.connect(_on_level_up_requested)
 	player.inventory_changed.connect(_refresh_inventory)
-	player.skill_tree_changed.connect(_refresh_skill_tree)
 	player.ability_message.connect(_on_ability_message)
 	player.loot_message.connect(_on_loot_message)
 	player.died.connect(_on_player_died)
@@ -64,6 +70,10 @@ func _spawn_player() -> void:
 			int(sigil_snapshot.get("active", 0)),
 			int(sigil_snapshot.get("maximum", 3))
 		)
+
+	_disable_legacy_level_panel()
+	_install_progression_hud()
+	_initialize_progression_runtime()
 
 
 func _input(event: InputEvent) -> void:
@@ -148,67 +158,210 @@ func _on_player_died() -> void:
 	_show_message("%s HAS FALLEN\nPress R to restart" % fallen_name, 999.0)
 
 
-func _refresh_skill_tree() -> void:
-	if not is_instance_valid(player) or skill_columns == null:
+func _on_player_experience_changed(current_level: int, current_xp: int, required_xp: int) -> void:
+	super._on_player_experience_changed(current_level, current_xp, required_xp)
+	if progression_bridge != null and progression_bridge.is_configured():
+		progression_bridge.sync_playable_progress(current_level, current_xp)
+
+
+func _disable_legacy_level_panel() -> void:
+	# The inherited panel remains prototype scaffolding in main.gd. The actual
+	# multiclass play path removes it before the first gameplay frame so level
+	# gains can never seize focus or pause combat.
+	if is_instance_valid(level_up_panel):
+		level_up_panel.queue_free()
+	level_up_panel = null
+	level_choice_buttons.clear()
+	current_level_choices.clear()
+
+
+func _install_progression_hud() -> void:
+	if not is_instance_valid(xp_label) or class_point_label != null:
 		return
-	_clear_container(skill_columns)
-	var snapshot: Dictionary = player.get_skill_tree_snapshot()
-	var progress: Dictionary = snapshot.get("progress", {})
-	var branches: Dictionary = snapshot.get("branches", {})
-	var branch_order: Array = snapshot.get("branch_order", branches.keys())
+	var canvas := xp_label.get_parent()
+	if canvas == null:
+		return
+	class_point_label = Label.new()
+	class_point_label.position = Vector2(335.0, 55.0)
+	class_point_label.size = Vector2(260.0, 24.0)
+	class_point_label.add_theme_font_size_override("font_size", 14)
+	class_point_label.modulate = Color(0.82, 0.62, 1.0)
+	class_point_label.text = "CLASS POINTS  0"
+	canvas.add_child(class_point_label)
 
-	for branch_index in range(branch_order.size()):
-		var branch_name := str(branch_order[branch_index])
-		var branch_box := VBoxContainer.new()
-		branch_box.custom_minimum_size = Vector2(285.0, 450.0)
-		skill_columns.add_child(branch_box)
+	progression_notification_label = Label.new()
+	progression_notification_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	progression_notification_label.position = Vector2(-310.0, 112.0)
+	progression_notification_label.size = Vector2(620.0, 38.0)
+	progression_notification_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	progression_notification_label.add_theme_font_size_override("font_size", 18)
+	progression_notification_label.modulate = Color(0.92, 0.76, 1.0)
+	progression_notification_label.visible = false
+	canvas.add_child(progression_notification_label)
 
-		var branch_title := Label.new()
-		branch_title.text = branch_name.to_upper()
-		branch_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		branch_title.add_theme_font_size_override("font_size", 26)
-		branch_title.modulate = _branch_color(branch_index, branch_name)
-		branch_box.add_child(branch_title)
-
-		var current_tier := int(progress.get(branch_name, 0))
-		var skills: Array = branches.get(branch_name, [])
-		for skill_index in range(skills.size()):
-			var skill: Dictionary = skills[skill_index]
-			var node_label := Label.new()
-			node_label.custom_minimum_size = Vector2(275.0, 62.0)
-			node_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			var prefix := (
-				"✓"
-					if skill_index < current_tier
-					else ("▶" if skill_index == current_tier else "◇")
-			)
-			node_label.text = (
-				"%s  T%d  %s\n%s"
-				% [
-					prefix,
-					skill_index + 1,
-					str(skill.get("name", "Unknown")),
-					str(skill.get("description", "")),
-				]
-			)
-			if skill_index < current_tier:
-				node_label.modulate = _branch_color(branch_index, branch_name).lightened(0.18)
-			elif skill_index == current_tier:
-				node_label.modulate = Color(1.0, 0.93, 0.68)
-			else:
-				node_label.modulate = Color(0.36, 0.34, 0.42)
-			branch_box.add_child(node_label)
+	if is_instance_valid(skill_panel):
+		for child in skill_panel.get_children():
+			if child is Label and str(child.text).begins_with("THE THREE FORBIDDEN PATHS"):
+				child.text = "CLASS PROGRESSION     —     T / ESC TO CLOSE"
+		if is_instance_valid(skill_columns):
+			var legacy_scroll := skill_columns.get_parent() as Control
+			if legacy_scroll != null:
+				legacy_scroll.visible = false
+		class_tree_screen = CLASS_TREE_SCREEN_SCRIPT.new() as ClassTreeScreen
+		if class_tree_screen == null:
+			push_error("Could not create the graphical class-tree screen.")
+			return
+		class_tree_screen.position = Vector2(35.0, 62.0)
+		class_tree_screen.size = Vector2(930.0, 478.0)
+		class_tree_screen.purchase_requested.connect(_on_class_tree_node_pressed)
+		skill_panel.add_child(class_tree_screen)
 
 
-func _branch_color(branch_index: int, branch_name: String) -> Color:
-	if branch_name == "Corruption":
-		return Color(0.48, 0.88, 0.08)
-	var palette := [
-		Color(0.70, 0.12, 0.18),
-		Color(0.92, 0.30, 0.12),
-		Color(0.36, 0.86, 0.08),
-	]
-	return palette[branch_index % palette.size()]
+func _initialize_progression_runtime() -> void:
+	if not is_instance_valid(player) or progression_bridge != null:
+		return
+	progression_bridge = PLAYABLE_PROGRESSION_BRIDGE_SCRIPT.new()
+	progression_bridge.name = "PlayableProgressionBridge"
+	progression_bridge.configured.connect(_on_progression_configured)
+	progression_bridge.points_awarded.connect(_on_progression_points_awarded)
+	progression_bridge.state_changed.connect(_on_progression_state_changed)
+	progression_bridge.persistence_failed.connect(_on_progression_persistence_failed)
+	progression_bridge.combat_projection_changed.connect(_on_class_tree_combat_projection_changed)
+	add_child(progression_bridge)
+	var build_name := "%s Build" % str(player.get_class_display_name())
+	if not progression_bridge.configure_persistent(selected_class_id, Persistence, build_name):
+		push_error("Could not initialize persistent class progression for %s." % selected_class_id)
+		return
+	progression_bridge.restore_into_playable(player)
+	_refresh_skill_tree()
+
+
+func _on_progression_configured(point_name: String, available_points: int, _level: int) -> void:
+	_update_class_point_label(point_name, available_points)
+
+
+func _on_progression_points_awarded(level_value: int, amount: int, available_points: int) -> void:
+	var point_name := progression_bridge.point_display_name()
+	_update_class_point_label(point_name, available_points)
+	_show_progression_notification(
+		"LEVEL %d     %s +%d     %d AVAILABLE"
+		% [level_value, point_name.to_upper(), amount, available_points],
+		2.4
+	)
+
+
+func _on_progression_state_changed(available_points: int) -> void:
+	if progression_bridge == null:
+		return
+	_update_class_point_label(progression_bridge.point_display_name(), available_points)
+	if is_instance_valid(skill_panel) and skill_panel.visible:
+		_refresh_skill_tree()
+
+
+func _on_progression_persistence_failed(context: String, error: Error) -> void:
+	push_error("Class progression persistence failed in %s (error %d)." % [context, error])
+	_show_progression_notification("PROGRESSION SAVE FAILED", 2.4)
+
+
+func _on_class_tree_combat_projection_changed(projection: Dictionary) -> void:
+	if is_instance_valid(player) and player.has_method("apply_class_tree_projection"):
+		player.apply_class_tree_projection(projection)
+
+
+func _update_class_point_label(point_name: String, available_points: int) -> void:
+	if is_instance_valid(class_point_label):
+		class_point_label.text = "%s  %d" % [point_name.to_upper(), available_points]
+
+
+func _show_progression_notification(text: String, duration: float) -> void:
+	if not is_instance_valid(progression_notification_label):
+		return
+	progression_notification_token += 1
+	var token := progression_notification_token
+	progression_notification_label.text = text
+	progression_notification_label.visible = true
+	await get_tree().create_timer(duration, true).timeout
+	if token == progression_notification_token and is_instance_valid(progression_notification_label):
+		progression_notification_label.text = ""
+		progression_notification_label.visible = false
+
+
+func _toggle_inventory() -> void:
+	if not is_instance_valid(inventory_panel) or not is_instance_valid(skill_panel):
+		return
+	skill_panel.visible = false
+	inventory_panel.visible = not inventory_panel.visible
+	if inventory_panel.visible:
+		_refresh_inventory()
+	_update_pause_state()
+
+
+func _toggle_skill_tree() -> void:
+	if not is_instance_valid(inventory_panel) or not is_instance_valid(skill_panel):
+		return
+	inventory_panel.visible = false
+	skill_panel.visible = not skill_panel.visible
+	if skill_panel.visible:
+		_refresh_skill_tree()
+		if class_tree_screen != null:
+			class_tree_screen.call_deferred("focus_initial")
+	_update_pause_state()
+
+
+func _close_side_menus() -> void:
+	if is_instance_valid(inventory_panel):
+		inventory_panel.visible = false
+	if is_instance_valid(skill_panel):
+		skill_panel.visible = false
+	_update_pause_state()
+
+
+func _update_pause_state() -> void:
+	var should_pause := false
+	if is_instance_valid(inventory_panel) and inventory_panel.visible:
+		should_pause = true
+	if is_instance_valid(skill_panel) and skill_panel.visible:
+		should_pause = true
+	_prepare_gameplay_pause_boundary()
+	get_tree().paused = should_pause
+
+
+func _prepare_gameplay_pause_boundary() -> void:
+	# main.gd remains ALWAYS so it can close menus while paused. The dedicated
+	# boundary keeps Canvas UI and persistence/progression plumbing responsive,
+	# while every direct gameplay subtree becomes genuinely pausable.
+	var always_nodes: Array[Node] = []
+	if progression_bridge != null:
+		always_nodes.append(progression_bridge)
+	GAMEPLAY_PAUSE_BOUNDARY.apply(self, always_nodes)
+
+
+func _refresh_skill_tree() -> void:
+	if class_tree_screen == null:
+		return
+	if progression_bridge == null or not progression_bridge.is_configured():
+		class_tree_screen.show_unavailable("CLASS PROGRESSION IS NOT YET BOUND")
+		return
+	class_tree_screen.set_tree_snapshot(progression_bridge.tree_snapshot())
+
+
+func _on_class_tree_node_pressed(node_id: StringName) -> void:
+	if progression_bridge == null or node_id == &"":
+		return
+	var result := progression_bridge.purchase_node(node_id)
+	if bool(result.get("success", false)):
+		_show_progression_notification(
+			"NODE AWAKENED     RANK %d     %d POINTS REMAIN"
+			% [int(result.get("rank", 1)), int(result.get("available_points", 0))],
+			1.6
+		)
+	else:
+		_show_progression_notification(
+			"NODE PURCHASE BLOCKED     %s"
+			% str(result.get("reason", &"invalid")).replace("_", " ").to_upper(),
+			1.4
+		)
+	_refresh_skill_tree()
 
 
 func _update_class_specific_copy() -> void:

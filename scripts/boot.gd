@@ -1,6 +1,7 @@
 extends Node
 
 const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
+const CONTROLLER_UI_INPUT_MAP = preload("res://scripts/core/controller_ui_input_map.gd")
 const CLASS_SELECTION_SCRIPT = preload("res://scripts/ui/class_selection_screen.gd")
 const DIAGNOSTIC_OVERLAY_SCRIPT = preload("res://scripts/tooling/playtest_diagnostic_overlay.gd")
 const GAMEPLAY_SCENE = preload("res://gameplay.tscn")
@@ -11,6 +12,7 @@ var diagnostic_overlay: PlaytestDiagnosticOverlay
 
 
 func _ready() -> void:
+	CONTROLLER_UI_INPUT_MAP.install_defaults()
 	_install_diagnostic_overlay()
 	var command_line_class := _get_command_line_class()
 	if CHARACTER_FACTORY.has_class(command_line_class):

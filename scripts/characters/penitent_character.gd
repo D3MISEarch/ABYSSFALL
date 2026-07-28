@@ -230,7 +230,7 @@ func _perform_ritual_blade_attack() -> void:
 	var hit_count := 0
 	var completed_count := 0
 	var echo_count := 0
-	var damage: int = RITUAL_BLADE_RULES.get_damage(ritual_blade_combo_step)
+	var damage: int = _resolve_outgoing_damage(RITUAL_BLADE_RULES.get_damage(ritual_blade_combo_step))
 
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
