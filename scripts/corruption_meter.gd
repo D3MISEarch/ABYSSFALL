@@ -4,11 +4,22 @@ var current_value := 0.0
 var maximum_value := 100.0
 var displayed_value := 0.0
 var pulse_time := 0.0
+var last_observed_gain := 0.0
+var gain_pulse_remaining := 0.0
+var gain_label: Label
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	custom_minimum_size = Vector2(470.0, 76.0)
+	gain_label = Label.new()
+	gain_label.name = "ObservedGainLabel"
+	gain_label.position = Vector2(348.0, -1.0)
+	gain_label.size = Vector2(88.0, 24.0)
+	gain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	gain_label.add_theme_font_size_override("font_size", 18)
+	gain_label.modulate = Color(0.78, 1.0, 0.58, 0.0)
+	add_child(gain_label)
 	queue_redraw()
 
 
@@ -17,16 +28,37 @@ func set_corruption(new_value: float, new_maximum: float) -> void:
 	maximum_value = maxf(new_maximum, 1.0)
 
 
+func present_observed_gain(actual_delta: float) -> void:
+	if actual_delta <= 0.0:
+		return
+	last_observed_gain = actual_delta
+	gain_pulse_remaining = 0.62
+	_update_gain_label()
+
+
 func _process(delta: float) -> void:
 	pulse_time += delta
 	displayed_value = lerpf(displayed_value, current_value, clampf(delta * 7.0, 0.0, 1.0))
+	gain_pulse_remaining = maxf(gain_pulse_remaining - delta, 0.0)
+	_update_gain_label()
 	queue_redraw()
+
+
+func _update_gain_label() -> void:
+	if not is_instance_valid(gain_label):
+		return
+	var visibility := clampf(gain_pulse_remaining / 0.18, 0.0, 1.0)
+	gain_label.text = "+%d" % int(round(last_observed_gain))
+	gain_label.visible = gain_pulse_remaining > 0.0
+	gain_label.modulate = Color(0.78, 1.0, 0.58, visibility)
+	gain_label.position.y = -1.0 - (1.0 - visibility) * 8.0
 
 
 func _draw() -> void:
 	var ratio: float = clampf(displayed_value / maximum_value, 0.0, 1.0)
 	var bar_rect: Rect2 = Rect2(42.0, 27.0, maxf(size.x - 84.0, 120.0), 22.0)
 	var pulse: float = (sin(pulse_time * (3.0 + ratio * 3.0)) + 1.0) * 0.5
+	var gain_strength := clampf(gain_pulse_remaining / 0.62, 0.0, 1.0)
 
 	draw_rect(
 		Rect2(bar_rect.position - Vector2(6.0, 7.0), bar_rect.size + Vector2(12.0, 14.0)),
@@ -34,6 +66,13 @@ func _draw() -> void:
 		true
 	)
 	draw_rect(bar_rect, Color(0.025, 0.009, 0.035, 1.0), true)
+	if gain_strength > 0.0:
+		draw_rect(
+			Rect2(bar_rect.position - Vector2(3.0, 3.0), bar_rect.size + Vector2(6.0, 6.0)),
+			Color(0.68, 1.0, 0.38, gain_strength * 0.45),
+			false,
+			2.0
+		)
 
 	var fill_width: float = bar_rect.size.x * ratio
 	if fill_width > 1.0:

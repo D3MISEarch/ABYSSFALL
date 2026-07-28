@@ -7,6 +7,8 @@ var age := 0.0
 var magnet_delay := 0.32
 var move_speed := 5.0
 var visual_root: Node3D
+var release_origin := Vector3.ZERO
+var delivered := false
 
 
 func setup(new_target: Node3D, amount: float, is_rare: bool) -> void:
@@ -16,10 +18,13 @@ func setup(new_target: Node3D, amount: float, is_rare: bool) -> void:
 
 
 func _ready() -> void:
+	release_origin = global_position
 	_build_visual()
 
 
 func _process(delta: float) -> void:
+	if delivered:
+		return
 	age += delta
 	if is_instance_valid(visual_root):
 		visual_root.rotation.y += delta * (3.4 if rare else 2.4)
@@ -29,9 +34,10 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(target):
 		return
 
-	var hover_height := 0.75 + sin(age * 4.5) * 0.12
 	if age < magnet_delay:
-		global_position.y = move_toward(global_position.y, hover_height, delta * 2.2)
+		var release_progress := clampf(age / magnet_delay, 0.0, 1.0)
+		var release_height := lerpf(0.0, 0.76, sin(release_progress * PI * 0.5))
+		global_position = release_origin + Vector3(0.0, release_height, 0.0)
 		return
 
 	var target_position := target.global_position + Vector3(0.0, 0.55, 0.0)
@@ -39,11 +45,22 @@ func _process(delta: float) -> void:
 	move_speed = minf(move_speed + delta * 10.0, 18.0)
 	global_position = global_position.move_toward(target_position, move_speed * delta)
 	if distance <= 0.65:
-		if target.has_method("collect_soul"):
-			target.collect_soul(corruption_amount, rare)
-		elif target.has_method("add_corruption"):
-			target.add_corruption(corruption_amount)
-		queue_free()
+		_deliver_once()
+
+
+func _deliver_once() -> void:
+	if delivered or not is_instance_valid(target):
+		return
+	delivered = true
+	var corruption_before := float(target.get("corruption"))
+	if target.has_method("collect_soul"):
+		target.collect_soul(corruption_amount, rare)
+	elif target.has_method("add_corruption"):
+		target.add_corruption(corruption_amount)
+	var observed_delta := maxf(float(target.get("corruption")) - corruption_before, 0.0)
+	if observed_delta > 0.0 and target.has_method("present_soul_arrival"):
+		target.present_soul_arrival(observed_delta)
+	queue_free()
 
 
 func _build_visual() -> void:

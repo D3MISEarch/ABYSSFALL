@@ -3,8 +3,10 @@ name: Full-Stack Controller Reconciliation
 on:
   pull_request:
     paths:
+      - "scripts/*.gd"
       - "main.tscn"
       - "gameplay.tscn"
+      - "scripts/core/character_factory.gd"
       - "scripts/multiclass_main.gd"
       - "scripts/full_stack_controller_boot.gd"
       - "scripts/full_stack_controller_main.gd"
@@ -18,6 +20,7 @@ on:
       - "tests/test_full_stack_controller_reconciliation.gd"
       - "tests/test_penitent_class_gates.gd"
       - "tests/test_input_prompt_profile.gd"
+      - "tests/test_voidbringer_impact_feedback.gd"
       - ".github/workflows/godot-hotfix3-validation.yml"
       - ".github/workflows/full-stack-controller-reconciliation.yml"
   workflow_dispatch:
@@ -44,6 +47,20 @@ jobs:
 
       - name: Import project
         run: godot --headless --editor --path . --quit
+
+      - name: Run Voidbringer impact and Corruption payoff regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_impact_feedback.gd 2>&1 | tee voidbringer-impact-feedback.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' voidbringer-impact-feedback.log; then
+            echo "Voidbringer impact and Corruption payoff regression failed."
+            exit 1
+          fi
+          if ! grep -Fxq 'PASS: Voidbringer impact and Corruption payoff' voidbringer-impact-feedback.log; then
+            echo "Missing Voidbringer impact and Corruption payoff PASS marker."
+            exit 1
+          fi
 
       - name: Run full-stack controller reconciliation
         shell: bash
@@ -122,6 +139,7 @@ jobs:
             test_persistent_level_flow.log
             test_art_pass0_visual_contract.log
             test_voidbringer_vfx_pass0b.log
+            voidbringer-impact-feedback.log
             runtime-void_warlock.log
             runtime-penitent.log
           if-no-files-found: warn

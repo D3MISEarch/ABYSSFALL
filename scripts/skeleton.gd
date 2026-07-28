@@ -2,6 +2,8 @@ extends CharacterBody3D
 
 signal died(enemy: Node)
 
+const IMPACT_FEEDBACK_SCRIPT = preload("res://scripts/impact_feedback.gd")
+
 var target: Node3D
 var max_health := 48
 var health := 48
@@ -94,10 +96,21 @@ func take_damage(amount: int) -> void:
 		_die()
 
 
+func present_void_bolt_impact(
+	incoming_direction: Vector3, primary_hit: bool, lethal_hit: bool
+) -> void:
+	if not is_instance_valid(visual_root):
+		return
+	IMPACT_FEEDBACK_SCRIPT.play_contact(
+		visual_root, incoming_direction, &"light", primary_hit, lethal_hit
+	)
+
+
 func _die() -> void:
 	alive = false
 	collision_layer = 0
 	collision_mask = 0
+	IMPACT_FEEDBACK_SCRIPT.spawn_death_consequence(get_parent(), global_position, &"light")
 	died.emit(self)
 	var tween := create_tween()
 	tween.set_parallel(true)

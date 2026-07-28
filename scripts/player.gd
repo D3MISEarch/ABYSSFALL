@@ -382,6 +382,17 @@ func collect_soul(amount: float, rare: bool = false) -> void:
 	add_experience(8 if rare else 4)
 
 
+func present_soul_arrival(observed_delta: float) -> void:
+	if observed_delta <= 0.0 or not is_instance_valid(visual_root):
+		return
+	var intensity := clampf(observed_delta / 28.0, 0.0, 1.0)
+	var tween := create_tween()
+	tween.tween_property(
+		visual_root, "scale", Vector3(1.0 + intensity * 0.08, 0.92, 1.0 + intensity * 0.08), 0.07
+	)
+	tween.tween_property(visual_root, "scale", Vector3.ONE, 0.16).set_trans(Tween.TRANS_BACK)
+
+
 func spend_corruption(amount: float) -> bool:
 	if corruption < amount:
 		return false
