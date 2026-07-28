@@ -8,7 +8,7 @@ For contribution mechanics (branching, PR expectations, placeholder-art norms), 
 
 - **AbyssFall** — a dark-fantasy action dungeon crawler / ARPG.
 - **Engine:** Godot 4.4.1, GDScript.
-- **Known-good playable baseline:** `main` at `ff35886b582e534edf01fe0b8f826c3223322099` (Godot 4.4.1). This is the owner-approved full-stack Sunken Crypts build with front end, durable inventory, persistent class progression, controller reconciliation, Art Pass 0, and Voidbringer VFX. See [`Docs/Roadmap/CURRENT_SLICE.md`](Docs/Roadmap/CURRENT_SLICE.md).
+- **Known-good playable baseline:** `main` at `7b4bde25940d1941c54857471efdc581c6b9b150` (Godot 4.4.1). This is the approved full-stack Sunken Crypts build with front end, durable inventory, persistent class progression, controller reconciliation, Art Pass 0, and Voidbringer VFX. The active human gate and exact future branch sequence live in [`Docs/Roadmap/CURRENT_SLICE.md`](Docs/Roadmap/CURRENT_SLICE.md).
 - **Active production class:** Voidbringer only. Penitent mechanics remain preserved and regression-tested, but further Penitent graphical/content work is deferred until the roster milestone is intentionally reopened.
 - **Current architecture stage:** consolidated single-line production from `main`; the active milestone is the first polished Voidbringer combat vertical slice. Historical Stage 3–5 documents remain architectural background, not the current work queue.
 
