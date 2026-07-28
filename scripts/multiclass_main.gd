@@ -1,21 +1,48 @@
 extends "res://scripts/main.gd"
 
+signal exit_to_front_end_requested
+
 const CHARACTER_FACTORY = preload("res://scripts/core/character_factory.gd")
+const CLASS_IDS = preload("res://scripts/shared/class_ids.gd")
 const FERVOR_SEAL_SCRIPT = preload("res://scripts/ui/fervor_seal.gd")
 const INPUT_PROMPT_PROFILE = preload("res://scripts/ui/input_prompt_profile.gd")
 const PLAYABLE_PROGRESSION_BRIDGE_SCRIPT = preload("res://scripts/ui/playable_progression_bridge.gd")
+const PLAYABLE_INVENTORY_BRIDGE_SCRIPT = preload("res://scripts/ui/playable_inventory_bridge.gd")
 const CLASS_TREE_SCREEN_SCRIPT = preload("res://scripts/ui/class_tree_screen.gd")
 const GAMEPLAY_PAUSE_BOUNDARY = preload("res://scripts/ui/gameplay_pause_boundary.gd")
+const GAMEPLAY_PAUSE_MENU_SCRIPT = preload("res://scripts/ui/gameplay_pause_menu.gd")
 
 var requested_class_id := ""
 var selected_class_id := CHARACTER_FACTORY.DEFAULT_CLASS_ID
 var penitent_hud_installed := false
 var active_prompt_profile := INPUT_PROMPT_PROFILE.KEYBOARD_MOUSE
 var progression_bridge: PlayableProgressionBridge
+var inventory_bridge: PlayableInventoryBridge
 var class_tree_screen: ClassTreeScreen
 var class_point_label: Label
 var progression_notification_label: Label
 var progression_notification_token := 0
+var pause_menu: GameplayPauseMenu
+
+
+func _install_input_map() -> void:
+	super._install_input_map()
+	_bind_joy_button("menu_close", JOY_BUTTON_START)
+
+
+func _process(delta: float) -> void:
+	if pause_menu != null and pause_menu.visible:
+		if Input.is_action_just_pressed("menu_close"):
+			_close_pause_menu()
+		return
+	if (
+		Input.is_action_just_pressed("menu_close")
+		and not (is_instance_valid(inventory_panel) and inventory_panel.visible)
+		and not (is_instance_valid(skill_panel) and skill_panel.visible)
+	):
+		_open_pause_menu()
+		return
+	super._process(delta)
 
 
 func _spawn_player() -> void:
@@ -73,6 +100,7 @@ func _spawn_player() -> void:
 
 	_disable_legacy_level_panel()
 	_install_progression_hud()
+	_install_pause_menu()
 	_initialize_progression_runtime()
 
 
@@ -124,7 +152,7 @@ func _on_player_corruption_changed(current_value: float, maximum_value: float) -
 
 func preview_penitent_sacrament(cost: float = 40.0) -> Dictionary:
 	if (
-		selected_class_id != "penitent_placeholder"
+		selected_class_id != CLASS_IDS.PENITENT
 		or not is_instance_valid(player)
 		or not player.has_method("quote_sacrament_cost")
 	):
@@ -229,10 +257,20 @@ func _initialize_progression_runtime() -> void:
 	progression_bridge.combat_projection_changed.connect(_on_class_tree_combat_projection_changed)
 	add_child(progression_bridge)
 	var build_name := "%s Build" % str(player.get_class_display_name())
-	if not progression_bridge.configure_persistent(selected_class_id, Persistence, build_name):
+	var persistence_service := get_node_or_null("/root/Persistence") as PersistenceService
+	if persistence_service == null or not progression_bridge.configure_persistent(selected_class_id, persistence_service, build_name):
 		push_error("Could not initialize persistent class progression for %s." % selected_class_id)
 		return
+	inventory_bridge = PLAYABLE_INVENTORY_BRIDGE_SCRIPT.new() as PlayableInventoryBridge
+	inventory_bridge.name = "PlayableInventoryBridge"
+	add_child(inventory_bridge)
+	if not inventory_bridge.configure(progression_bridge):
+		push_error("Could not initialize persistent playable inventory for %s." % selected_class_id)
+		return
+	if player.has_method("bind_playable_inventory_bridge"):
+		player.call("bind_playable_inventory_bridge", inventory_bridge)
 	progression_bridge.restore_into_playable(player)
+	_refresh_inventory()
 	_refresh_skill_tree()
 
 
@@ -259,8 +297,8 @@ func _on_progression_state_changed(available_points: int) -> void:
 
 
 func _on_progression_persistence_failed(context: String, error: Error) -> void:
-	push_error("Class progression persistence failed in %s (error %d)." % [context, error])
-	_show_progression_notification("PROGRESSION SAVE FAILED", 2.4)
+	push_error("Playable runtime persistence failed in %s (error %d)." % [context, error])
+	_show_progression_notification("SAVE FAILED", 2.4)
 
 
 func _on_class_tree_combat_projection_changed(projection: Dictionary) -> void:
@@ -287,16 +325,21 @@ func _show_progression_notification(text: String, duration: float) -> void:
 
 
 func _toggle_inventory() -> void:
+	if pause_menu != null and pause_menu.visible:
+		return
 	if not is_instance_valid(inventory_panel) or not is_instance_valid(skill_panel):
 		return
 	skill_panel.visible = false
 	inventory_panel.visible = not inventory_panel.visible
 	if inventory_panel.visible:
 		_refresh_inventory()
+		_focus_inventory_item_deferred()
 	_update_pause_state()
 
 
 func _toggle_skill_tree() -> void:
+	if pause_menu != null and pause_menu.visible:
+		return
 	if not is_instance_valid(inventory_panel) or not is_instance_valid(skill_panel):
 		return
 	inventory_panel.visible = false
@@ -322,8 +365,68 @@ func _update_pause_state() -> void:
 		should_pause = true
 	if is_instance_valid(skill_panel) and skill_panel.visible:
 		should_pause = true
+	if pause_menu != null and pause_menu.visible:
+		should_pause = true
 	_prepare_gameplay_pause_boundary()
 	get_tree().paused = should_pause
+
+
+func _install_pause_menu() -> void:
+	if pause_menu != null or not is_instance_valid(xp_label):
+		return
+	var canvas := xp_label.get_parent()
+	if canvas == null:
+		return
+	pause_menu = GAMEPLAY_PAUSE_MENU_SCRIPT.new() as GameplayPauseMenu
+	if pause_menu == null:
+		push_error("Could not create gameplay pause menu.")
+		return
+	pause_menu.name = "GameplayPauseMenu"
+	pause_menu.resume_requested.connect(_close_pause_menu)
+	pause_menu.save_continue_requested.connect(_on_save_continue_requested)
+	pause_menu.save_exit_requested.connect(_on_save_exit_requested)
+	canvas.add_child(pause_menu)
+
+
+func _open_pause_menu() -> void:
+	if pause_menu == null:
+		return
+	pause_menu.open_menu()
+	_update_pause_state()
+
+
+func _close_pause_menu() -> void:
+	if pause_menu == null:
+		return
+	pause_menu.close_menu()
+	_update_pause_state()
+
+
+func _on_save_continue_requested() -> void:
+	_save_runtime(false)
+
+
+func _on_save_exit_requested() -> void:
+	_save_runtime(true)
+
+
+func _save_runtime(exit_after_save: bool) -> void:
+	if pause_menu == null or progression_bridge == null or not progression_bridge.is_configured():
+		if pause_menu != null:
+			pause_menu.show_status("SAVE UNAVAILABLE", true)
+		return
+	pause_menu.set_busy(true)
+	pause_menu.show_status("SAVING...")
+	var context := "manual_save_exit" if exit_after_save else "manual_save_continue"
+	var saved := progression_bridge.persist_runtime_snapshot(true, context)
+	pause_menu.set_busy(false)
+	if not saved:
+		pause_menu.show_status("SAVE FAILED", true)
+		return
+	pause_menu.show_status("SAVED")
+	if exit_after_save:
+		get_tree().paused = false
+		exit_to_front_end_requested.emit()
 
 
 func _prepare_gameplay_pause_boundary() -> void:
@@ -333,6 +436,8 @@ func _prepare_gameplay_pause_boundary() -> void:
 	var always_nodes: Array[Node] = []
 	if progression_bridge != null:
 		always_nodes.append(progression_bridge)
+	if inventory_bridge != null:
+		always_nodes.append(inventory_bridge)
 	GAMEPLAY_PAUSE_BOUNDARY.apply(self, always_nodes)
 
 
@@ -378,7 +483,7 @@ func _update_class_specific_copy() -> void:
 		if label.text.begins_with("VOID WARLOCK INVENTORY"):
 			label.text = "%s INVENTORY     —     I / ESC TO CLOSE" % display_name.to_upper()
 
-	if selected_class_id == "penitent_placeholder":
+	if selected_class_id == CLASS_IDS.PENITENT:
 		_install_penitent_resource_hud()
 
 	_refresh_control_hint(resource_name)

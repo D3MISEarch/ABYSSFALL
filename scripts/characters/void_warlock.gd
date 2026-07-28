@@ -17,6 +17,7 @@ const PLAYABLE_COMBAT_PROJECTION = preload("res://scripts/core/playable_combat_p
 const PLAYABLE_AIM_RESOLVER = preload("res://scripts/core/playable_aim_resolver.gd")
 
 var class_tree_combat := PLAYABLE_COMBAT_PROJECTION.new() as PlayableCombatProjection
+var playable_inventory_bridge: PlayableInventoryBridge
 var controller_aim_authority := false
 
 
@@ -52,7 +53,7 @@ func _update_aim(move_direction: Vector3) -> void:
 	var mouse_direction := Vector3.ZERO
 	var has_mouse_direction := false
 	if not controller_aim_authority:
-		var mouse_point := _mouse_ground_point()
+		var mouse_point := super._mouse_ground_point()
 		if mouse_point != Vector3.INF:
 			mouse_direction = mouse_point - global_position
 			mouse_direction.y = 0.0
@@ -68,21 +69,10 @@ func _update_aim(move_direction: Vector3) -> void:
 	rotation.y = atan2(-facing.x, -facing.z)
 
 
-func unequip_slot(slot: String) -> bool:
-	if not EQUIPMENT_SLOTS.has(slot):
-		return false
-	var equipped_item: Dictionary = equipment.get(slot, {})
-	if equipped_item.is_empty():
-		return false
-	if backpack.size() >= MAX_BACKPACK_SIZE:
-		loot_message.emit("BACKPACK FULL — CANNOT UNEQUIP")
-		return false
-	backpack.append(equipped_item)
-	equipment[slot] = {}
-	_recalculate_stats(true)
-	inventory_changed.emit()
-	loot_message.emit("UNEQUIPPED: %s" % str(equipped_item.get("name", "Unknown Relic")))
-	return true
+func _mouse_ground_point() -> Vector3:
+	if controller_aim_authority:
+		return Vector3.INF
+	return super._mouse_ground_point()
 
 
 func get_class_id() -> String:
@@ -156,6 +146,77 @@ func _forward_corruption_changed(current_value: float, maximum_value: float) -> 
 		current_value,
 		maximum_value
 	)
+
+
+func bind_playable_inventory_bridge(bridge: PlayableInventoryBridge) -> bool:
+	if bridge == null or not bridge.is_configured():
+		return false
+	playable_inventory_bridge = bridge
+	_apply_persistent_inventory_snapshot(bridge.snapshot())
+	return true
+
+
+func add_item(item: Dictionary) -> void:
+	try_add_item(item)
+
+
+func try_add_item(item: Dictionary) -> bool:
+	if playable_inventory_bridge == null:
+		super.add_item(item)
+		return true
+	var result := playable_inventory_bridge.collect_drop(item)
+	if bool(result.get("success", false)):
+		_apply_persistent_inventory_snapshot(playable_inventory_bridge.snapshot())
+		var stored_item: Dictionary = result.get("item", {})
+		loot_message.emit("LOOT STORED: %s — PRESS I" % str(stored_item.get("name", "Unknown Relic")))
+		return true
+	var reason := StringName(str(result.get("reason", &"rejected")))
+	if reason == &"inventory_full":
+		loot_message.emit("BACKPACK FULL — LOOT REMAINS ON THE GROUND")
+	else:
+		loot_message.emit("LOOT COULD NOT BE STORED: %s" % String(reason).replace("_", " ").to_upper())
+	return false
+
+
+func equip_inventory_index(index: int) -> void:
+	if playable_inventory_bridge == null:
+		super.equip_inventory_index(index)
+		return
+	var result := playable_inventory_bridge.equip_inventory_index(index)
+	if not bool(result.get("success", false)):
+		loot_message.emit("EQUIP BLOCKED: %s" % str(result.get("reason", &"invalid")).replace("_", " ").to_upper())
+		return
+	_apply_persistent_inventory_snapshot(playable_inventory_bridge.snapshot())
+	var equipped_item: Dictionary = result.get("item", {})
+	loot_message.emit("EQUIPPED: %s" % str(equipped_item.get("name", "Unknown Relic")))
+
+
+func unequip_slot(slot: String) -> bool:
+	if playable_inventory_bridge == null:
+		return false
+	var result := playable_inventory_bridge.unequip_slot(slot)
+	if not bool(result.get("success", false)):
+		loot_message.emit("UNEQUIP BLOCKED: %s" % str(result.get("reason", &"invalid")).replace("_", " ").to_upper())
+		return false
+	_apply_persistent_inventory_snapshot(playable_inventory_bridge.snapshot())
+	var unequipped_item: Dictionary = result.get("item", {})
+	loot_message.emit("UNEQUIPPED: %s" % str(unequipped_item.get("name", "Unknown Relic")))
+	return true
+
+
+func get_inventory_snapshot() -> Dictionary:
+	if playable_inventory_bridge != null and playable_inventory_bridge.is_configured():
+		return playable_inventory_bridge.snapshot()
+	return super.get_inventory_snapshot()
+
+
+func _apply_persistent_inventory_snapshot(snapshot: Dictionary) -> void:
+	var projected_equipment: Dictionary = snapshot.get("equipment", {})
+	for slot: String in EQUIPMENT_SLOTS:
+		equipment[slot] = projected_equipment.get(slot, {}).duplicate(true)
+	backpack = snapshot.get("backpack", []).duplicate(true)
+	_recalculate_stats(true)
+	inventory_changed.emit()
 
 
 func apply_class_tree_projection(snapshot: Dictionary) -> void:

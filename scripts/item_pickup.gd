@@ -5,6 +5,7 @@ var item: Dictionary = {}
 var age := 0.0
 var magnet_delay := 0.75
 var move_speed := 3.0
+var retry_cooldown := 0.0
 var visual_root: Node3D
 
 
@@ -19,6 +20,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	age += delta
+	retry_cooldown = maxf(retry_cooldown - delta, 0.0)
 	if is_instance_valid(visual_root):
 		visual_root.rotation.y += delta * 1.8
 		var pulse := 1.0 + sin(age * 5.5) * 0.08
@@ -34,10 +36,16 @@ func _process(delta: float) -> void:
 	var distance := global_position.distance_to(target_position)
 	move_speed = minf(move_speed + delta * 8.0, 14.0)
 	global_position = global_position.move_toward(target_position, move_speed * delta)
-	if distance <= 0.72:
-		if target.has_method("add_item"):
-			target.add_item(item)
-		queue_free()
+	if distance <= 0.72 and retry_cooldown <= 0.0:
+		var accepted := true
+		if target.has_method("try_add_item"):
+			accepted = bool(target.call("try_add_item", item))
+		elif target.has_method("add_item"):
+			target.call("add_item", item)
+		if accepted:
+			queue_free()
+		else:
+			retry_cooldown = 1.0
 
 
 func _build_visual() -> void:

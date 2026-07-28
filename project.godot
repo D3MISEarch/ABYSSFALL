@@ -10,6 +10,7 @@ config/features=PackedStringArray("4.2", "GL Compatibility")
 
 [autoload]
 
+ControllerUiBootstrap="*res://scripts/controller_ui_bootstrap.gd"
 Persistence="*res://scripts/persistence/persistence_service.gd"
 
 [debug]

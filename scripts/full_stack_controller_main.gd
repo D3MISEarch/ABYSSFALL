@@ -9,7 +9,25 @@ var inventory_focus_key := ""
 func _install_input_map() -> void:
 	super._install_input_map()
 	CONTROLLER_UI_INPUT_MAP.install_defaults()
-	_bind_joy_button("menu_close", JOY_BUTTON_B)
+
+
+func _process(delta: float) -> void:
+	if _side_menu_visible() and Input.is_action_just_pressed("ui_cancel"):
+		_close_side_menus()
+		return
+	super._process(delta)
+
+
+func _toggle_inventory() -> void:
+	if pause_menu != null and pause_menu.visible:
+		return
+	if not is_instance_valid(inventory_panel) or not is_instance_valid(skill_panel):
+		return
+	skill_panel.visible = false
+	inventory_panel.visible = not inventory_panel.visible
+	if inventory_panel.visible:
+		_refresh_inventory()
+	_update_pause_state()
 
 
 func _refresh_inventory() -> void:
@@ -22,14 +40,26 @@ func _refresh_inventory() -> void:
 	_capture_inventory_focus()
 	_clear_container(inventory_equipment_box)
 	_clear_container(inventory_backpack_box)
+	inventory_item_buttons.clear()
+
 	var snapshot: Dictionary = player.get_inventory_snapshot()
 	var equipped: Dictionary = snapshot.get("equipment", {})
 	var backpack: Array = snapshot.get("backpack", [])
 	var equipment_buttons: Array[Button] = []
 	var backpack_buttons: Array[Button] = []
+	var equipment_scroll := inventory_equipment_box.get_parent() as ScrollContainer
+	var backpack_scroll := inventory_backpack_box.get_parent() as ScrollContainer
+	INVENTORY_FOCUS_NAVIGATOR.prepare_scroll(equipment_scroll)
+	INVENTORY_FOCUS_NAVIGATOR.prepare_scroll(backpack_scroll)
+	inventory_equipment_box.custom_minimum_size.x = 0.0
+	inventory_equipment_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inventory_backpack_box.custom_minimum_size.x = 0.0
+	inventory_backpack_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var title := Label.new()
 	title.text = "EQUIPPED RELICS"
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.add_theme_font_size_override("font_size", 22)
 	inventory_equipment_box.add_child(title)
 
@@ -42,8 +72,11 @@ func _refresh_inventory() -> void:
 		slot_button.focus_mode = Control.FOCUS_ALL
 		slot_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		slot_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		slot_button.custom_minimum_size = Vector2(360.0, 54.0)
-		slot_button.focus_entered.connect(_on_inventory_focus_entered.bind(focus_key))
+		slot_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		slot_button.custom_minimum_size = Vector2(0.0, 54.0)
+		slot_button.focus_entered.connect(
+			_on_inventory_focus_entered.bind(slot_button, focus_key, equipment_scroll)
+		)
 		if item.is_empty():
 			slot_button.text = "%s\n  — Empty —" % slot
 			slot_button.modulate = Color(0.62, 0.60, 0.68)
@@ -51,7 +84,7 @@ func _refresh_inventory() -> void:
 			summary_lines.append("%s: Empty" % slot)
 		else:
 			var rarity: String = str(item.get("rarity", "Common"))
-			slot_button.custom_minimum_size = Vector2(360.0, 88.0)
+			slot_button.custom_minimum_size = Vector2(0.0, 96.0)
 			slot_button.text = (
 				"%s  •  %s\n%s\n%s\nCROSS / A / CLICK: UNEQUIP"
 				% [
@@ -74,6 +107,9 @@ func _refresh_inventory() -> void:
 		"BACKPACK  %d / %d   — CROSS / A / CLICK AN ITEM TO EQUIP"
 		% [backpack.size(), int(snapshot.get("capacity", 12))]
 	)
+	pack_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pack_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pack_title.custom_minimum_size.y = 50.0
 	pack_title.add_theme_font_size_override("font_size", 22)
 	inventory_backpack_box.add_child(pack_title)
 
@@ -81,7 +117,8 @@ func _refresh_inventory() -> void:
 		var empty_label := Label.new()
 		empty_label.text = "No unequipped items. Elite Reavers and shattered generators can drop gear."
 		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		empty_label.custom_minimum_size = Vector2(500.0, 70.0)
+		empty_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		empty_label.custom_minimum_size = Vector2(0.0, 70.0)
 		empty_label.modulate = Color(0.70, 0.67, 0.76)
 		inventory_backpack_box.add_child(empty_label)
 	else:
@@ -91,8 +128,10 @@ func _refresh_inventory() -> void:
 			var focus_key := "backpack:%d" % index
 			button.set_meta("inventory_focus_key", focus_key)
 			button.focus_mode = Control.FOCUS_ALL
-			button.custom_minimum_size = Vector2(510.0, 92.0)
+			button.custom_minimum_size = Vector2(0.0, 110.0)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			button.text = (
 				"%s  •  %s  •  %s\n%s\n%s"
 				% [
@@ -104,19 +143,23 @@ func _refresh_inventory() -> void:
 				]
 			)
 			button.modulate = _rarity_color(str(item.get("rarity", "Common")))
-			button.focus_entered.connect(_on_inventory_focus_entered.bind(focus_key))
+			button.focus_entered.connect(
+				_on_inventory_focus_entered.bind(button, focus_key, backpack_scroll)
+			)
 			button.pressed.connect(_on_inventory_item_pressed.bind(index))
 			inventory_backpack_box.add_child(button)
 			backpack_buttons.append(button)
 
 	INVENTORY_FOCUS_NAVIGATOR.wire_columns(equipment_buttons, backpack_buttons)
+	inventory_item_buttons.append_array(equipment_buttons)
+	inventory_item_buttons.append_array(backpack_buttons)
 	var focus_target: Button = INVENTORY_FOCUS_NAVIGATOR.choose_focus(
 		equipment_buttons,
 		backpack_buttons,
 		inventory_focus_key
 	)
 	if focus_target != null and inventory_panel != null and inventory_panel.visible:
-		focus_target.call_deferred("grab_focus")
+		call_deferred("_focus_inventory_button", focus_target)
 
 
 func _capture_inventory_focus() -> void:
@@ -127,8 +170,24 @@ func _capture_inventory_focus() -> void:
 		inventory_focus_key = str(focus_owner.get_meta("inventory_focus_key", ""))
 
 
-func _on_inventory_focus_entered(focus_key: String) -> void:
+func _on_inventory_focus_entered(
+	button: Control,
+	focus_key: String,
+	scroll: ScrollContainer
+) -> void:
 	inventory_focus_key = focus_key
+	call_deferred("_reveal_inventory_control", scroll, button)
+
+
+func _focus_inventory_button(button: Button) -> void:
+	if not is_instance_valid(inventory_panel) or not inventory_panel.visible:
+		return
+	if is_instance_valid(button) and not button.disabled:
+		button.grab_focus()
+
+
+func _reveal_inventory_control(scroll: ScrollContainer, control: Control) -> void:
+	INVENTORY_FOCUS_NAVIGATOR.reveal(scroll, control)
 
 
 func _on_inventory_item_pressed(index: int) -> void:
@@ -149,4 +208,11 @@ func _on_inventory_slot_pressed(slot: String) -> void:
 	var snapshot: Dictionary = player.get_inventory_snapshot()
 	var backpack: Array = snapshot.get("backpack", [])
 	inventory_focus_key = "backpack:%d" % backpack.size()
-	player.unequip_slot(slot)
+	player.call("unequip_slot", slot)
+
+
+func _side_menu_visible() -> bool:
+	return (
+		(is_instance_valid(inventory_panel) and inventory_panel.visible)
+		or (is_instance_valid(skill_panel) and skill_panel.visible)
+	)

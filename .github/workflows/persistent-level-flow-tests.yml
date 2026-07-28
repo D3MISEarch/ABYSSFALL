@@ -3,32 +3,54 @@ name: Persistent Level Flow Tests
 on:
   pull_request:
     paths:
+      - "scripts/art/**"
       - "scripts/characters/**"
       - "scripts/core/**"
       - "scripts/runtime/**"
       - "scripts/ui/**"
+      - "scripts/main.gd"
+      - "scripts/player.gd"
+      - "scripts/void_bolt.gd"
+      - "scripts/grasping_rift.gd"
+      - "scripts/shadow_step_vfx.gd"
       - "scripts/multiclass_main.gd"
       - "scripts/persistence/**"
       - "tests/test_persistent_level_flow.gd"
       - "tests/test_class_tree_navigation.gd"
       - "tests/test_class_tree_screen.gd"
       - "tests/test_playable_combat_projection.gd"
+      - "tests/test_playable_inventory_persistence.gd"
+      - "tests/test_front_end_save_flow.gd"
+      - "tests/front_end_gameplay_harness.gd"
+      - "tests/test_art_pass0_visual_contract.gd"
+      - "tests/test_voidbringer_vfx_pass0b.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   push:
     branches:
       - main
     paths:
+      - "scripts/art/**"
       - "scripts/characters/**"
       - "scripts/core/**"
       - "scripts/runtime/**"
       - "scripts/ui/**"
+      - "scripts/main.gd"
+      - "scripts/player.gd"
+      - "scripts/void_bolt.gd"
+      - "scripts/grasping_rift.gd"
+      - "scripts/shadow_step_vfx.gd"
       - "scripts/multiclass_main.gd"
       - "scripts/persistence/**"
       - "tests/test_persistent_level_flow.gd"
       - "tests/test_class_tree_navigation.gd"
       - "tests/test_class_tree_screen.gd"
       - "tests/test_playable_combat_projection.gd"
+      - "tests/test_playable_inventory_persistence.gd"
+      - "tests/test_front_end_save_flow.gd"
+      - "tests/front_end_gameplay_harness.gd"
+      - "tests/test_art_pass0_visual_contract.gd"
+      - "tests/test_voidbringer_vfx_pass0b.gd"
       - "project.godot"
       - ".github/workflows/persistent-level-flow-tests.yml"
   workflow_dispatch:
@@ -44,7 +66,7 @@ jobs:
   persistent-level-flow:
     name: Godot 4.4.1 Persistent Level Flow
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
 
     steps:
       - name: Check out exact commit
@@ -116,6 +138,62 @@ jobs:
             exit 1
           fi
 
+      - name: Run player-controlled inventory regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_playable_inventory_persistence.gd 2>&1 | tee playable-inventory-persistence-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' playable-inventory-persistence-tests.log; then
+            echo "Player-controlled inventory regression failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Player-controlled durable inventory' playable-inventory-persistence-tests.log; then
+            echo "Missing player-controlled inventory PASS marker."
+            exit 1
+          fi
+
+      - name: Run front-end and visible-save regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_front_end_save_flow.gd 2>&1 | tee front-end-save-flow-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' front-end-save-flow-tests.log; then
+            echo "Front-end and visible-save regression failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Front end and visible save flow' front-end-save-flow-tests.log; then
+            echo "Missing front-end save-flow PASS marker."
+            exit 1
+          fi
+
+      - name: Run Art Pass 0 visual contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_art_pass0_visual_contract.gd 2>&1 | tee art-pass0-visual-contract-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' art-pass0-visual-contract-tests.log; then
+            echo "Art Pass 0 visual contract failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Sunken Crypts Art Pass 0 visual contract' art-pass0-visual-contract-tests.log; then
+            echo "Missing Art Pass 0 PASS marker."
+            exit 1
+          fi
+
+      - name: Run Voidbringer Art Pass 0B VFX contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_vfx_pass0b.gd 2>&1 | tee voidbringer-vfx-pass0b-tests.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' voidbringer-vfx-pass0b-tests.log; then
+            echo "Voidbringer Art Pass 0B VFX contract failed."
+            exit 1
+          fi
+          if ! grep -Eq '^PASS: Voidbringer Art Pass 0B VFX contract' voidbringer-vfx-pass0b-tests.log; then
+            echo "Missing Voidbringer VFX PASS marker."
+            exit 1
+          fi
+
       - name: Run playable class smoke paths
         shell: bash
         run: |
@@ -151,6 +229,10 @@ jobs:
             class-tree-navigation-tests.log
             class-tree-screen-tests.log
             playable-combat-projection-tests.log
+            playable-inventory-persistence-tests.log
+            front-end-save-flow-tests.log
+            art-pass0-visual-contract-tests.log
+            voidbringer-vfx-pass0b-tests.log
             runtime-void_warlock.log
             runtime-penitent.log
           if-no-files-found: warn
