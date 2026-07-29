@@ -5,8 +5,10 @@ const REASON_OK: StringName = &"ok"
 const REASON_INVALID_ABILITY: StringName = &"invalid_ability"
 const REASON_NO_CHARACTER: StringName = &"no_character"
 const REASON_LOCKED: StringName = &"ability_locked"
+const REASON_NOT_EQUIPPED: StringName = &"ability_not_equipped"
 const REASON_RESOURCE_MISMATCH: StringName = &"resource_mismatch"
 const REASON_COOLDOWN: StringName = &"cooldown"
+const REASON_NO_CHARGES: StringName = &"no_charges"
 const REASON_INSUFFICIENT_RESOURCE: StringName = &"insufficient_resource"
 
 var event_bus: RuntimeEventBus
@@ -17,8 +19,12 @@ func _init(p_event_bus: RuntimeEventBus = null) -> void:
 	event_bus = p_event_bus
 
 
-func execute(character: RuntimeCharacter, definition: AbilityDefinition) -> Dictionary:
-	var validation := _validate(character, definition)
+func execute(
+	character: RuntimeCharacter,
+	definition: AbilityDefinition,
+	equipped_ability_ids: Variant = null
+) -> Dictionary:
+	var validation := _validate(character, definition, equipped_ability_ids)
 	if validation != REASON_OK:
 		_emit_rejected(character, definition, validation)
 		return _result(false, validation, character, definition)
@@ -26,17 +32,20 @@ func execute(character: RuntimeCharacter, definition: AbilityDefinition) -> Dict
 	var runtime := _runtime_for(character, definition)
 	if runtime.cooldown_remaining > 0.0:
 		_emit_rejected(character, definition, REASON_COOLDOWN)
-		return _result(false, REASON_COOLDOWN, character, definition, runtime.cooldown_remaining)
+		return _result(false, REASON_COOLDOWN, character, definition, runtime)
+	if not runtime.has_available_charge():
+		_emit_rejected(character, definition, REASON_NO_CHARGES)
+		return _result(false, REASON_NO_CHARGES, character, definition, runtime)
 	if not character.class_resource.can_spend(definition.resource_cost):
 		_emit_rejected(character, definition, REASON_INSUFFICIENT_RESOURCE)
-		return _result(false, REASON_INSUFFICIENT_RESOURCE, character, definition)
+		return _result(false, REASON_INSUFFICIENT_RESOURCE, character, definition, runtime)
 	if not runtime.try_cast(character.class_resource):
 		_emit_rejected(character, definition, REASON_INSUFFICIENT_RESOURCE)
-		return _result(false, REASON_INSUFFICIENT_RESOURCE, character, definition)
+		return _result(false, REASON_INSUFFICIENT_RESOURCE, character, definition, runtime)
 
 	if event_bus != null:
 		event_bus.ability_cast.emit(character.build_id, definition.ability_id)
-	return _result(true, REASON_OK, character, definition, runtime.cooldown_remaining)
+	return _result(true, REASON_OK, character, definition, runtime)
 
 
 func tick(delta: float) -> void:
@@ -45,10 +54,18 @@ func tick(delta: float) -> void:
 
 
 func cooldown_remaining(build_id: String, ability_id: StringName) -> float:
-	var key := _runtime_key(build_id, ability_id)
-	if not _runtimes.has(key):
-		return 0.0
-	return float((_runtimes[key] as AbilityRuntime).cooldown_remaining)
+	var runtime := _existing_runtime(build_id, ability_id)
+	return 0.0 if runtime == null else runtime.cooldown_remaining
+
+
+func charges_remaining(build_id: String, ability_id: StringName) -> int:
+	var runtime := _existing_runtime(build_id, ability_id)
+	return 0 if runtime == null else runtime.current_charges
+
+
+func charge_snapshot(build_id: String, ability_id: StringName) -> Dictionary:
+	var runtime := _existing_runtime(build_id, ability_id)
+	return {} if runtime == null else runtime.charge_snapshot()
 
 
 func clear_build(build_id: String) -> void:
@@ -58,16 +75,30 @@ func clear_build(build_id: String) -> void:
 			_runtimes.erase(key)
 
 
-func _validate(character: RuntimeCharacter, definition: AbilityDefinition) -> StringName:
+func _validate(
+	character: RuntimeCharacter,
+	definition: AbilityDefinition,
+	equipped_ability_ids: Variant = null
+) -> StringName:
 	if character == null:
 		return REASON_NO_CHARACTER
 	if definition == null or not definition.is_valid():
 		return REASON_INVALID_ABILITY
 	if not character.unlocked_abilities.has(definition.ability_id):
 		return REASON_LOCKED
+	if equipped_ability_ids != null:
+		if not equipped_ability_ids is Array or not _contains_ability_id(equipped_ability_ids, definition.ability_id):
+			return REASON_NOT_EQUIPPED
 	if character.class_resource.resource_id != definition.resource_id:
 		return REASON_RESOURCE_MISMATCH
 	return REASON_OK
+
+
+func _contains_ability_id(raw_ids: Array, ability_id: StringName) -> bool:
+	for raw_id: Variant in raw_ids:
+		if StringName(str(raw_id)) == ability_id:
+			return true
+	return false
 
 
 func _runtime_for(character: RuntimeCharacter, definition: AbilityDefinition) -> AbilityRuntime:
@@ -76,8 +107,17 @@ func _runtime_for(character: RuntimeCharacter, definition: AbilityDefinition) ->
 		_runtimes[key] = AbilityRuntime.new(
 			definition.ability_id,
 			definition.resource_cost,
-			definition.cooldown_seconds
+			definition.cooldown_seconds,
+			definition.maximum_charges,
+			definition.recharge_seconds
 		)
+	return _runtimes[key] as AbilityRuntime
+
+
+func _existing_runtime(build_id: String, ability_id: StringName) -> AbilityRuntime:
+	var key := _runtime_key(build_id, ability_id)
+	if not _runtimes.has(key):
+		return null
 	return _runtimes[key] as AbilityRuntime
 
 
@@ -98,12 +138,17 @@ func _result(
 	reason: StringName,
 	character: RuntimeCharacter,
 	definition: AbilityDefinition,
-	remaining: float = 0.0
+	runtime: AbilityRuntime = null
 ) -> Dictionary:
+	var charge_state: Dictionary = {} if runtime == null else runtime.charge_snapshot()
 	return {
 		"success": success,
 		"reason": reason,
 		"build_id": "" if character == null else character.build_id,
 		"ability_id": &"" if definition == null else definition.ability_id,
-		"cooldown_remaining": remaining,
+		"cooldown_remaining": 0.0 if runtime == null else runtime.cooldown_remaining,
+		"uses_charges": bool(charge_state.get("uses_charges", false)),
+		"charges_remaining": int(charge_state.get("current", 0)),
+		"maximum_charges": int(charge_state.get("maximum", 0)),
+		"recharge_remaining": float(charge_state.get("recharge_remaining", 0.0)),
 	}
