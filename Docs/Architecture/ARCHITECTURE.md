@@ -206,11 +206,11 @@ Allocator snapshots also round-trip through JSON. A restored service resumes fro
 
 ## Future design — not yet implemented
 
-### Proposed Voidbringer combat-state boundary
+### Owner-approved Voidbringer combat-state boundary
 
-[ADR-021](../ADR/ADR-021-VOIDBRINGER-COMBAT-STATE-ABILITY-CHARGE-AND-FORCE-OWNERSHIP.md) proposes the ownership boundary required before Issue #89. It is not current implementation and grants no authority while its status remains proposed.
+[ADR-021](../ADR/ADR-021-VOIDBRINGER-COMBAT-STATE-ABILITY-CHARGE-AND-FORCE-OWNERSHIP.md) records the owner-approved ownership boundary required before Issue #89. It is not current implementation. Implementation remains unauthorized until ADR-021 merges into `main` and the resulting exact `main` SHA is recorded.
 
-Under that proposal:
+Under the approved decision:
 
 - `VoidWarlockCharacter` composes one character-combat-scoped `VoidbringerController` only after the existing `RuntimeSession`/`RuntimeCharacter` bind succeeds;
 - the controller composes one `AnchorManager`, `FoldLineManager`, and `InstabilityController` and owns only Voidbringer transient state/orchestration;
@@ -222,7 +222,7 @@ Under that proposal:
 - a generation token and ordered teardown reject stale effects across death, rebind, menu return and scene replacement;
 - the durable compatibility ID remains `void_warlock`, and no save-schema migration is part of the foundation.
 
-The controller/managers, charge extension and force vocabulary must remain described here as future design until their own implementation PRs merge. If ADR-021 is rejected or revised, this subsection must change with it.
+The controller/managers, charge extension and force vocabulary must remain described here as Future Design until their own implementation PRs merge. This subsection must stay synchronized if ADR-021 is revised.
 
 ### Other deferred architecture
 

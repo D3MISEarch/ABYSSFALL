@@ -1,9 +1,10 @@
 # ADR-021 — Voidbringer Combat State, Ability Charge, and Force Ownership
 
-- **Status:** PROPOSED — PENDING INDEPENDENT REVIEW AND OWNER APPROVAL
+- **Status:** OWNER APPROVED — PENDING MERGE
 - **Proposal date:** 2026-07-28
+- **Owner approval date:** 2026-07-28
 - **Human owner:** D3MISEarch
-- **Implementation authority:** NONE UNTIL THIS ADR IS OWNER-APPROVED AND MERGED
+- **Implementation authority:** NONE UNTIL THIS OWNER-APPROVED ADR IS MERGED AND THE RESULTING MAIN SHA IS RECORDED
 - **Primary tracker:** Issue #97
 - **First dependent implementation:** Issue #89
 
@@ -432,12 +433,16 @@ Before Issue #89 or later integration may merge, focused tests must prove:
 
 ## 18. Implementation gate
 
-This proposed ADR grants no implementation authority.
+### Completed
 
-Issue #89 may begin only after:
+1. independent read-only architecture review;
+2. every required wording correction on frozen exact head `8e9d1492967312f2ef59f48169b0eb7130b7401d`;
+3. independent verdict `PASS — CORRECTIONS COMPLETE`;
+4. explicit human owner approval.
 
-1. this ADR receives independent read-only review;
-2. every required correction is incorporated on a frozen exact head;
-3. the human owner explicitly approves the decision;
-4. this ADR and the corresponding future-design architecture section merge to `main`;
-5. the exact resulting `main` SHA is recorded.
+### Remaining
+
+1. merge ADR-021 and the synchronized Future Design section into `main`;
+2. record the resulting exact `main` SHA in Issues #97 and #89.
+
+This owner-approved ADR grants no implementation authority before merge. Issue #89 may begin only after merge and SHA recording. No architecture rule changed during this status synchronization.
