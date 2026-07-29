@@ -7,11 +7,13 @@ const BUILD_SELECTION_SCRIPT = preload("res://scripts/ui/build_selection_screen.
 const FRONT_END_BUILD_SERVICE = preload("res://scripts/ui/front_end_build_service.gd")
 const DIAGNOSTIC_OVERLAY_SCRIPT = preload("res://scripts/tooling/playtest_diagnostic_overlay.gd")
 const GAMEPLAY_SCENE = preload("res://gameplay.tscn")
+const VOIDBRINGER_FOUNDATION_SANDBOX_SCENE = preload("res://scenes/voidbringer_foundation_sandbox.tscn")
 
 var front_end: FrontEndScreen
 var class_selection: ClassSelectionScreen
 var build_selection: BuildSelectionScreen
 var gameplay_root: Node3D
+var sandbox_root: Node3D
 var diagnostic_overlay: PlaytestDiagnosticOverlay
 
 
@@ -19,6 +21,10 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_install_diagnostic_overlay()
 	_install_front_end_input_map()
+	var command_line_sandbox := _get_command_line_sandbox()
+	if command_line_sandbox == "voidbringer_anchor":
+		call_deferred("_launch_voidbringer_foundation_sandbox")
+		return
 	if Persistence.profile == null:
 		Persistence.initialize()
 	var command_line_class := _get_command_line_class()
@@ -180,6 +186,14 @@ func _launch_command_line_gameplay(class_id: String) -> void:
 	_launch_gameplay(class_id)
 
 
+func _launch_voidbringer_foundation_sandbox() -> void:
+	if is_instance_valid(sandbox_root):
+		return
+	_clear_front_end_screens()
+	sandbox_root = VOIDBRINGER_FOUNDATION_SANDBOX_SCENE.instantiate()
+	add_child(sandbox_root)
+
+
 func _launch_gameplay(class_id: String) -> void:
 	if is_instance_valid(gameplay_root) or not CHARACTER_FACTORY.has_class(class_id):
 		return
@@ -239,4 +253,11 @@ func _get_command_line_class() -> String:
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--class="):
 			return argument.trim_prefix("--class=")
+	return ""
+
+
+func _get_command_line_sandbox() -> String:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--sandbox="):
+			return argument.trim_prefix("--sandbox=")
 	return ""

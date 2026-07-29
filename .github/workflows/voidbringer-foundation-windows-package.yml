@@ -1,0 +1,214 @@
+name: Voidbringer Foundation Windows Package
+
+on:
+  pull_request:
+    paths:
+      - "scenes/voidbringer_foundation_sandbox.tscn"
+      - "scripts/boot.gd"
+      - "scripts/characters/voidbringer/**"
+      - "scripts/core/playable_combat_projection.gd"
+      - "scripts/runtime/abilities/**"
+      - "tests/test_ability_charges_and_atomicity.gd"
+      - "tests/test_voidbringer_anchor_instability_sandbox.gd"
+      - "tests/test_voidbringer_foundation_contracts.gd"
+      - "tests/test_voidbringer_playable_foundation_sandbox.gd"
+      - "docs/VOIDBRINGER_FOUNDATION_PLAYTEST.md"
+      - ".github/workflows/voidbringer-foundation-windows-package.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voidbringer-foundation-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-sandbox-package:
+    name: Exact-head Voidbringer Windows sandbox
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot 4.4.1 and Windows export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="4.4.1"
+          ENGINE="Godot_v${VERSION}-stable_linux.x86_64.zip"
+          TEMPLATES="Godot_v${VERSION}-stable_export_templates.tpz"
+          RELEASE="https://github.com/godotengine/godot/releases/download/${VERSION}-stable"
+          curl --fail --location --retry 3 "$RELEASE/$ENGINE" --output /tmp/godot.zip
+          curl --fail --location --retry 3 "$RELEASE/$TEMPLATES" --output /tmp/templates.tpz
+          mkdir -p "$HOME/godot"
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          BIN="$(find "$HOME/godot" -maxdepth 1 -type f -name 'Godot_v*-stable_linux.x86_64' | head -n 1)"
+          chmod +x "$BIN"
+          ln -s "$BIN" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -q /tmp/templates.tpz -d /tmp/export-templates
+          cp -a /tmp/export-templates/templates/. "$TEMPLATE_DIR/"
+          test -f "$TEMPLATE_DIR/windows_release_x86_64.exe"
+
+      - name: Create exact package metadata
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REVIEW_BRANCH: ${{ github.head_ref || github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${REVIEW_SHA:0:7}"
+          BUILT_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          PACKAGE_NAME="AbyssFall-Voidbringer-Foundation-${SHORT_SHA}"
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
+          cat > BUILD_INFO.cfg <<EOF
+          [build]
+          name="AbyssFall Voidbringer foundation sandbox"
+          commit="${REVIEW_SHA}"
+          short_commit="${SHORT_SHA}"
+          branch="${REVIEW_BRANCH}"
+          workflow_run="${RUN_ID}"
+          built_at_utc="${BUILT_AT}"
+          EOF
+          mkdir -p "dist/$PACKAGE_NAME"
+          cat > "dist/$PACKAGE_NAME/BUILD_INFO.txt" <<EOF
+          AbyssFall Voidbringer Foundation Sandbox
+          Commit: ${REVIEW_SHA}
+          Short commit: ${SHORT_SHA}
+          Branch: ${REVIEW_BRANCH}
+          Workflow run: ${RUN_ID}
+          Built UTC: ${BUILT_AT}
+          Sandbox route: --sandbox=voidbringer_anchor
+          Diagnostics: F3
+          Report capture: F8
+          EOF
+          cp docs/VOIDBRINGER_FOUNDATION_PLAYTEST.md "dist/$PACKAGE_NAME/README_VOIDBRINGER_SANDBOX.txt"
+          printf '@echo off\r\ncd /d "%%~dp0"\r\nstart "AbyssFall Voidbringer Foundation" "AbyssFall.exe" -- --sandbox=voidbringer_anchor\r\n' > "dist/$PACKAGE_NAME/Launch Voidbringer Foundation Sandbox.bat"
+
+      - name: Verify generated launcher command
+        shell: bash
+        run: |
+          set -euo pipefail
+          LAUNCHER="dist/$PACKAGE_NAME/Launch Voidbringer Foundation Sandbox.bat"
+          tr -d '\r' < "$LAUNCHER" | tee windows-launcher-command.log
+          grep -Fxq 'start "AbyssFall Voidbringer Foundation" "AbyssFall.exe" -- --sandbox=voidbringer_anchor' windows-launcher-command.log
+          if grep -Fxq 'start "AbyssFall Voidbringer Foundation" "AbyssFall.exe" --sandbox=voidbringer_anchor' windows-launcher-command.log; then
+            echo "Launcher is missing the Godot user-argument separator."
+            exit 1
+          fi
+
+      - name: Import project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --quit 2>&1 | tee windows-foundation-import.log
+
+      - name: Run exact foundation regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_test() {
+            local script="$1"
+            local marker="$2"
+            local log="$3"
+            godot --headless --path . --script "$script" 2>&1 | tee "$log"
+            if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' "$log"; then
+              echo "Godot reported an error in $script."
+              exit 1
+            fi
+            grep -Fxq "$marker" "$log"
+          }
+          run_test res://tests/test_ability_charges_and_atomicity.gd 'PASS: Voidbringer ability charges and atomicity' windows-ability-charges.log
+          run_test res://tests/test_voidbringer_anchor_instability_sandbox.gd 'PASS: Voidbringer anchor and Instability sandbox' windows-anchor-instability.log
+          run_test res://tests/test_voidbringer_foundation_contracts.gd 'PASS: Voidbringer command and damage foundation' windows-foundation-contracts.log
+          run_test res://tests/test_voidbringer_playable_foundation_sandbox.gd 'PASS: Voidbringer playable foundation sandbox' windows-playable-sandbox.log
+
+      - name: Verify isolated sandbox boot route
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          timeout 10s godot --headless --path . -- --sandbox=voidbringer_anchor > windows-sandbox-route.log 2>&1
+          status=$?
+          set -e
+          cat windows-sandbox-route.log
+          if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+            exit "$status"
+          fi
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ERROR:' windows-sandbox-route.log; then
+            exit 1
+          fi
+          grep -Fq 'ABYSSFALL_SANDBOX_LAUNCHED:voidbringer_anchor' windows-sandbox-route.log
+          if grep -Fq 'ABYSSFALL_CLASS_LAUNCHED:' windows-sandbox-route.log; then
+            echo "Sandbox boot route launched campaign gameplay."
+            exit 1
+          fi
+
+      - name: Export Windows executable
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --export-release "Windows Desktop" "dist/$PACKAGE_NAME/AbyssFall.exe" 2>&1 | tee windows-foundation-export.log
+          test -s "dist/$PACKAGE_NAME/AbyssFall.exe"
+          test -s "dist/$PACKAGE_NAME/AbyssFall.pck"
+
+      - name: Reject hidden Godot errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat windows-foundation-import.log windows-ability-charges.log windows-anchor-instability.log windows-foundation-contracts.log windows-playable-sandbox.log windows-sandbox-route.log windows-foundation-export.log > windows-foundation-combined.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Compile Error:|Failed to load script|ERROR:|Invalid access|Invalid set index|Cannot call method|Condition .* is true|ASSERTION FAILED|^FAIL:' windows-foundation-combined.log; then
+            echo "Godot emitted an import, test, route, export, parser, script, or runtime error."
+            exit 1
+          fi
+
+      - name: Audit package contents
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          cd "dist/$PACKAGE_NAME"
+          sha256sum AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README_VOIDBRINGER_SANDBOX.txt "Launch Voidbringer Foundation Sandbox.bat" > SHA256SUMS.txt
+          grep -F "$REVIEW_SHA" BUILD_INFO.txt
+          sha256sum --check SHA256SUMS.txt
+          find . -maxdepth 1 -type f -printf '%f\n' | sort | tee ../voidbringer-package-contents.log
+          for required in AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README_VOIDBRINGER_SANDBOX.txt SHA256SUMS.txt; do
+            grep -Fx "$required" ../voidbringer-package-contents.log
+          done
+          grep -Fx 'Launch Voidbringer Foundation Sandbox.bat' ../voidbringer-package-contents.log
+
+      - name: Upload Voidbringer Windows sandbox
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}
+          path: dist/${{ env.PACKAGE_NAME }}/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload package validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voidbringer-foundation-windows-audit-logs
+          path: |
+            windows-launcher-command.log
+            windows-foundation-import.log
+            windows-ability-charges.log
+            windows-anchor-instability.log
+            windows-foundation-contracts.log
+            windows-playable-sandbox.log
+            windows-sandbox-route.log
+            windows-foundation-export.log
+            windows-foundation-combined.log
+            dist/voidbringer-package-contents.log
+          if-no-files-found: warn
+          retention-days: 90

@@ -15,16 +15,19 @@ const RESOURCE_DISPLAY_NAME := "Corruption"
 const PERSISTENT_LEVEL_RULES = preload("res://scripts/core/persistent_level_rules.gd")
 const PLAYABLE_COMBAT_PROJECTION = preload("res://scripts/core/playable_combat_projection.gd")
 const PLAYABLE_AIM_RESOLVER = preload("res://scripts/core/playable_aim_resolver.gd")
+const VOIDBRINGER_CONTROLLER_SCRIPT = preload("res://scripts/characters/voidbringer/voidbringer_controller.gd")
 
 var class_tree_combat := PLAYABLE_COMBAT_PROJECTION.new() as PlayableCombatProjection
 var playable_inventory_bridge: PlayableInventoryBridge
 var controller_aim_authority := false
+var voidbringer_controller := VOIDBRINGER_CONTROLLER_SCRIPT.new() as VoidbringerController
 
 
 func _ready() -> void:
 	var forwarder := Callable(self, "_forward_corruption_changed")
 	if not corruption_changed.is_connected(forwarder):
 		corruption_changed.connect(forwarder)
+	voidbringer_controller.configure(level)
 	super._ready()
 
 
@@ -124,11 +127,23 @@ func get_progression_snapshot() -> Dictionary:
 
 
 func add_experience(amount: int) -> void:
+	var previous_level := level
 	PERSISTENT_LEVEL_RULES.apply_experience(self, amount)
+	if level != previous_level:
+		voidbringer_controller.configure(level)
 
 
 func restore_persistent_progression(saved_level: int, saved_experience: int) -> void:
 	PERSISTENT_LEVEL_RULES.restore(self, saved_level, saved_experience)
+	voidbringer_controller.configure(level)
+
+
+func bind_runtime_session(session: RuntimeSession, runtime_character: RuntimeCharacter) -> bool:
+	return voidbringer_controller.bind_runtime(session, runtime_character)
+
+
+func get_voidbringer_foundation_snapshot() -> Dictionary:
+	return voidbringer_controller.snapshot()
 
 
 func add_class_resource(amount: float) -> void:
@@ -149,7 +164,9 @@ func _forward_corruption_changed(current_value: float, maximum_value: float) -> 
 
 
 func bind_playable_inventory_bridge(bridge: PlayableInventoryBridge) -> bool:
-	if bridge == null or not bridge.is_configured():
+	if bridge == null or not bridge.is_configured() or bridge.runtime_bridge == null:
+		return false
+	if not bind_runtime_session(bridge.runtime_bridge.session, bridge.runtime_bridge.runtime_character):
 		return false
 	playable_inventory_bridge = bridge
 	_apply_persistent_inventory_snapshot(bridge.snapshot())

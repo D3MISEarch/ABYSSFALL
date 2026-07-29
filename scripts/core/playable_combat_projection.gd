@@ -17,14 +17,31 @@ func configure(snapshot: Dictionary) -> void:
 
 
 func resolve_outgoing_damage(base_damage: int) -> int:
+	return int(resolve_outgoing_result(base_damage).get("damage", 0))
+
+
+func resolve_outgoing_result(base_damage: int) -> Dictionary:
 	if base_damage <= 0:
-		return 0
-	var resolved := maxi(0, int(round(float(base_damage) + power)))
+		return {
+			"damage": 0,
+			"critical": false,
+			"pre_critical_damage": 0,
+			"base_damage": maxi(base_damage, 0),
+		}
+	var pre_critical := maxi(0, int(round(float(base_damage) + power)))
 	_critical_meter += critical_chance
+	var critical := false
+	var resolved := pre_critical
 	if _critical_meter >= 1.0:
 		_critical_meter -= 1.0
+		critical = true
 		resolved = int(round(float(resolved) * CRITICAL_DAMAGE_MULTIPLIER))
-	return resolved
+	return {
+		"damage": resolved,
+		"critical": critical,
+		"pre_critical_damage": pre_critical,
+		"base_damage": base_damage,
+	}
 
 
 func resolve_incoming_damage(base_damage: int) -> int:
