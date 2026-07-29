@@ -31,9 +31,8 @@ func resolve_definition_with_multiplier(
 	if definition == null or not definition.is_valid():
 		return _resolve(0, 0.0, &"", 1.0, projection)
 	var clamped_multiplier := maxf(damage_multiplier, 0.0)
-	var base_damage := int(round(float(base_damage_for_definition(definition)) * clamped_multiplier))
 	return _resolve(
-		base_damage,
+		base_damage_for_definition(definition),
 		definition.damage_coefficient,
 		definition.ability_id,
 		clamped_multiplier,
@@ -62,17 +61,18 @@ func _resolve(
 	projection: PlayableCombatProjection
 ) -> Dictionary:
 	if projection == null:
+		var scaled_damage := maxi(0, int(round(float(base_damage) * maxf(damage_multiplier, 0.0))))
 		return {
 			"ability_id": ability_id,
-			"damage": base_damage,
+			"damage": scaled_damage,
 			"critical": false,
-			"pre_critical_damage": base_damage,
+			"pre_critical_damage": scaled_damage,
 			"base_damage": base_damage,
 			"weapon_power": COMPATIBILITY_WEAPON_POWER,
 			"coefficient": coefficient,
 			"damage_multiplier": damage_multiplier,
 		}
-	var result := projection.resolve_outgoing_result(base_damage)
+	var result := projection.resolve_outgoing_result_with_multiplier(base_damage, damage_multiplier)
 	result["ability_id"] = ability_id
 	result["weapon_power"] = COMPATIBILITY_WEAPON_POWER
 	result["coefficient"] = coefficient
