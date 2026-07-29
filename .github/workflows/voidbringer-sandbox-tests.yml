@@ -48,7 +48,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          godot --headless --path . --script res://tests/test_voidbringer_playable_foundation_sandbox.gd 2>&1 | tee voidbringer-playable-sandbox.log
+          set +e
+          timeout 30s godot --headless --path . --script res://tests/test_voidbringer_playable_foundation_sandbox.gd 2>&1 | tee voidbringer-playable-sandbox.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [[ "$status" -eq 124 ]]; then
+            echo "Voidbringer playable sandbox timed out."
+            exit 1
+          fi
+          if [[ "$status" -ne 0 ]]; then
+            echo "Voidbringer playable sandbox exited with status $status."
+            exit "$status"
+          fi
           if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-playable-sandbox.log; then
             echo "Voidbringer playable sandbox regression failed."
             exit 1
