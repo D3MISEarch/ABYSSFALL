@@ -7,6 +7,7 @@ on:
       - "scripts/core/playable_combat_projection.gd"
       - "scripts/runtime/abilities/**"
       - "tests/test_voidbringer_mass_brand_transaction.gd"
+      - "tests/test_voidbringer_fold_line_3d.gd"
       - "tests/test_voidbringer_skill_slice.gd"
       - ".github/workflows/voidbringer-skill-slice-tests.yml"
   workflow_dispatch:
@@ -19,8 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  transactional-mass-brand:
-    name: Godot 4.4.1 Mass Brand Transaction
+  transactional-skill-contracts:
+    name: Godot 4.4.1 Voidbringer Skill Contracts
     runs-on: ubuntu-latest
     timeout-minutes: 12
 
@@ -51,11 +52,24 @@ jobs:
           fi
           grep -Fxq 'PASS: Voidbringer transactional Mass Brand' voidbringer-mass-brand-transaction.log
 
-      - name: Upload focused log
+      - name: Run full-3D Fold Line proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_fold_line_3d.gd 2>&1 | tee voidbringer-fold-line-3d.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-fold-line-3d.log; then
+            echo "Voidbringer full-3D Fold Line regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer full-3D Fold Line crossings' voidbringer-fold-line-3d.log
+
+      - name: Upload focused logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: voidbringer-skill-slice-logs
-          path: voidbringer-mass-brand-transaction.log
+          path: |
+            voidbringer-mass-brand-transaction.log
+            voidbringer-fold-line-3d.log
           if-no-files-found: warn
           retention-days: 14
