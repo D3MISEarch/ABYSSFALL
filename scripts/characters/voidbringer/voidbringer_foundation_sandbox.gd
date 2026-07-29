@@ -215,7 +215,7 @@ func _build_presentation_signature() -> String:
 				position.z,
 			]
 		)
-	okens.append("lines:%d" % controller.fold_lines.line_count())
+	tokens.append("lines:%d" % controller.fold_lines.line_count())
 	return ";".join(tokens)
 
 
