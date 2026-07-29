@@ -31,6 +31,7 @@ var kill_label: Label
 var message_label: Label
 var corruption_label: Label
 var corruption_meter
+var last_observed_corruption := -1.0
 var equipment_summary_label: Label
 var boss_health_bar: ProgressBar
 var boss_health_label: Label
@@ -615,8 +616,8 @@ func _spawn_soul_pickup(position_value: Vector3, from_elite: bool) -> void:
 	var amount := 28.0 if is_rare else 13.0
 	var pickup := SOUL_PICKUP_SCRIPT.new()
 	pickup.setup(player, amount, is_rare)
+	pickup.position = to_local(position_value + Vector3(0.0, 0.55, 0.0))
 	add_child(pickup)
-	pickup.global_position = position_value + Vector3(0.0, 0.55, 0.0)
 
 
 func _spawn_item_drop(position_value: Vector3, specific_item: Dictionary = {}) -> void:
@@ -891,8 +892,14 @@ func _on_player_health_changed(current_health: int, maximum_health: int) -> void
 
 
 func _on_player_corruption_changed(current_corruption: float, maximum_corruption: float) -> void:
+	var observed_delta := 0.0
+	if last_observed_corruption >= 0.0:
+		observed_delta = maxf(current_corruption - last_observed_corruption, 0.0)
+	last_observed_corruption = current_corruption
 	if is_instance_valid(corruption_meter):
 		corruption_meter.set_corruption(current_corruption, maximum_corruption)
+		if observed_delta > 0.0 and corruption_meter.has_method("present_observed_gain"):
+			corruption_meter.present_observed_gain(observed_delta)
 	if is_instance_valid(corruption_label):
 		corruption_label.text = (
 			"CORRUPTION  %d / %d" % [int(current_corruption), int(maximum_corruption)]

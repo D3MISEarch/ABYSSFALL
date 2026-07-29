@@ -18,6 +18,8 @@ var shell_root: Node3D
 var wake_root: Node3D
 var pale_core: MeshInstance3D
 var splash_shell: MeshInstance3D
+var primary_contact_frame: MeshInstance3D
+var secondary_contact_frame: MeshInstance3D
 var bolt_light: OmniLight3D
 
 
@@ -68,11 +70,15 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if impact_started or body == source:
 		return
+	impact_started = true
 	if body.has_method("take_damage"):
+		var health_before := _health_value(body)
 		body.take_damage(damage)
+		if _health_value(body) < health_before:
+			_present_enemy_impact(body, true)
 		if splash_radius > 0.0 and splash_damage > 0:
 			_splash_damage(body)
-		_impact_burst()
+	_impact_burst()
 
 
 func _splash_damage(primary_body: Node) -> void:
@@ -86,11 +92,27 @@ func _splash_damage(primary_body: Node) -> void:
 		var offset: Vector3 = enemy.global_position - global_position
 		offset.y = 0.0
 		if offset.length() <= splash_radius:
+			var health_before := _health_value(enemy)
 			enemy.take_damage(splash_damage)
+			if _health_value(enemy) < health_before:
+				_present_enemy_impact(enemy, false)
+
+
+func _health_value(body: Node) -> int:
+	for property in body.get_property_list():
+		if str(property.get("name", "")) == "health":
+			return int(body.get("health"))
+	return -1
+
+
+func _present_enemy_impact(enemy: Node, primary_hit: bool) -> void:
+	if not enemy.has_method("present_void_bolt_impact"):
+		return
+	var lethal_hit := _health_value(enemy) <= 0
+	enemy.present_void_bolt_impact(direction, primary_hit, lethal_hit)
 
 
 func _impact_burst() -> void:
-	impact_started = true
 	monitoring = false
 	move_speed = 0.0
 	if is_instance_valid(wake_root):
@@ -98,14 +120,20 @@ func _impact_burst() -> void:
 	if is_instance_valid(bolt_light):
 		bolt_light.light_color = PALETTE.GRAVITATIONAL_WHITE
 		bolt_light.light_energy = 5.2
+	if is_instance_valid(primary_contact_frame):
+		primary_contact_frame.visible = true
+		primary_contact_frame.scale = Vector3.ONE * 0.48
+	if is_instance_valid(secondary_contact_frame):
+		secondary_contact_frame.visible = splash_radius > 0.0 and splash_damage > 0
+		secondary_contact_frame.scale = Vector3.ONE * 0.52
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(self, "scale", Vector3(0.44, 1.55, 0.44), 0.045).set_trans(
+	tween.tween_property(visual_root, "scale", Vector3(0.44, 1.55, 0.44), 0.045).set_trans(
 		Tween.TRANS_EXPO
 	)
 	if is_instance_valid(shell_root):
 		tween.tween_property(shell_root, "rotation_degrees:z", 210.0, 0.09)
-	tween.chain().tween_property(self, "scale", Vector3(2.15, 0.22, 2.15), 0.075).set_trans(
+	tween.chain().tween_property(visual_root, "scale", Vector3(2.15, 0.22, 2.15), 0.075).set_trans(
 		Tween.TRANS_EXPO
 	)
 	tween.chain().tween_callback(queue_free)
@@ -194,6 +222,18 @@ func _build_visual() -> void:
 	splash_shell.rotation_degrees.x = 90.0
 	splash_shell.visible = false
 	visual_root.add_child(splash_shell)
+
+	primary_contact_frame = _create_ring(0.34, 0.030, white_material)
+	primary_contact_frame.name = "PrimaryContactFrame"
+	primary_contact_frame.rotation_degrees.x = 90.0
+	primary_contact_frame.visible = false
+	visual_root.add_child(primary_contact_frame)
+
+	secondary_contact_frame = _create_ring(0.23, 0.022, violet_material)
+	secondary_contact_frame.name = "SecondarySplashContactFrame"
+	secondary_contact_frame.rotation_degrees.x = 90.0
+	secondary_contact_frame.visible = false
+	visual_root.add_child(secondary_contact_frame)
 
 	bolt_light = OmniLight3D.new()
 	bolt_light.name = "VoidBoltLight"

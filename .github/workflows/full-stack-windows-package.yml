@@ -3,9 +3,11 @@ name: Full-Stack Windows Package
 on:
   pull_request:
     paths:
+      - "scripts/*.gd"
       - "project.godot"
       - "main.tscn"
       - "gameplay.tscn"
+      - "scripts/core/character_factory.gd"
       - "scripts/multiclass_main.gd"
       - "scripts/controller_ui_bootstrap.gd"
       - "scripts/full_stack_controller_main.gd"
@@ -19,6 +21,7 @@ on:
       - "tests/test_full_stack_controller_reconciliation.gd"
       - "tests/test_penitent_class_gates.gd"
       - "tests/test_input_prompt_profile.gd"
+      - "tests/test_voidbringer_impact_feedback.gd"
       - ".github/workflows/godot-hotfix3-validation.yml"
       - ".github/workflows/full-stack-windows-package.yml"
   workflow_dispatch:
@@ -73,12 +76,12 @@ jobs:
           set -euo pipefail
           SHORT_SHA="${REVIEW_SHA:0:7}"
           BUILT_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          PACKAGE_NAME="AbyssFall-FullStack-ControllerFix-${SHORT_SHA}"
+          PACKAGE_NAME="AbyssFall-Voidbringer-ImpactPayoff-${SHORT_SHA}"
           echo "PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
 
           cat > BUILD_INFO.cfg <<EOF
           [build]
-          name="AbyssFall full-stack controller playtest"
+          name="AbyssFall Voidbringer impact and payoff playtest"
           commit="${REVIEW_SHA}"
           short_commit="${SHORT_SHA}"
           branch="${REVIEW_BRANCH}"
@@ -88,7 +91,7 @@ jobs:
 
           mkdir -p "dist/$PACKAGE_NAME"
           cat > "dist/$PACKAGE_NAME/BUILD_INFO.txt" <<EOF
-          AbyssFall Full-Stack Controller Playtest
+          AbyssFall Voidbringer Impact and Payoff Playtest
           Commit: ${REVIEW_SHA}
           Short commit: ${SHORT_SHA}
           Branch: ${REVIEW_BRANCH}
@@ -117,6 +120,12 @@ jobs:
           godot --headless --path . --script res://tests/test_penitent_class_gates.gd 2>&1 | tee windows-penitent-class-gates.log
           godot --headless --path . --script res://tests/test_input_prompt_profile.gd 2>&1 | tee windows-input-prompt-profile.log
 
+      - name: Run Voidbringer impact and Corruption payoff regression
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_impact_feedback.gd 2>&1 | tee windows-voidbringer-impact-feedback.log
+
       - name: Export Windows executable
         shell: bash
         run: |
@@ -129,7 +138,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat windows-import.log windows-controller-test.log windows-penitent-class-gates.log windows-input-prompt-profile.log windows-export.log > windows-combined.log
+          cat windows-import.log windows-controller-test.log windows-penitent-class-gates.log windows-input-prompt-profile.log windows-voidbringer-impact-feedback.log windows-export.log > windows-combined.log
           if grep -E "SCRIPT ERROR:|Parse Error:|Compile Error:|Failed to load script|ERROR:|Invalid access|Invalid set index|Cannot call method|Condition .* is true|ASSERTION FAILED|^FAIL:" windows-combined.log; then
             echo "Godot emitted an import, test, export, parser, script, or runtime error."
             exit 1
@@ -137,6 +146,7 @@ jobs:
           grep -Eq '^PASS: Full-stack controller reconciliation' windows-controller-test.log
           grep -Eq '^PASS: Canonical Penitent class gates' windows-penitent-class-gates.log
           grep -Eq '^PASS: Input prompt profiles' windows-input-prompt-profile.log
+          grep -Fxq 'PASS: Voidbringer impact and Corruption payoff' windows-voidbringer-impact-feedback.log
 
       - name: Audit extracted package contents
         shell: bash
@@ -171,6 +181,7 @@ jobs:
             windows-controller-test.log
             windows-penitent-class-gates.log
             windows-input-prompt-profile.log
+            windows-voidbringer-impact-feedback.log
             windows-export.log
             windows-combined.log
             dist/package-contents.log
