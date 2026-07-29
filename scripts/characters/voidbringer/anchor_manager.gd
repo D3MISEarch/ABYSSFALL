@@ -55,10 +55,27 @@ func place_anchor(
 	mass: float = 0.0,
 	metadata: Dictionary = {}
 ) -> Dictionary:
+	var transaction := place_anchor_transaction(carrier_type, carrier, position, mass, metadata)
+	if transaction.is_empty():
+		return {}
+	emit_placement_events(transaction)
+	return (transaction.get("anchor", {}) as Dictionary).duplicate(true)
+
+
+func place_anchor_transaction(
+	carrier_type: StringName,
+	carrier: Variant,
+	position: Vector3,
+	mass: float = 0.0,
+	metadata: Dictionary = {}
+) -> Dictionary:
 	if validate_placement(carrier_type, carrier) != PLACEMENT_OK:
 		return {}
+	var removed_events: Array[Dictionary] = []
 	while _order.size() >= capacity():
-		remove_anchor(_order.front(), &"capacity_replacement")
+		var removed_id: StringName = _order.front()
+		if _remove_anchor_internal(removed_id):
+			removed_events.append({"anchor_id": removed_id, "reason": &"capacity_replacement"})
 
 	var anchor_id := StringName("vb.anchor.%04d" % _next_serial)
 	_next_serial += 1
@@ -75,8 +92,23 @@ func place_anchor(
 	}
 	_anchors[anchor_id] = anchor
 	_order.append(anchor_id)
-	anchor_created.emit(_public_snapshot(anchor))
-	return _public_snapshot(anchor)
+	return {
+		"anchor": _public_snapshot(anchor),
+		"removed_events": removed_events.duplicate(true),
+	}
+
+
+func emit_placement_events(transaction: Dictionary) -> void:
+	for raw_event: Variant in transaction.get("removed_events", []):
+		if raw_event is Dictionary:
+			var event: Dictionary = raw_event
+			anchor_removed.emit(
+				StringName(str(event.get("anchor_id", ""))),
+				StringName(str(event.get("reason", "capacity_replacement")))
+			)
+	var anchor: Dictionary = transaction.get("anchor", {})
+	if not anchor.is_empty():
+		anchor_created.emit(anchor.duplicate(true))
 
 
 func add_mass(anchor_id: StringName, amount: float) -> Dictionary:
@@ -125,11 +157,17 @@ func tick(delta: float) -> void:
 
 
 func remove_anchor(anchor_id: StringName, reason: StringName = &"removed") -> bool:
+	if not _remove_anchor_internal(anchor_id):
+		return false
+	anchor_removed.emit(anchor_id, reason)
+	return true
+
+
+func _remove_anchor_internal(anchor_id: StringName) -> bool:
 	if not _anchors.has(anchor_id):
 		return false
 	_anchors.erase(anchor_id)
 	_order.erase(anchor_id)
-	anchor_removed.emit(anchor_id, reason)
 	return true
 
 
