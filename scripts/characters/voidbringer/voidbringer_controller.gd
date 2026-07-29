@@ -204,8 +204,7 @@ func execute_null_shard_command(
 		push_error("Null Shard projectile invariant failed after successful ability commit")
 		return _reject_skill(definition, &"projectile_invariant_failed", ability_result)
 	active_null_shards[projectile_id] = projectile
-	projectile.impact_committed.connect(_on_null_shard_impact)
-	projectile.projectile_ended.connect(_on_null_shard_ended)
+	_connect_null_shard_callbacks(projectile)
 
 	var was_in_breach := instability.in_breach
 	var instability_applied := instability.commit_spatial_ability(definition.instability_delta)
@@ -331,6 +330,22 @@ func _next_cast_id() -> StringName:
 	var cast_id := StringName("vb.cast.%06d" % _next_cast_serial)
 	_next_cast_serial += 1
 	return cast_id
+
+
+func _connect_null_shard_callbacks(projectile: VoidbringerNullShardProjectile) -> void:
+	var owner_ref := weakref(self)
+	projectile.impact_committed.connect(
+		func(result: VoidbringerImpactResult) -> void:
+			var owner: Object = owner_ref.get_ref()
+			if owner != null:
+				owner.call("_on_null_shard_impact", result)
+	)
+	projectile.projectile_ended.connect(
+		func(projectile_id: StringName, reason: StringName) -> void:
+			var owner: Object = owner_ref.get_ref()
+			if owner != null:
+				owner.call("_on_null_shard_ended", projectile_id, reason)
+	)
 
 
 func _begin_transaction() -> void:
