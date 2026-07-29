@@ -1,0 +1,70 @@
+name: Voidbringer Foundation Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/runtime/abilities/**"
+      - "scripts/characters/voidbringer/**"
+      - "tests/test_ability_charges_and_atomicity.gd"
+      - "tests/test_voidbringer_anchor_instability_sandbox.gd"
+      - ".github/workflows/voidbringer-foundation-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/runtime/abilities/**"
+      - "scripts/characters/voidbringer/**"
+      - "tests/test_ability_charges_and_atomicity.gd"
+      - "tests/test_voidbringer_anchor_instability_sandbox.gd"
+      - ".github/workflows/voidbringer-foundation-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voidbringer-foundation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-runtime:
+    name: Godot 4.4.1 Voidbringer Foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+
+      - name: Run ability charges and rejection atomicity
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_ability_charges_and_atomicity.gd 2>&1 | tee ability-charges-and-atomicity.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' ability-charges-and-atomicity.log; then
+            echo "Voidbringer ability charge regression failed."
+            exit 1
+          fi
+          if ! grep -Fxq 'PASS: Voidbringer ability charges and atomicity' ability-charges-and-atomicity.log; then
+            echo "Missing Voidbringer ability charge PASS marker."
+            exit 1
+          fi
+
+      - name: Upload focused logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voidbringer-foundation-logs
+          path: ability-charges-and-atomicity.log
+          if-no-files-found: warn
+          retention-days: 7
