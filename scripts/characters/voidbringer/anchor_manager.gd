@@ -98,6 +98,23 @@ func place_anchor_transaction(
 	}
 
 
+func reclassify_pending_anchor(
+	anchor_id: StringName,
+	carrier_type: StringName,
+	carrier: Variant
+) -> Dictionary:
+	if not _anchors.has(anchor_id):
+		return {}
+	if validate_placement(carrier_type, carrier) != PLACEMENT_OK:
+		return {}
+	var anchor: Dictionary = _anchors[anchor_id]
+	anchor["carrier_type"] = carrier_type
+	anchor["carrier_ref"] = weakref(carrier) if carrier is Object else null
+	anchor["remaining_seconds"] = _duration_for(carrier_type)
+	_anchors[anchor_id] = anchor
+	return _public_snapshot(anchor)
+
+
 func emit_placement_events(transaction: Dictionary) -> void:
 	for raw_event: Variant in transaction.get("removed_events", []):
 		if raw_event is Dictionary:
