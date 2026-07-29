@@ -35,8 +35,10 @@ func _test_anchor_caps_durations_stages_and_cleanup() -> void:
 	_expect(manager.place_anchor(&"corpse", null, Vector3.ZERO, 10.0).is_empty(), "Corpse Anchors should reject missing carriers")
 
 	var enemy := Node3D.new()
+	root.add_child(enemy)
 	enemy.global_position = Vector3(-2.0, 0.0, 0.0)
 	var corpse := Node3D.new()
+	root.add_child(corpse)
 	corpse.global_position = Vector3(0.0, 0.0, 2.0)
 	var enemy_anchor: Dictionary = manager.place_anchor(&"enemy", enemy, enemy.global_position, -12.0)
 	var terrain_anchor: Dictionary = manager.place_anchor(&"terrain", null, Vector3(2.0, 0.0, 0.0), 35.0)
@@ -94,8 +96,14 @@ func _test_instability_delay_decay_and_base_breach() -> void:
 	var controller = INSTABILITY_CONTROLLER_SCRIPT.new()
 	var breach_starts := [0]
 	var breach_ends := [0]
-	controller.breach_started.connect(func(_duration: float) -> void: breach_starts[0] += 1)
-	controller.breach_ended.connect(func() -> void: breach_ends[0] += 1)
+	controller.breach_started.connect(
+		func(_duration: float) -> void:
+			breach_starts[0] += 1
+	)
+	controller.breach_ended.connect(
+		func() -> void:
+			breach_ends[0] += 1
+	)
 	_expect(controller.commit_spatial_ability(30.0) == 30.0, "Successful spatial commits should add Instability")
 	controller.tick(4.0)
 	_expect(is_equal_approx(controller.current, 30.0), "Instability should not decay during the four-second delay")
