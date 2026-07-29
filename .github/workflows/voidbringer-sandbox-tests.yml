@@ -1,0 +1,68 @@
+name: Voidbringer Sandbox Tests
+
+on:
+  pull_request:
+    paths:
+      - "scenes/voidbringer_foundation_sandbox.tscn"
+      - "scripts/characters/voidbringer/**"
+      - "tests/test_voidbringer_playable_foundation_sandbox.gd"
+      - ".github/workflows/voidbringer-sandbox-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scenes/voidbringer_foundation_sandbox.tscn"
+      - "scripts/characters/voidbringer/**"
+      - "tests/test_voidbringer_playable_foundation_sandbox.gd"
+      - ".github/workflows/voidbringer-sandbox-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voidbringer-sandbox-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playable-sandbox:
+    name: Godot 4.4.1 Voidbringer Playable Sandbox
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+
+      - name: Run playable foundation sandbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_playable_foundation_sandbox.gd 2>&1 | tee voidbringer-playable-sandbox.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-playable-sandbox.log; then
+            echo "Voidbringer playable sandbox regression failed."
+            exit 1
+          fi
+          if ! grep -Fxq 'PASS: Voidbringer playable foundation sandbox' voidbringer-playable-sandbox.log; then
+            echo "Missing Voidbringer playable sandbox PASS marker."
+            exit 1
+          fi
+
+      - name: Upload sandbox log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voidbringer-sandbox-log
+          path: voidbringer-playable-sandbox.log
+          if-no-files-found: warn
+          retention-days: 7
