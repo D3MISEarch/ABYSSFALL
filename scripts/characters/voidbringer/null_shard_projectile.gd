@@ -107,7 +107,7 @@ func commit_contact(
 	surface_profile: StringName = &"default",
 	death_profile: StringName = &"default"
 ) -> Dictionary:
-	if not active or contact_committed or target == null or not is_instance_valid(target):
+	if not active or contact_committed or not _target_is_logically_alive(target):
 		return {}
 	contact_committed = true
 	active = false
@@ -121,14 +121,16 @@ func commit_contact(
 	var resolved_damage := int(damage_result.get("damage", 0))
 	var health_before := _read_health(target)
 	var damage_return: Variant = null
-	if target.has_method("take_damage"):
+	var damage_method_called := target.has_method("take_damage")
+	if damage_method_called:
 		damage_return = target.call("take_damage", resolved_damage)
 	var health_after := _read_health(target)
 	var damage_applied := _resolve_applied_damage(
 		resolved_damage,
 		health_before,
 		health_after,
-		damage_return
+		damage_return,
+		damage_method_called
 	)
 	var fatal := _is_target_fatal(target, health_after)
 	var normalized_normal := surface_normal.normalized() if surface_normal.length_squared() > 0.0 else Vector3.UP
@@ -278,6 +280,14 @@ func _copy_definition(source: AbilityDefinition) -> AbilityDefinition:
 	)
 
 
+func _target_is_logically_alive(target: Object) -> bool:
+	if target == null or not is_instance_valid(target):
+		return false
+	if _object_has_property(target, &"alive"):
+		return bool(target.get("alive"))
+	return true
+
+
 func _read_health(target: Object) -> float:
 	if _object_has_property(target, &"health"):
 		return float(target.get("health"))
@@ -290,13 +300,14 @@ func _resolve_applied_damage(
 	resolved_damage: int,
 	health_before: float,
 	health_after: float,
-	damage_return: Variant
+	damage_return: Variant,
+	damage_method_called: bool
 ) -> float:
 	if health_before >= 0.0 and health_after >= 0.0:
 		return maxf(health_before - health_after, 0.0)
 	if damage_return is int or damage_return is float:
 		return maxf(float(damage_return), 0.0)
-	return float(resolved_damage)
+	return float(resolved_damage) if damage_method_called else 0.0
 
 
 func _is_target_fatal(target: Object, health_after: float) -> bool:
