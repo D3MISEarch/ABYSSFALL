@@ -14,6 +14,10 @@ const STAGE_DORMANT: StringName = &"dormant"
 const STAGE_DENSE: StringName = &"dense"
 const STAGE_CRITICAL: StringName = &"critical"
 
+const PLACEMENT_OK: StringName = &"ok"
+const REASON_CARRIER_TYPE_NOT_ALLOWED: StringName = &"carrier_type_not_allowed"
+const REASON_CARRIER_INVALIDATED: StringName = &"carrier_invalidated"
+
 const ENEMY_DURATION := 12.0
 const TERRAIN_DURATION := 18.0
 const CORPSE_DURATION := 8.0
@@ -36,6 +40,14 @@ func capacity() -> int:
 	return 3 if owner_level >= 5 else 2
 
 
+func validate_placement(carrier_type: StringName, carrier: Variant) -> StringName:
+	if not _carrier_type_is_allowed(carrier_type):
+		return REASON_CARRIER_TYPE_NOT_ALLOWED
+	if not _carrier_is_valid(carrier_type, carrier):
+		return REASON_CARRIER_INVALIDATED
+	return PLACEMENT_OK
+
+
 func place_anchor(
 	carrier_type: StringName,
 	carrier: Variant,
@@ -43,7 +55,7 @@ func place_anchor(
 	mass: float = 0.0,
 	metadata: Dictionary = {}
 ) -> Dictionary:
-	if not _carrier_type_is_allowed(carrier_type) or not _carrier_is_valid(carrier_type, carrier):
+	if validate_placement(carrier_type, carrier) != PLACEMENT_OK:
 		return {}
 	while _order.size() >= capacity():
 		remove_anchor(_order.front(), &"capacity_replacement")
@@ -97,10 +109,11 @@ func tick(delta: float) -> void:
 		if not _anchors.has(anchor_id):
 			continue
 		var anchor: Dictionary = _anchors[anchor_id]
+		var carrier_type: StringName = anchor.get("carrier_type", &"")
 		var carrier_ref: WeakRef = anchor.get("carrier_ref") as WeakRef
 		var carrier: Object = carrier_ref.get_ref() if carrier_ref != null else null
-		if carrier_ref != null and not is_instance_valid(carrier):
-			remove_anchor(anchor_id, &"carrier_invalidated")
+		if not _carrier_is_valid(carrier_type, carrier):
+			remove_anchor(anchor_id, REASON_CARRIER_INVALIDATED)
 			continue
 		if carrier is Node3D:
 			anchor["position"] = (carrier as Node3D).global_position
@@ -167,7 +180,20 @@ func _carrier_type_is_allowed(carrier_type: StringName) -> bool:
 func _carrier_is_valid(carrier_type: StringName, carrier: Variant) -> bool:
 	if carrier_type == CARRIER_TERRAIN and carrier == null:
 		return true
-	return carrier is Object and is_instance_valid(carrier)
+	if not carrier is Object or not is_instance_valid(carrier):
+		return false
+	if carrier_type == CARRIER_ENEMY and _object_has_property(carrier as Object, &"alive"):
+		return bool((carrier as Object).get("alive"))
+	return true
+
+
+func _object_has_property(object: Object, property_name: StringName) -> bool:
+	if object == null:
+		return false
+	for property: Dictionary in object.get_property_list():
+		if StringName(str(property.get("name", ""))) == property_name:
+			return true
+	return false
 
 
 func _duration_for(carrier_type: StringName) -> float:
@@ -185,7 +211,7 @@ func _duration_for(carrier_type: StringName) -> float:
 
 func _enforce_capacity() -> void:
 	while _order.size() > capacity():
-		remove_anchor(_order.front(), &"capacity_replacement")
+		remove_anchor(_order.front(), &"capacity_downgrade")
 
 
 func _public_snapshot(anchor: Dictionary) -> Dictionary:
