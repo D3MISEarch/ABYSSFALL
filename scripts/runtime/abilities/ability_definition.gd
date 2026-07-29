@@ -10,6 +10,7 @@ var maximum_charges: int = 0
 var recharge_seconds: float = 0.0
 var instability_delta: float = 0.0
 var tags: Array[StringName] = []
+var damage_coefficient: float = 1.0
 
 
 func _init(
@@ -21,7 +22,8 @@ func _init(
 	p_maximum_charges: int = 0,
 	p_recharge_seconds: float = 0.0,
 	p_instability_delta: float = 0.0,
-	p_tags: Array = []
+	p_tags: Array = [],
+	p_damage_coefficient: float = 1.0
 ) -> void:
 	ability_id = p_ability_id
 	resource_id = p_resource_id
@@ -34,6 +36,7 @@ func _init(
 	tags.clear()
 	for tag: Variant in p_tags:
 		tags.append(StringName(str(tag)))
+	damage_coefficient = p_damage_coefficient
 
 
 func is_valid() -> bool:
@@ -41,8 +44,16 @@ func is_valid() -> bool:
 		return false
 	if maximum_charges > 0 and recharge_seconds <= 0.0:
 		return false
+	if is_nan(damage_coefficient) or is_inf(damage_coefficient) or damage_coefficient < 0.0:
+		return false
 	return true
 
 
 func uses_charges() -> bool:
 	return maximum_charges > 0
+
+
+func base_damage_for_weapon_power(weapon_power: float) -> int:
+	if not is_valid():
+		return 0
+	return maxi(0, int(round(maxf(weapon_power, 0.0) * damage_coefficient)))
