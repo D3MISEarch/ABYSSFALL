@@ -67,7 +67,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          godot --headless --path . --script res://tests/test_voidbringer_skill_slice.gd 2>&1 | tee voidbringer-skill-slice.log
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_skill_slice.gd 2>&1 | tee voidbringer-skill-slice.log
           if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-skill-slice.log; then
             echo "Voidbringer Mass Brand and Null Shard regression failed."
             exit 1
