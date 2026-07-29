@@ -76,10 +76,12 @@ func _run() -> void:
 			)
 	)
 
+	var corpse_target := DamageTarget.new()
+	root.add_child(corpse_target)
 	var second := controller.execute_mass_brand_command(
 		mass_brand,
 		&"corpse",
-		DamageTarget.new(),
+		corpse_target,
 		Vector3(2.0, 0.0, 0.0),
 		20.0,
 		{},
@@ -124,6 +126,7 @@ func _run() -> void:
 	_expect(is_equal_approx(float(impact.get("anchor_influence_multiplier_at_launch", 0.0)), 1.0), "Immutable Null Shard impact should retain launch Anchor influence metadata")
 
 	target.free()
+	corpse_target.free()
 	controller.clear()
 	session.free()
 	if failures.is_empty():
