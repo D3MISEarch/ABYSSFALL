@@ -189,6 +189,8 @@ The existing generic ability system is extended rather than special-casing Mass 
 - `slot_type`;
 - immutable tags/metadata required for validation and presentation.
 
+The authoritative `slot_type` values are `ACTIVE_SKILL`, `DEDICATED_ACTION`, `BASIC_ATTACK`, `UNIVERSAL_EVADE`, and `ULTIMATE`. The six configurable active positions are loadout indices under `ACTIVE_SKILL`, not six separate definition categories.
+
 ### 7.2 Backward-compatible modes
 
 - `maximum_charges == 0`: cooldown-only ability. Existing behavior remains unchanged; no charge state is created or checked.
@@ -202,9 +204,10 @@ For a charge-enabled ability:
 
 - successful executor commit consumes exactly one charge;
 - zero charges rejects before resource spending, cooldown liability, Instability or gameplay effects;
-- recharge is sequential: at most one recharge interval advances at a time regardless of missing-charge count;
-- when an interval completes, one charge is restored and any excess scaled delta carries into the next missing charge;
-- a large tick loops deterministically until the scaled delta is exhausted or charges are full;
+- recharge intervals advance sequentially rather than in parallel: only one missing-charge interval accumulates progress at a time, regardless of missing-charge count;
+- each completed interval restores exactly one charge;
+- a single tick may nevertheless complete multiple consecutive intervals when its scaled delta is large enough; excess delta carries into each next interval until the delta is exhausted or charges are full;
+- this large-delta loop is deterministic;
 - when full, recharge progress is reset to zero and no hidden progress accumulates;
 - charge consumption, cooldown liability and the structured commit result occur atomically.
 
@@ -212,10 +215,14 @@ A definition may combine charges with a post-cast cooldown only when explicitly 
 
 ### 7.4 Source-keyed recharge-rate modifiers
 
-`AbilityRuntime` owns a map keyed by stable source ID. Each modifier contains a finite positive rate multiplier and optional bounded remaining duration.
+`AbilityRuntime` owns a map keyed by stable source ID. Each modifier contains a finite positive rate multiplier and optional bounded remaining duration. The only permitted duplicate-source modes are:
+
+- `REPLACE`: replace the existing source's multiplier and remaining duration with the incoming values.
+- `REFRESH_DURATION`: when the source exists, preserve its current multiplier and replace its remaining duration with the incoming duration; when the source does not exist, create it using the incoming multiplier and duration.
+
+When a caller omits the mode, it defaults to `REPLACE`. Adding the same source never creates a duplicate entry.
 
 - the effective recharge rate is calculated deterministically from modifiers in sorted source-ID order;
-- adding the same source replaces/refreshes that source according to the caller's explicit rule; it never creates a duplicate entry;
 - removal names the exact source;
 - duration ticking and expiry occur in the executor/runtime ability clock;
 - modifiers do not grant charges directly;
@@ -302,6 +309,8 @@ The immutable result may report:
 - own collision shapes or a global registry.
 
 Target locomotion owners apply accepted movement/rotation results. Target health/stance owners apply separately approved consequence results. Bosses/immovable targets convert resisted force through supported channels rather than returning a generic immunity presentation.
+
+Concrete target response profiles, supported conversion channels, channel priority/order, conversion magnitudes, and gameplay consequences are selected by later owner-approved gameplay issues and implementation contracts. This ADR decides only pure request/result ownership, target-owned application, deterministic conversion vocabulary, and that resisted force may not become a generic immunity result. It does not approve boss balance or Issue #95's final conversion values.
 
 ## 11. Structured outgoing-damage compatibility
 
