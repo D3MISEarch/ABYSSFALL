@@ -91,7 +91,19 @@ jobs:
           Report capture: F8
           EOF
           cp docs/VOIDBRINGER_FOUNDATION_PLAYTEST.md "dist/$PACKAGE_NAME/README_VOIDBRINGER_SANDBOX.txt"
-          printf '@echo off\r\ncd /d "%%~dp0"\r\nstart "AbyssFall Voidbringer Foundation" "AbyssFall.exe" --sandbox=voidbringer_anchor\r\n' > "dist/$PACKAGE_NAME/Launch Voidbringer Foundation Sandbox.bat"
+          printf '@echo off\r\ncd /d "%%~dp0"\r\nstart "AbyssFall Voidbringer Foundation" "AbyssFall.exe" -- --sandbox=voidbringer_anchor\r\n' > "dist/$PACKAGE_NAME/Launch Voidbringer Foundation Sandbox.bat"
+
+      - name: Verify generated launcher command
+        shell: bash
+        run: |
+          set -euo pipefail
+          LAUNCHER="dist/$PACKAGE_NAME/Launch Voidbringer Foundation Sandbox.bat"
+          tr -d '\r' < "$LAUNCHER" | tee windows-launcher-command.log
+          grep -Fxq 'start "AbyssFall Voidbringer Foundation" "AbyssFall.exe" -- --sandbox=voidbringer_anchor' windows-launcher-command.log
+          if grep -Fxq 'start "AbyssFall Voidbringer Foundation" "AbyssFall.exe" --sandbox=voidbringer_anchor' windows-launcher-command.log; then
+            echo "Launcher is missing the Godot user-argument separator."
+            exit 1
+          fi
 
       - name: Import project
         shell: bash
@@ -188,6 +200,7 @@ jobs:
         with:
           name: voidbringer-foundation-windows-audit-logs
           path: |
+            windows-launcher-command.log
             windows-foundation-import.log
             windows-ability-charges.log
             windows-anchor-instability.log
