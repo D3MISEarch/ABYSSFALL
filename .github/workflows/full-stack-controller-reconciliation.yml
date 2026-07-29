@@ -21,6 +21,7 @@ on:
       - "tests/test_penitent_class_gates.gd"
       - "tests/test_input_prompt_profile.gd"
       - "tests/test_voidbringer_impact_feedback.gd"
+      - "tests/test_grasping_rift_readability_payoff.gd"
       - ".github/workflows/godot-hotfix3-validation.yml"
       - ".github/workflows/full-stack-controller-reconciliation.yml"
   workflow_dispatch:
@@ -59,6 +60,20 @@ jobs:
           fi
           if ! grep -Fxq 'PASS: Voidbringer impact and Corruption payoff' voidbringer-impact-feedback.log; then
             echo "Missing Voidbringer impact and Corruption payoff PASS marker."
+            exit 1
+          fi
+
+      - name: Run Grasping Rift readability and grouping payoff regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_grasping_rift_readability_payoff.gd 2>&1 | tee grasping-rift-readability-payoff.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' grasping-rift-readability-payoff.log; then
+            echo "Grasping Rift readability and grouping payoff regression failed."
+            exit 1
+          fi
+          if ! grep -Fxq 'PASS: Grasping Rift readability and grouping payoff' grasping-rift-readability-payoff.log; then
+            echo "Missing Grasping Rift readability and grouping payoff PASS marker."
             exit 1
           fi
 
@@ -140,6 +155,7 @@ jobs:
             test_art_pass0_visual_contract.log
             test_voidbringer_vfx_pass0b.log
             voidbringer-impact-feedback.log
+            grasping-rift-readability-payoff.log
             runtime-void_warlock.log
             runtime-penitent.log
           if-no-files-found: warn

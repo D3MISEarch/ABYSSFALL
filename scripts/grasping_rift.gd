@@ -2,6 +2,8 @@ extends Node3D
 
 const PALETTE = preload("res://scripts/art/abyssfall_art_palette.gd")
 
+const SETUP_DURATION := 0.22
+
 var source: Node
 var pull_radius := 6.0
 var pull_duration := 2.2
@@ -23,6 +25,10 @@ var white_material: StandardMaterial3D
 var corruption_material: StandardMaterial3D
 var rift_light: OmniLight3D
 var orbit_debris: Array[MeshInstance3D] = []
+var target_presentation_root: Node3D
+var affected_targets: Dictionary = {}
+var presentation_phase: StringName = &"setup"
+var pull_scan_count := 0
 
 
 func setup(
@@ -66,14 +72,22 @@ func _physics_process(delta: float) -> void:
 	_update_orbit_debris(pull_progress)
 
 	if elapsed <= pull_duration:
+		_update_presentation_phase()
 		_pull_targets(delta)
-	elif not collapsed:
-		_collapse()
-	elif elapsed >= pull_duration + collapse_delay:
-		queue_free()
+	else:
+		if not collapsed:
+			_collapse()
+		if elapsed >= pull_duration + collapse_delay:
+			presentation_phase = &"cleanup"
+			_clear_target_presentations()
+			queue_free()
+		else:
+			_validate_target_presentations(pull_progress)
 
 
 func _pull_targets(_delta: float) -> void:
+	pull_scan_count += 1
+	var seen_target_ids: Dictionary = {}
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or not enemy.has_method("apply_rift_pull"):
 			continue
@@ -83,10 +97,19 @@ func _pull_targets(_delta: float) -> void:
 		if distance <= pull_radius:
 			var strength_scale: float = lerpf(1.25, 0.72, clampf(distance / pull_radius, 0.0, 1.0))
 			enemy.apply_rift_pull(global_position, pull_strength * strength_scale)
+			if _is_living_presentation_target(enemy):
+				var target_id := enemy.get_instance_id()
+				seen_target_ids[target_id] = true
+				_update_target_presentation(enemy, distance)
+	for target_id in affected_targets.keys():
+		if not seen_target_ids.has(target_id):
+			_remove_target_presentation(target_id)
 
 
 func _collapse() -> void:
 	collapsed = true
+	presentation_phase = &"collapsed_contact"
+	_clear_target_presentations()
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
 			continue
@@ -127,6 +150,7 @@ func _build_visual() -> void:
 	visual_root = Node3D.new()
 	visual_root.name = "GraspingRiftVisual"
 	add_child(visual_root)
+	_build_target_presentation_root()
 
 	void_material = PALETTE.emissive(PALETTE.VOID_FRACTURE, 3.4, 0.11)
 	white_material = PALETTE.emissive(PALETTE.GRAVITATIONAL_WHITE, 4.8, 0.06)
@@ -228,6 +252,146 @@ func _build_visual() -> void:
 	rift_light.light_energy = 2.8
 	rift_light.omni_range = 6.4
 	visual_root.add_child(rift_light)
+
+
+func _build_target_presentation_root() -> void:
+	target_presentation_root = Node3D.new()
+	target_presentation_root.name = "RiftTargetPresentation"
+	target_presentation_root.top_level = true
+	visual_root.add_child(target_presentation_root)
+
+
+func _update_presentation_phase() -> void:
+	var setup_end := minf(SETUP_DURATION, pull_duration)
+	var imminent_start := maxf(setup_end, pull_duration - collapse_delay)
+	if elapsed <= setup_end:
+		presentation_phase = &"setup"
+	elif elapsed >= imminent_start:
+		presentation_phase = &"imminent_collapse"
+	else:
+		presentation_phase = &"active_pull"
+
+
+func _is_living_presentation_target(target: Node) -> bool:
+	return is_instance_valid(target) and bool(target.get("alive"))
+
+
+func _update_target_presentation(target: Node3D, distance: float) -> void:
+	if not is_instance_valid(target_presentation_root):
+		return
+	var target_id := target.get_instance_id()
+	var entry: Dictionary = affected_targets.get(target_id, {})
+	var marker: Node3D = entry.get("marker") as Node3D
+	if not is_instance_valid(marker):
+		marker = _create_target_marker(target, target_id)
+		entry = {
+			"target_ref": weakref(target),
+			"marker": marker,
+			"profile": marker.get_meta("rift_profile")
+		}
+		affected_targets[target_id] = entry
+	var marker_height := float(marker.get_meta("rift_height", 0.72))
+	marker.global_position = target.global_position + Vector3.UP * marker_height
+	var direction := global_position - target.global_position
+	direction.y = 0.0
+	if direction.length_squared() > 0.0001:
+		marker.look_at(marker.global_position + direction, Vector3.UP)
+	var pull_progress := clampf(elapsed / maxf(pull_duration, 0.01), 0.0, 1.0)
+	var proximity := 1.0 - clampf(distance / maxf(pull_radius, 0.01), 0.0, 1.0)
+	var intensity := 0.82 + pull_progress * 0.32 + proximity * 0.16
+	marker.scale = Vector3.ONE * intensity
+
+
+func _create_target_marker(target: Node3D, target_id: int) -> Node3D:
+	var marker := Node3D.new()
+	marker.name = "GraspingRiftTargetMarker_%d" % target_id
+	marker.set_meta("rift_profile", _presentation_profile_for(target))
+	marker.set_meta("rift_height", _presentation_height(marker.get_meta("rift_profile")))
+	target_presentation_root.add_child(marker)
+	var mesh := MeshInstance3D.new()
+	var profile: StringName = marker.get_meta("rift_profile")
+	match profile:
+		&"archer_tether":
+			mesh.name = "RiftArcherTether"
+			var tether_mesh := BoxMesh.new()
+			tether_mesh.size = Vector3(0.035, 0.035, 1.28)
+			mesh.mesh = tether_mesh
+			mesh.position.z = -0.48
+			mesh.material_override = PALETTE.emissive(PALETTE.CORRUPTION_GREEN, 2.4, 0.12)
+		&"brute_restraint":
+			mesh.name = "RiftBruteRestraint"
+			var restraint_mesh := TorusMesh.new()
+			restraint_mesh.inner_radius = 0.44
+			restraint_mesh.outer_radius = 0.52
+			restraint_mesh.rings = 16
+			restraint_mesh.ring_segments = 6
+			mesh.mesh = restraint_mesh
+			mesh.rotation_degrees.x = 90.0
+			mesh.material_override = PALETTE.emissive(PALETTE.VOID_FRACTURE, 2.0, 0.10)
+		_:
+			mesh.name = "RiftLightInwardStreak"
+			var streak_mesh := BoxMesh.new()
+			streak_mesh.size = Vector3(0.045, 0.08, 1.46)
+			mesh.mesh = streak_mesh
+			mesh.position.z = -0.54
+			mesh.material_override = PALETTE.emissive(PALETTE.GRAVITATIONAL_WHITE, 3.6, 0.08)
+	marker.add_child(mesh)
+	return marker
+
+
+func _presentation_profile_for(target: Node) -> StringName:
+	var target_script := target.get_script()
+	var script_path := "" if target_script == null else str(target_script.resource_path)
+	if script_path.ends_with("bone_archer.gd"):
+		return &"archer_tether"
+	if script_path.ends_with("crypt_brute.gd"):
+		return &"brute_restraint"
+	return &"light_streak"
+
+
+func _presentation_height(profile: StringName) -> float:
+	if profile == &"brute_restraint":
+		return 0.46
+	if profile == &"archer_tether":
+		return 0.82
+	return 0.72
+
+
+func _validate_target_presentations(_pull_progress: float) -> void:
+	for target_id in affected_targets.keys():
+		var entry: Dictionary = affected_targets[target_id]
+		var target_ref := entry.get("target_ref") as WeakRef
+		var target: Node3D = null if target_ref == null else target_ref.get_ref() as Node3D
+		if not _is_living_presentation_target(target):
+			_remove_target_presentation(target_id)
+			continue
+		var offset := global_position - target.global_position
+		offset.y = 0.0
+		if offset.length() > pull_radius:
+			_remove_target_presentation(target_id)
+			continue
+		_update_target_presentation(target, offset.length())
+
+
+func _clear_target_presentations() -> void:
+	for target_id in affected_targets.keys():
+		_remove_target_presentation(target_id)
+
+
+func _remove_target_presentation(target_id: int) -> void:
+	var entry: Dictionary = affected_targets.get(target_id, {})
+	var marker: Node3D = entry.get("marker") as Node3D
+	if is_instance_valid(marker):
+		var marker_parent := marker.get_parent()
+		if is_instance_valid(marker_parent):
+			marker_parent.remove_child(marker)
+		marker.queue_free()
+	affected_targets.erase(target_id)
+
+
+func _exit_tree() -> void:
+	presentation_phase = &"cleanup"
+	_clear_target_presentations()
 
 
 func _update_orbit_debris(pull_progress: float) -> void:

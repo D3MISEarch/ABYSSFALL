@@ -724,11 +724,11 @@ func _spawn_catacomb_second_wave() -> void:
 		return
 	game_state = "catacombs_wave_2"
 	catacomb_wave = 2
-	_spawn_enemy("brute", Vector3(0.0, 0.0, -48.0), 0.15, true)
-	_spawn_enemy("archer", Vector3(-8.0, 0.0, -50.0))
-	_spawn_enemy("archer", Vector3(8.0, 0.0, -50.0))
-	for x in [-5.0, 0.0, 5.0]:
-		_spawn_enemy("reaver", Vector3(x, 0.0, -40.0), 0.28)
+	_spawn_enemy("brute", Vector3(0.0, 0.0, -47.0), 0.15, true)
+	_spawn_enemy("archer", Vector3(-6.0, 0.0, -47.0))
+	_spawn_enemy("archer", Vector3(6.0, 0.0, -47.0))
+	for x in [-4.0, 0.0, 4.0]:
+		_spawn_enemy("reaver", Vector3(x, 0.0, -43.0), 0.28)
 	_show_message("THE OSSUARY OPENS", 1.15)
 
 
