@@ -24,10 +24,10 @@ func commit_spatial_ability(instability_delta: float) -> float:
 	var before := current
 	current = clampf(current + maxf(instability_delta, 0.0), 0.0, MAXIMUM)
 	var applied := current - before
-	if applied > 0.0:
-		instability_changed.emit(current, MAXIMUM)
 	if current >= MAXIMUM:
 		_enter_breach()
+	elif applied > 0.0:
+		instability_changed.emit(current, MAXIMUM)
 	return applied
 
 
@@ -77,11 +77,14 @@ func snapshot() -> Dictionary:
 
 
 func clear() -> void:
+	var was_in_breach := in_breach
 	current = 0.0
 	seconds_since_spatial_commit = 0.0
 	in_breach = false
 	breach_remaining = 0.0
 	instability_changed.emit(current, MAXIMUM)
+	if was_in_breach:
+		breach_ended.emit()
 
 
 func _enter_breach() -> void:
