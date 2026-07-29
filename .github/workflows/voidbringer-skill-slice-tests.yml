@@ -3,12 +3,14 @@ name: Voidbringer Skill Slice Tests
 on:
   pull_request:
     paths:
+      - "scenes/voidbringer_foundation_sandbox.tscn"
       - "scripts/characters/voidbringer/**"
       - "scripts/core/playable_combat_projection.gd"
       - "scripts/runtime/abilities/**"
       - "tests/test_voidbringer_mass_brand_transaction.gd"
       - "tests/test_voidbringer_fold_line_3d.gd"
       - "tests/test_voidbringer_skill_slice.gd"
+      - "tests/test_voidbringer_playable_skill_sandbox.gd"
       - ".github/workflows/voidbringer-skill-slice-tests.yml"
   workflow_dispatch:
 
@@ -74,6 +76,17 @@ jobs:
           fi
           grep -Fxq 'PASS: Voidbringer Mass Brand and Null Shard skill slice' voidbringer-skill-slice.log
 
+      - name: Run playable skill sandbox proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_playable_skill_sandbox.gd 2>&1 | tee voidbringer-playable-skill-sandbox.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-playable-skill-sandbox.log; then
+            echo "Voidbringer playable skill sandbox regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer playable skill sandbox' voidbringer-playable-skill-sandbox.log
+
       - name: Upload focused logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -83,5 +96,6 @@ jobs:
             voidbringer-mass-brand-transaction.log
             voidbringer-fold-line-3d.log
             voidbringer-skill-slice.log
+            voidbringer-playable-skill-sandbox.log
           if-no-files-found: warn
           retention-days: 14
