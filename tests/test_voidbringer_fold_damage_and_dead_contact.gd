@@ -38,7 +38,7 @@ func _run() -> void:
 func _test_fold_multiplier_scales_total_pre_critical_hit() -> void:
 	var setup := _setup("fold-total-damage")
 	var controller: VoidbringerController = setup.controller
-	var definition: AbilityDefinition = setup.null_shard
+	var definition: AbilityDefinition = setup.definition
 	var projection := PlayableCombatProjection.new()
 	projection.configure({"power": 4.0, "critical_chance": 0.0})
 	controller.place_anchor(&"terrain", null, Vector3(-1.0, 0.0, 0.0), 0.0)
@@ -74,7 +74,7 @@ func _test_fold_multiplier_scales_total_pre_critical_hit() -> void:
 func _test_logically_dead_contact_is_ignored() -> void:
 	var setup := _setup("dead-contact")
 	var controller: VoidbringerController = setup.controller
-	var definition: AbilityDefinition = setup.null_shard
+	var definition: AbilityDefinition = setup.definition
 	var impact_events := [0]
 	controller.impact_committed.connect(
 		func(_result: VoidbringerImpactResult) -> void:
