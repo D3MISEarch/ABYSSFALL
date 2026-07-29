@@ -13,6 +13,7 @@ func _run() -> void:
 	var sandbox = SANDBOX_SCENE.instantiate()
 	root.add_child(sandbox)
 	sandbox.set_process(false)
+	print("SANDBOX_TEST_STEP:ready")
 
 	var initial: Dictionary = sandbox.debug_snapshot()
 	_expect(int(initial.get("debug_level", 0)) == 1, "The sandbox should begin at level one")
@@ -24,6 +25,7 @@ func _run() -> void:
 	var two_anchor_state: Dictionary = sandbox.debug_snapshot()
 	_expect((two_anchor_state.get("anchors", []) as Array).size() == 2, "The sandbox should expose both placed anchors")
 	_expect((two_anchor_state.get("fold_lines", []) as Array).size() == 1, "Two sandbox anchors should produce one visible Fold Line")
+	print("SANDBOX_TEST_STEP:anchors")
 
 	_expect(sandbox.simulate_command(&"load_mass"), "The sandbox should load Mass into the newest anchor")
 	var loaded_anchors: Array = sandbox.debug_snapshot().get("anchors", []) as Array
@@ -34,6 +36,7 @@ func _run() -> void:
 	var breach_state: Dictionary = sandbox.debug_snapshot().get("instability", {}) as Dictionary
 	_expect(bool(breach_state.get("in_breach", false)), "Five Instability commands should enter base Breach")
 	_expect(is_equal_approx(float(breach_state.get("anchor_influence_multiplier", 1.0)), 1.30), "The sandbox should expose Breach anchor influence")
+	print("SANDBOX_TEST_STEP:breach")
 
 	_expect(sandbox.simulate_command(&"toggle_level"), "The sandbox should toggle to the level-five cap")
 	_expect(int(sandbox.debug_snapshot().get("capacity", 0)) == 3, "Level five should expose three-anchor capacity")
@@ -45,8 +48,8 @@ func _run() -> void:
 	_expect((cleared.get("anchors", []) as Array).is_empty(), "Sandbox clear should remove every anchor")
 	_expect((cleared.get("fold_lines", []) as Array).is_empty(), "Sandbox clear should remove every Fold Line")
 	_expect(not bool((cleared.get("instability", {}) as Dictionary).get("in_breach", true)), "Sandbox clear should exit Breach")
+	print("SANDBOX_TEST_STEP:cleared")
 
-	sandbox.free()
 	if failures.is_empty():
 		print("PASS: Voidbringer playable foundation sandbox")
 		quit(0)
