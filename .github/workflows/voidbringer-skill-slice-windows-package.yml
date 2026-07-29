@@ -13,6 +13,7 @@ on:
       - "tests/test_voidbringer_mass_brand_transaction.gd"
       - "tests/test_voidbringer_fold_line_3d.gd"
       - "tests/test_voidbringer_skill_slice.gd"
+      - "tests/test_voidbringer_commit_packet_finality.gd"
       - "tests/test_voidbringer_playable_foundation_sandbox.gd"
       - "tests/test_voidbringer_playable_skill_sandbox.gd"
       - "docs/VOIDBRINGER_SKILL_SLICE_PLAYTEST.md"
@@ -134,6 +135,7 @@ jobs:
           run_test res://tests/test_voidbringer_mass_brand_transaction.gd 'PASS: Voidbringer transactional Mass Brand' windows-skill-mass-brand.log
           run_test res://tests/test_voidbringer_fold_line_3d.gd 'PASS: Voidbringer full-3D Fold Line crossings' windows-skill-fold-line-3d.log
           run_test res://tests/test_voidbringer_skill_slice.gd 'PASS: Voidbringer Mass Brand and Null Shard skill slice' windows-skill-slice.log
+          run_test res://tests/test_voidbringer_commit_packet_finality.gd 'PASS: Voidbringer authoritative commit packet finality' windows-skill-commit-finality.log
           run_test res://tests/test_voidbringer_playable_foundation_sandbox.gd 'PASS: Voidbringer playable foundation sandbox' windows-skill-foundation-sandbox.log
           run_test res://tests/test_voidbringer_playable_skill_sandbox.gd 'PASS: Voidbringer playable skill sandbox' windows-skill-playable-sandbox.log
 
@@ -177,6 +179,7 @@ jobs:
             windows-skill-mass-brand.log \
             windows-skill-fold-line-3d.log \
             windows-skill-slice.log \
+            windows-skill-commit-finality.log \
             windows-skill-foundation-sandbox.log \
             windows-skill-playable-sandbox.log \
             windows-skill-route.log \
@@ -223,6 +226,7 @@ jobs:
             windows-skill-mass-brand.log
             windows-skill-fold-line-3d.log
             windows-skill-slice.log
+            windows-skill-commit-finality.log
             windows-skill-foundation-sandbox.log
             windows-skill-playable-sandbox.log
             windows-skill-route.log
