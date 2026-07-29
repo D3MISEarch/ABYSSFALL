@@ -46,6 +46,7 @@ func _run() -> void:
 	var line_rebuilds := [0]
 	var anchor_event_saw_final := [false]
 	var cast_event_saw_final := [false]
+	var controller_ref := weakref(controller)
 	controller.foundation_changed.connect(
 		func(_snapshot: Dictionary) -> void:
 			foundation_events[0] += 1
@@ -56,7 +57,10 @@ func _run() -> void:
 	)
 	controller.anchors.anchor_created.connect(
 		func(_anchor: Dictionary) -> void:
-			var commit := controller.last_skill_commit
+			var observed_controller := controller_ref.get_ref() as VoidbringerController
+			if observed_controller == null:
+				return
+			var commit := observed_controller.last_skill_commit
 			if commit == null:
 				return
 			var committed_snapshot: Dictionary = commit.snapshot().get("foundation_snapshot", {})
@@ -67,9 +71,12 @@ func _run() -> void:
 	)
 	session.event_bus.ability_cast.connect(
 		func(_build_id: String, ability_id: StringName) -> void:
-			if ability_id != mass_brand.ability_id or controller.last_skill_commit == null:
+			var observed_controller := controller_ref.get_ref() as VoidbringerController
+			if observed_controller == null or ability_id != mass_brand.ability_id:
 				return
-			var committed_snapshot: Dictionary = controller.last_skill_commit.snapshot().get("foundation_snapshot", {})
+			if observed_controller.last_skill_commit == null:
+				return
+			var committed_snapshot: Dictionary = observed_controller.last_skill_commit.snapshot().get("foundation_snapshot", {})
 			cast_event_saw_final[0] = (
 				(committed_snapshot.get("anchors", []) as Array).size() == 2
 				and (committed_snapshot.get("fold_lines", []) as Array).size() == 1
