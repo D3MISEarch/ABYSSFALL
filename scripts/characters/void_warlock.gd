@@ -164,7 +164,9 @@ func _forward_corruption_changed(current_value: float, maximum_value: float) -> 
 
 
 func bind_playable_inventory_bridge(bridge: PlayableInventoryBridge) -> bool:
-	if bridge == null or not bridge.is_configured():
+	if bridge == null or not bridge.is_configured() or bridge.runtime_bridge == null:
+		return false
+	if not bind_runtime_session(bridge.runtime_bridge.session, bridge.runtime_bridge.runtime_character):
 		return false
 	playable_inventory_bridge = bridge
 	_apply_persistent_inventory_snapshot(bridge.snapshot())
