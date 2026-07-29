@@ -42,7 +42,8 @@ func mass_brand_definition() -> AbilityDefinition:
 		2,
 		4.0,
 		5.0,
-		[&"spatial", &"projectile", &"anchor_create"]
+		[&"spatial", &"projectile", &"anchor_create"],
+		0.35
 	)
 
 
@@ -56,7 +57,8 @@ func null_shard_definition() -> AbilityDefinition:
 		0,
 		0.0,
 		4.0,
-		[&"spatial", &"projectile", &"fold_line_interaction"]
+		[&"spatial", &"projectile", &"fold_line_interaction"],
+		0.75
 	)
 
 
@@ -70,7 +72,8 @@ func closure_definition() -> AbilityDefinition:
 		0,
 		0.0,
 		0.0,
-		[&"spatial", &"anchor_consume"]
+		[&"spatial", &"anchor_consume"],
+		1.0
 	)
 
 
