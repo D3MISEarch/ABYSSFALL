@@ -62,12 +62,16 @@ func _test_rejected_launch_vs_committed_miss() -> void:
 	var cast_events := [0]
 	var foundation_events := [0]
 	var spawn_observations: Array[Dictionary] = []
+	var controller_ref := weakref(controller)
 	controller.null_shard_spawned.connect(
 		func(projectile: VoidbringerNullShardProjectile) -> void:
+			var observed_controller := controller_ref.get_ref() as VoidbringerController
+			if observed_controller == null:
+				return
 			spawn_events[0] += 1
 			spawn_observations.append({
-				"active_count": controller.active_null_shards.size(),
-				"instability": controller.instability.current,
+				"active_count": observed_controller.active_null_shards.size(),
+				"instability": observed_controller.instability.current,
 				"projectile_active": projectile.active,
 			})
 	)
