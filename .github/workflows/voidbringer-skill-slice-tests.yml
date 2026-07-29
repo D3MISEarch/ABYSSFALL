@@ -1,0 +1,61 @@
+name: Voidbringer Skill Slice Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/characters/voidbringer/**"
+      - "scripts/core/playable_combat_projection.gd"
+      - "scripts/runtime/abilities/**"
+      - "tests/test_voidbringer_mass_brand_transaction.gd"
+      - "tests/test_voidbringer_skill_slice.gd"
+      - ".github/workflows/voidbringer-skill-slice-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voidbringer-skill-slice-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  transactional-mass-brand:
+    name: Godot 4.4.1 Mass Brand Transaction
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+
+      - name: Run transactional Mass Brand proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_mass_brand_transaction.gd 2>&1 | tee voidbringer-mass-brand-transaction.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-mass-brand-transaction.log; then
+            echo "Voidbringer Mass Brand transaction regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer transactional Mass Brand' voidbringer-mass-brand-transaction.log
+
+      - name: Upload focused log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voidbringer-skill-slice-logs
+          path: voidbringer-mass-brand-transaction.log
+          if-no-files-found: warn
+          retention-days: 14
