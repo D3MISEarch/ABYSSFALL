@@ -52,7 +52,7 @@ func _run() -> void:
 			foundation_events[0] += 1
 	)
 	controller.fold_lines.lines_rebuilt.connect(
-		func(_lines: Array[Dictionary]) -> void:
+		func(_lines: Array) -> void:
 			line_rebuilds[0] += 1
 	)
 	controller.anchors.anchor_created.connect(
