@@ -60,11 +60,27 @@ jobs:
             exit 1
           fi
 
+      - name: Run Anchor Fold Line and Instability sandbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_anchor_instability_sandbox.gd 2>&1 | tee voidbringer-anchor-instability-sandbox.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|ASSERTION FAILED|^FAIL:' voidbringer-anchor-instability-sandbox.log; then
+            echo "Voidbringer Anchor and Instability sandbox regression failed."
+            exit 1
+          fi
+          if ! grep -Fxq 'PASS: Voidbringer anchor and Instability sandbox' voidbringer-anchor-instability-sandbox.log; then
+            echo "Missing Voidbringer Anchor and Instability PASS marker."
+            exit 1
+          fi
+
       - name: Upload focused logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: voidbringer-foundation-logs
-          path: ability-charges-and-atomicity.log
+          path: |
+            ability-charges-and-atomicity.log
+            voidbringer-anchor-instability-sandbox.log
           if-no-files-found: warn
           retention-days: 7
