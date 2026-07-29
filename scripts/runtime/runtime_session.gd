@@ -79,8 +79,8 @@ func bind_character(runtime_character: RuntimeCharacter, inventory_capacity: int
 	return true
 
 
-func execute_ability(definition: AbilityDefinition) -> Dictionary:
-	return ability_executor.execute(character, definition)
+func execute_ability(definition: AbilityDefinition, equipped_ability_ids: Variant = null) -> Dictionary:
+	return ability_executor.execute(character, definition, equipped_ability_ids)
 
 
 func purchase_class_tree_node(node_id: StringName) -> Dictionary:
