@@ -12,7 +12,7 @@ func _init() -> void:
 func _run() -> void:
 	var sandbox = SANDBOX_SCENE.instantiate()
 	root.add_child(sandbox)
-	await process_frame
+	sandbox.set_process(false)
 
 	var initial: Dictionary = sandbox.debug_snapshot()
 	_expect(int(initial.get("debug_level", 0)) == 1, "The sandbox should begin at level one")
@@ -46,8 +46,7 @@ func _run() -> void:
 	_expect((cleared.get("fold_lines", []) as Array).is_empty(), "Sandbox clear should remove every Fold Line")
 	_expect(not bool((cleared.get("instability", {}) as Dictionary).get("in_breach", true)), "Sandbox clear should exit Breach")
 
-	sandbox.queue_free()
-	await process_frame
+	sandbox.free()
 	if failures.is_empty():
 		print("PASS: Voidbringer playable foundation sandbox")
 		quit(0)
