@@ -3,8 +3,16 @@ extends RefCounted
 
 signal lines_rebuilt(lines: Array[Dictionary])
 
+const DEFAULT_LINE_INTERACTION_RADIUS := 0.25
+const GEOMETRY_EPSILON := 0.000001
+
+var line_interaction_radius := DEFAULT_LINE_INTERACTION_RADIUS
 var _lines: Dictionary = {}
 var _ordered_ids: Array[StringName] = []
+
+
+func configure_interaction_radius(radius: float) -> void:
+	line_interaction_radius = maxf(radius, 0.0)
 
 
 func rebuild(anchor_snapshots: Array) -> Array[Dictionary]:
@@ -75,28 +83,34 @@ func get_line(line_id: StringName) -> Dictionary:
 
 func lines_for_anchor(anchor_id: StringName) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	for line: Dictionary in lines():
+	for line_id: StringName in _ordered_ids:
+		if not _lines.has(line_id):
+			continue
+		var line: Dictionary = _lines[line_id]
 		if line.get("anchor_a_id", &"") == anchor_id or line.get("anchor_b_id", &"") == anchor_id:
-			result.append(line)
+			result.append(line.duplicate(true))
 	return result
 
 
-func segment_crossings(from: Vector3, to: Vector3, epsilon: float = 0.001) -> Array[Dictionary]:
+func segment_crossings(from: Vector3, to: Vector3, projectile_radius: float = 0.0) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	var movement_a := Vector2(from.x, from.z)
-	var movement_b := Vector2(to.x, to.z)
-	for line: Dictionary in lines():
+	var total_radius := maxf(projectile_radius, 0.0) + line_interaction_radius
+	var threshold_squared := total_radius * total_radius
+	for line_id: StringName in _ordered_ids:
+		if not _lines.has(line_id):
+			continue
+		var line: Dictionary = _lines[line_id]
 		var start: Vector3 = line.get("start", Vector3.ZERO)
 		var finish: Vector3 = line.get("end", Vector3.ZERO)
-		if _segments_intersect(
-			movement_a,
-			movement_b,
-			Vector2(start.x, start.z),
-			Vector2(finish.x, finish.z),
-			epsilon
-		):
-			result.append(line)
+		if _segment_distance_squared(from, to, start, finish) <= threshold_squared:
+			result.append(line.duplicate(true))
 	return result
+
+
+func interaction_snapshot() -> Dictionary:
+	return {
+		"line_interaction_radius": line_interaction_radius,
+	}
 
 
 func _tension(first: Dictionary, second: Dictionary, length: float) -> float:
@@ -106,13 +120,37 @@ func _tension(first: Dictionary, second: Dictionary, length: float) -> float:
 	return clampf(combined_mass / maxf(length, 1.0), 0.0, 100.0)
 
 
-func _segments_intersect(a: Vector2, b: Vector2, c: Vector2, d: Vector2, epsilon: float) -> bool:
-	var ab := b - a
-	var cd := d - c
-	var denominator := ab.cross(cd)
-	if absf(denominator) <= epsilon:
-		return false
-	var offset := c - a
-	var t := offset.cross(cd) / denominator
-	var u := offset.cross(ab) / denominator
-	return t >= -epsilon and t <= 1.0 + epsilon and u >= -epsilon and u <= 1.0 + epsilon
+func _segment_distance_squared(p1: Vector3, q1: Vector3, p2: Vector3, q2: Vector3) -> float:
+	var d1 := q1 - p1
+	var d2 := q2 - p2
+	var r := p1 - p2
+	var a := d1.dot(d1)
+	var e := d2.dot(d2)
+	var f := d2.dot(r)
+	var s := 0.0
+	var t := 0.0
+
+	if a <= GEOMETRY_EPSILON and e <= GEOMETRY_EPSILON:
+		return p1.distance_squared_to(p2)
+	if a <= GEOMETRY_EPSILON:
+		t = clampf(f / e, 0.0, 1.0)
+	else:
+		var c := d1.dot(r)
+		if e <= GEOMETRY_EPSILON:
+			s = clampf(-c / a, 0.0, 1.0)
+		else:
+			var b := d1.dot(d2)
+			var denominator := a * e - b * b
+			if absf(denominator) > GEOMETRY_EPSILON:
+				s = clampf((b * f - c * e) / denominator, 0.0, 1.0)
+			t = (b * s + f) / e
+			if t < 0.0:
+				t = 0.0
+				s = clampf(-c / a, 0.0, 1.0)
+			elif t > 1.0:
+				t = 1.0
+				s = clampf((b - c) / a, 0.0, 1.0)
+
+	var closest_first := p1 + d1 * s
+	var closest_second := p2 + d2 * t
+	return closest_first.distance_squared_to(closest_second)
