@@ -28,12 +28,17 @@ var contact_committed := false
 var active := false
 var end_reason: StringName = &""
 var impact_result: VoidbringerImpactResult
+var instability_applied := 0.0
+var entered_breach := false
+var in_breach_at_launch := false
+var anchor_influence_multiplier_at_launch := 1.0
 
 var _controller_ref: WeakRef
 var _definition: AbilityDefinition
 var _projection: PlayableCombatProjection
 var _damage_bridge := VoidbringerDamageBridge.new()
 var _launch_metadata: Dictionary = {}
+var _launch_state_committed := false
 
 
 func _init(
@@ -57,6 +62,26 @@ func _init(
 	_projection = projection
 	_launch_metadata = launch_metadata.duplicate(true)
 	active = projectile_id != &"" and cast_id != &"" and direction.length_squared() > 0.0 and _definition != null
+
+
+func commit_launch_state(
+	p_instability_applied: float,
+	p_entered_breach: bool,
+	p_in_breach_at_launch: bool
+) -> void:
+	if _launch_state_committed:
+		return
+	_launch_state_committed = true
+	instability_applied = maxf(p_instability_applied, 0.0)
+	entered_breach = p_entered_breach
+	in_breach_at_launch = p_in_breach_at_launch
+	var controller := _controller()
+	if controller != null:
+		anchor_influence_multiplier_at_launch = controller.instability.anchor_influence_multiplier()
+	_launch_metadata["instability_applied"] = instability_applied
+	_launch_metadata["entered_breach"] = entered_breach
+	_launch_metadata["in_breach_at_launch"] = in_breach_at_launch
+	_launch_metadata["anchor_influence_multiplier_at_launch"] = anchor_influence_multiplier_at_launch
 
 
 func tick(delta: float) -> Dictionary:
@@ -134,6 +159,10 @@ func commit_contact(
 		"death_profile": death_profile,
 		"fold_crossing_count": crossing_count,
 		"credited_fold_line_ids": _credited_line_ids(),
+		"instability_applied": instability_applied,
+		"entered_breach": entered_breach,
+		"in_breach_at_launch": in_breach_at_launch,
+		"anchor_influence_multiplier_at_launch": anchor_influence_multiplier_at_launch,
 		"launch_metadata": _launch_metadata.duplicate(true),
 	}
 	impact_result = VoidbringerImpactResult.new(result_data)
@@ -168,6 +197,10 @@ func snapshot() -> Dictionary:
 		"contact_committed": contact_committed,
 		"active": active,
 		"end_reason": end_reason,
+		"instability_applied": instability_applied,
+		"entered_breach": entered_breach,
+		"in_breach_at_launch": in_breach_at_launch,
+		"anchor_influence_multiplier_at_launch": anchor_influence_multiplier_at_launch,
 		"impact": {} if impact_result == null else impact_result.snapshot(),
 	}
 
