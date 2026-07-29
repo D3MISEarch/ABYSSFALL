@@ -43,7 +43,7 @@ func place_anchor(
 	mass: float = 0.0,
 	metadata: Dictionary = {}
 ) -> Dictionary:
-	if not _carrier_type_is_allowed(carrier_type):
+	if not _carrier_type_is_allowed(carrier_type) or not _carrier_is_valid(carrier_type, carrier):
 		return {}
 	while _order.size() >= capacity():
 		remove_anchor(_order.front(), &"capacity_replacement")
@@ -162,6 +162,12 @@ func _carrier_type_is_allowed(carrier_type: StringName) -> bool:
 	if carrier_type == CARRIER_SELF:
 		return allow_self_anchors
 	return carrier_type in [CARRIER_ENEMY, CARRIER_TERRAIN, CARRIER_CORPSE]
+
+
+func _carrier_is_valid(carrier_type: StringName, carrier: Variant) -> bool:
+	if carrier_type == CARRIER_TERRAIN and carrier == null:
+		return true
+	return carrier is Object and is_instance_valid(carrier)
 
 
 func _duration_for(carrier_type: StringName) -> float:
