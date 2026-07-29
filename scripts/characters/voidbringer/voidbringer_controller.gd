@@ -4,6 +4,9 @@ extends RefCounted
 signal foundation_changed(snapshot: Dictionary)
 signal skill_committed(commit: VoidbringerSkillCommit)
 signal skill_rejected(commit: VoidbringerSkillCommit)
+signal null_shard_spawned(projectile: VoidbringerNullShardProjectile)
+signal null_shard_ended(projectile_id: StringName, reason: StringName)
+signal impact_committed(result: VoidbringerImpactResult)
 
 var anchors := VoidbringerAnchorManager.new()
 var fold_lines := VoidbringerFoldLineManager.new()
@@ -11,8 +14,10 @@ var instability := VoidbringerInstabilityController.new()
 var runtime_session: RuntimeSession
 var runtime_character: RuntimeCharacter
 var last_skill_commit: VoidbringerSkillCommit
+var active_null_shards: Dictionary = {}
 
 var _next_cast_serial := 1
+var _next_projectile_serial := 1
 var _transaction_depth := 0
 var _snapshot_dirty := false
 
@@ -114,8 +119,7 @@ func execute_mass_brand_command(
 	var was_in_breach := instability.in_breach
 	var instability_applied := instability.commit_spatial_ability(definition.instability_delta)
 	var entered_breach := not was_in_breach and instability.in_breach
-	var cast_id := StringName("vb.cast.%06d" % _next_cast_serial)
-	_next_cast_serial += 1
+	var cast_id := _next_cast_id()
 	var anchor: Dictionary = placement.get("anchor", {})
 	var result_data := {
 		"success": true,
@@ -125,19 +129,115 @@ func execute_mass_brand_command(
 		"build_id": runtime_character.build_id,
 		"carrier_type": carrier_type,
 		"anchor": anchor.duplicate(true),
+		"projectile": {},
 		"removed_anchor_events": (placement.get("removed_events", []) as Array).duplicate(true),
 		"instability_applied": instability_applied,
 		"entered_breach": entered_breach,
 		"ability_runtime": ability_result.duplicate(true),
 		"foundation_snapshot": snapshot(),
 	}
+	last_skill_commit = VoidbringerSkillCommit.new(result_data)
 
 	runtime_session.ability_executor.emit_committed_cast(runtime_character, definition)
 	anchors.emit_placement_events(placement)
 	_end_transaction(true)
-	last_skill_commit = VoidbringerSkillCommit.new(result_data)
 	skill_committed.emit(last_skill_commit)
 	return last_skill_commit.snapshot()
+
+
+func execute_null_shard_command(
+	definition: AbilityDefinition,
+	origin: Vector3,
+	direction: Vector3,
+	projection: PlayableCombatProjection = null,
+	metadata: Dictionary = {},
+	equipped_ability_ids: Variant = null
+) -> Dictionary:
+	if not is_runtime_bound():
+		return _reject_skill(definition, &"runtime_unbound")
+	if definition == null or definition.ability_id != VoidbringerAbilityCatalog.NULL_SHARD:
+		runtime_session.ability_executor.emit_rejection(runtime_character, definition, &"invalid_ability")
+		return _reject_skill(definition, &"invalid_ability")
+	if direction.length_squared() <= 0.000001:
+		runtime_session.ability_executor.emit_rejection(runtime_character, definition, &"invalid_direction")
+		return _reject_skill(definition, &"invalid_direction")
+
+	var preflight := runtime_session.ability_executor.preflight(
+		runtime_character,
+		definition,
+		equipped_ability_ids,
+		true
+	)
+	if not bool(preflight.get("success", false)):
+		return _reject_skill(definition, StringName(str(preflight.get("reason", "rejected"))), preflight)
+
+	_begin_transaction()
+	var ability_result := runtime_session.ability_executor.commit(
+		runtime_character,
+		definition,
+		equipped_ability_ids,
+		false
+	)
+	if not bool(ability_result.get("success", false)):
+		_end_transaction(false)
+		return _reject_skill(
+			definition,
+			StringName(str(ability_result.get("reason", "rejected"))),
+			ability_result
+		)
+
+	var cast_id := _next_cast_id()
+	var projectile_id := StringName("vb.null_shard.%06d" % _next_projectile_serial)
+	_next_projectile_serial += 1
+	var projectile := VoidbringerNullShardProjectile.new(
+		projectile_id,
+		cast_id,
+		origin,
+		direction,
+		definition,
+		self,
+		projection,
+		metadata
+	)
+	if not projectile.active:
+		_end_transaction(true)
+		push_error("Null Shard projectile invariant failed after successful ability commit")
+		return _reject_skill(definition, &"projectile_invariant_failed", ability_result)
+	active_null_shards[projectile_id] = projectile
+	projectile.impact_committed.connect(_on_null_shard_impact)
+	projectile.projectile_ended.connect(_on_null_shard_ended)
+
+	var was_in_breach := instability.in_breach
+	var instability_applied := instability.commit_spatial_ability(definition.instability_delta)
+	var entered_breach := not was_in_breach and instability.in_breach
+	var result_data := {
+		"success": true,
+		"reason": &"ok",
+		"cast_id": cast_id,
+		"ability_id": definition.ability_id,
+		"build_id": runtime_character.build_id,
+		"carrier_type": &"",
+		"anchor": {},
+		"projectile": projectile.snapshot(),
+		"removed_anchor_events": [],
+		"instability_applied": instability_applied,
+		"entered_breach": entered_breach,
+		"ability_runtime": ability_result.duplicate(true),
+		"foundation_snapshot": snapshot(),
+	}
+	last_skill_commit = VoidbringerSkillCommit.new(result_data)
+
+	null_shard_spawned.emit(projectile)
+	runtime_session.ability_executor.emit_committed_cast(runtime_character, definition)
+	_end_transaction(true)
+	skill_committed.emit(last_skill_commit)
+	return last_skill_commit.snapshot()
+
+
+func get_null_shard(projectile_id: StringName) -> VoidbringerNullShardProjectile:
+	if not active_null_shards.has(projectile_id):
+		return null
+	return active_null_shards[projectile_id] as VoidbringerNullShardProjectile
 
 
 func place_anchor(
@@ -160,11 +260,20 @@ func commit_spatial_ability(instability_delta: float) -> float:
 
 func tick(delta: float) -> void:
 	anchors.tick(delta)
-	instability.tick(delta)
 	_rebuild_fold_lines()
+	for projectile_id: StringName in active_null_shards.keys().duplicate():
+		var projectile := active_null_shards.get(projectile_id) as VoidbringerNullShardProjectile
+		if projectile != null:
+			projectile.tick(delta)
+	instability.tick(delta)
 
 
 func clear() -> void:
+	for projectile_id: StringName in active_null_shards.keys().duplicate():
+		var projectile := active_null_shards.get(projectile_id) as VoidbringerNullShardProjectile
+		if projectile != null:
+			projectile.invalidate(&"teardown")
+	active_null_shards.clear()
 	anchors.clear(&"teardown")
 	fold_lines.clear()
 	instability.clear()
@@ -173,12 +282,24 @@ func clear() -> void:
 
 
 func snapshot() -> Dictionary:
+	var projectile_snapshots: Array[Dictionary] = []
+	var projectile_ids: Array[StringName] = []
+	for raw_id: Variant in active_null_shards.keys():
+		projectile_ids.append(StringName(str(raw_id)))
+	projectile_ids.sort_custom(func(a: StringName, b: StringName) -> bool:
+		return String(a) < String(b)
+	)
+	for projectile_id: StringName in projectile_ids:
+		var projectile := active_null_shards.get(projectile_id) as VoidbringerNullShardProjectile
+		if projectile != null:
+			projectile_snapshots.append(projectile.snapshot())
 	return {
 		"runtime_bound": is_runtime_bound(),
 		"build_id": "" if runtime_character == null else runtime_character.build_id,
 		"anchors": anchors.active_anchors(),
 		"fold_lines": fold_lines.lines(),
 		"instability": instability.snapshot(),
+		"null_shards": projectile_snapshots,
 	}
 
 
@@ -194,6 +315,7 @@ func _reject_skill(
 		"ability_id": &"" if definition == null else definition.ability_id,
 		"build_id": "" if runtime_character == null else runtime_character.build_id,
 		"anchor": {},
+		"projectile": {},
 		"removed_anchor_events": [],
 		"instability_applied": 0.0,
 		"entered_breach": false,
@@ -203,6 +325,12 @@ func _reject_skill(
 	last_skill_commit = VoidbringerSkillCommit.new(data)
 	skill_rejected.emit(last_skill_commit)
 	return last_skill_commit.snapshot()
+
+
+func _next_cast_id() -> StringName:
+	var cast_id := StringName("vb.cast.%06d" % _next_cast_serial)
+	_next_cast_serial += 1
+	return cast_id
 
 
 func _begin_transaction() -> void:
@@ -244,6 +372,16 @@ func _on_breach_started(_duration_seconds: float) -> void:
 
 
 func _on_breach_ended() -> void:
+	_request_snapshot()
+
+
+func _on_null_shard_impact(result: VoidbringerImpactResult) -> void:
+	impact_committed.emit(result)
+
+
+func _on_null_shard_ended(projectile_id: StringName, reason: StringName) -> void:
+	active_null_shards.erase(projectile_id)
+	null_shard_ended.emit(projectile_id, reason)
 	_request_snapshot()
 
 
