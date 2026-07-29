@@ -24,28 +24,51 @@ func execute(
 	definition: AbilityDefinition,
 	equipped_ability_ids: Variant = null
 ) -> Dictionary:
-	var validation := _validate(character, definition, equipped_ability_ids)
-	if validation != REASON_OK:
-		_emit_rejected(character, definition, validation)
-		return _result(false, validation, character, definition)
+	return commit(character, definition, equipped_ability_ids, true)
 
-	var runtime := _runtime_for(character, definition)
-	if runtime.cooldown_remaining > 0.0:
-		_emit_rejected(character, definition, REASON_COOLDOWN)
-		return _result(false, REASON_COOLDOWN, character, definition, runtime)
-	if not runtime.has_available_charge():
-		_emit_rejected(character, definition, REASON_NO_CHARGES)
-		return _result(false, REASON_NO_CHARGES, character, definition, runtime)
-	if not character.class_resource.can_spend(definition.resource_cost):
+
+func preflight(
+	character: RuntimeCharacter,
+	definition: AbilityDefinition,
+	equipped_ability_ids: Variant = null,
+	emit_rejection: bool = false
+) -> Dictionary:
+	var check := _preflight(character, definition, equipped_ability_ids)
+	var reason: StringName = check.get("reason", REASON_INVALID_ABILITY)
+	var runtime := check.get("runtime", null) as AbilityRuntime
+	if reason != REASON_OK and emit_rejection:
+		_emit_rejected(character, definition, reason)
+	return _result(reason == REASON_OK, reason, character, definition, runtime)
+
+
+func commit(
+	character: RuntimeCharacter,
+	definition: AbilityDefinition,
+	equipped_ability_ids: Variant = null,
+	emit_cast_event: bool = true
+) -> Dictionary:
+	var check := _preflight(character, definition, equipped_ability_ids)
+	var reason: StringName = check.get("reason", REASON_INVALID_ABILITY)
+	var runtime := check.get("runtime", null) as AbilityRuntime
+	if reason != REASON_OK:
+		_emit_rejected(character, definition, reason)
+		return _result(false, reason, character, definition, runtime)
+	if runtime == null or not runtime.try_cast(character.class_resource):
 		_emit_rejected(character, definition, REASON_INSUFFICIENT_RESOURCE)
 		return _result(false, REASON_INSUFFICIENT_RESOURCE, character, definition, runtime)
-	if not runtime.try_cast(character.class_resource):
-		_emit_rejected(character, definition, REASON_INSUFFICIENT_RESOURCE)
-		return _result(false, REASON_INSUFFICIENT_RESOURCE, character, definition, runtime)
-
-	if event_bus != null:
-		event_bus.ability_cast.emit(character.build_id, definition.ability_id)
+	if emit_cast_event:
+		emit_committed_cast(character, definition)
 	return _result(true, REASON_OK, character, definition, runtime)
+
+
+func emit_committed_cast(character: RuntimeCharacter, definition: AbilityDefinition) -> void:
+	if event_bus == null or character == null or definition == null:
+		return
+	event_bus.ability_cast.emit(character.build_id, definition.ability_id)
+
+
+func emit_rejection(character: RuntimeCharacter, definition: AbilityDefinition, reason: StringName) -> void:
+	_emit_rejected(character, definition, reason)
 
 
 func tick(delta: float) -> void:
@@ -73,6 +96,24 @@ func clear_build(build_id: String) -> void:
 	for key: Variant in _runtimes.keys():
 		if str(key).begins_with(prefix):
 			_runtimes.erase(key)
+
+
+func _preflight(
+	character: RuntimeCharacter,
+	definition: AbilityDefinition,
+	equipped_ability_ids: Variant = null
+) -> Dictionary:
+	var validation := _validate(character, definition, equipped_ability_ids)
+	if validation != REASON_OK:
+		return {"reason": validation, "runtime": null}
+	var runtime := _runtime_for(character, definition)
+	if runtime.cooldown_remaining > 0.0:
+		return {"reason": REASON_COOLDOWN, "runtime": runtime}
+	if not runtime.has_available_charge():
+		return {"reason": REASON_NO_CHARGES, "runtime": runtime}
+	if not character.class_resource.can_spend(definition.resource_cost):
+		return {"reason": REASON_INSUFFICIENT_RESOURCE, "runtime": runtime}
+	return {"reason": REASON_OK, "runtime": runtime}
 
 
 func _validate(
