@@ -6,6 +6,8 @@ signal foundation_changed(snapshot: Dictionary)
 var anchors := VoidbringerAnchorManager.new()
 var fold_lines := VoidbringerFoldLineManager.new()
 var instability := VoidbringerInstabilityController.new()
+var runtime_session: RuntimeSession
+var runtime_character: RuntimeCharacter
 
 
 func _init() -> void:
@@ -21,6 +23,29 @@ func configure(owner_level: int) -> void:
 	anchors.configure(owner_level, false)
 	_rebuild_fold_lines()
 	_emit_snapshot()
+
+
+func bind_runtime(session: RuntimeSession, character: RuntimeCharacter) -> bool:
+	if session == null or character == null or session.character != character:
+		return false
+	runtime_session = session
+	runtime_character = character
+	configure(character.level)
+	return true
+
+
+func is_runtime_bound() -> bool:
+	return runtime_session != null and runtime_character != null and runtime_session.character == runtime_character
+
+
+func execute_ability(definition: AbilityDefinition, equipped_ability_ids: Variant = null) -> Dictionary:
+	if not is_runtime_bound():
+		return {
+			"success": false,
+			"reason": &"runtime_unbound",
+			"ability_id": &"" if definition == null else definition.ability_id,
+		}
+	return runtime_session.execute_ability(definition, equipped_ability_ids)
 
 
 func place_anchor(
@@ -56,6 +81,8 @@ func clear() -> void:
 
 func snapshot() -> Dictionary:
 	return {
+		"runtime_bound": is_runtime_bound(),
+		"build_id": "" if runtime_character == null else runtime_character.build_id,
 		"anchors": anchors.active_anchors(),
 		"fold_lines": fold_lines.lines(),
 		"instability": instability.snapshot(),
