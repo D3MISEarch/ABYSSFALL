@@ -12,6 +12,7 @@ var enemy_fixture: Node3D
 var terrain_fixture: Node3D
 var corpse_fixture: Node3D
 var _hud_refresh_remaining := 0.0
+var _presentation_signature := ""
 
 
 func _ready() -> void:
@@ -19,7 +20,7 @@ func _ready() -> void:
 	_build_world()
 	controller.foundation_changed.connect(_on_foundation_changed)
 	controller.configure(debug_level)
-	_refresh_presentation()
+	_refresh_presentation(true)
 	print("ABYSSFALL_SANDBOX_LAUNCHED:voidbringer_anchor")
 
 
@@ -135,7 +136,7 @@ func _build_world() -> void:
 
 	enemy_fixture = _build_fixture("EnemyFixture", Vector3(-4.0, 0.45, -1.5), Color(0.62, 0.08, 0.16), &"enemy")
 	terrain_fixture = _build_fixture("TerrainFixture", Vector3(4.0, 0.6, -1.5), Color(0.18, 0.20, 0.28), &"terrain")
-	corpse_fixture = _build_fixture("CorpseFixture", Vector3(0.0, 0.22, 3.4), Color(0.22, 0.42, 0.18), &"corpse")
+	corpse_fixture = _build_fixture("CorpseFixture", Vector3(0.0, 0.48, 3.4), Color(0.22, 0.42, 0.18), &"corpse")
 
 	anchor_visual_root = Node3D.new()
 	anchor_visual_root.name = "AnchorDebugVisuals"
@@ -172,7 +173,7 @@ func _build_fixture(fixture_name: String, position: Vector3, color: Color, carri
 	else:
 		var capsule := CapsuleMesh.new()
 		capsule.radius = 0.48
-		capsule.height = 1.5 if carrier_type == &"enemy" else 0.55
+		capsule.height = 1.5 if carrier_type == &"enemy" else 0.96
 		mesh_instance.mesh = capsule
 	mesh_instance.material_override = _material(color, 0.35)
 	root.add_child(mesh_instance)
@@ -190,10 +191,32 @@ func _on_foundation_changed(_snapshot: Dictionary) -> void:
 	_refresh_presentation()
 
 
-func _refresh_presentation() -> void:
-	_rebuild_anchor_visuals()
-	_rebuild_fold_line_visuals()
+func _refresh_presentation(force_rebuild: bool = false) -> void:
+	var signature := _build_presentation_signature()
+	if force_rebuild or signature != _presentation_signature:
+		_presentation_signature = signature
+		_rebuild_anchor_visuals()
+		_rebuild_fold_line_visuals()
 	_refresh_hud()
+
+
+func _build_presentation_signature() -> String:
+	var tokens := PackedStringArray()
+	for anchor: Dictionary in controller.anchors.active_anchors():
+		var position: Vector3 = anchor.get("position", Vector3.ZERO)
+		tokens.append(
+			"%s|%s|%.2f|%s|%.3f,%.3f,%.3f" % [
+				String(anchor.get("anchor_id", &"")),
+				String(anchor.get("carrier_type", &"")),
+				float(anchor.get("mass", 0.0)),
+				String(anchor.get("mass_stage", &"")),
+				position.x,
+				position.y,
+				position.z,
+			]
+		)
+	okens.append("lines:%d" % controller.fold_lines.line_count())
+	return ";".join(tokens)
 
 
 func _rebuild_anchor_visuals() -> void:
@@ -251,8 +274,9 @@ func _rebuild_fold_line_visuals() -> void:
 		var mesh := BoxMesh.new()
 		mesh.size = Vector3(0.055, 0.055, length)
 		visual.mesh = mesh
-		visual.position = (start + finish) * 0.5 + Vector3(0.0, 0.24, 0.0)
-		visual.look_at(finish + Vector3(0.0, 0.24, 0.0), Vector3.UP)
+		var visual_position := (start + finish) * 0.5 + Vector3(0.0, 0.24, 0.0)
+		var visual_target := finish + Vector3(0.0, 0.24, 0.0)
+		visual.look_at_from_position(visual_position, visual_target, Vector3.UP)
 		visual.material_override = _material(Color(0.72, 0.62, 1.0), 3.2)
 		fold_line_visual_root.add_child(visual)
 
