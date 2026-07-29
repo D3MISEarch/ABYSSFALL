@@ -11,6 +11,7 @@ on:
       - "tests/test_voidbringer_fold_line_3d.gd"
       - "tests/test_voidbringer_skill_slice.gd"
       - "tests/test_voidbringer_commit_packet_finality.gd"
+      - "tests/test_voidbringer_fold_damage_and_dead_contact.gd"
       - "tests/test_voidbringer_playable_skill_sandbox.gd"
       - ".github/workflows/voidbringer-skill-slice-tests.yml"
   workflow_dispatch:
@@ -88,6 +89,17 @@ jobs:
           fi
           grep -Fxq 'PASS: Voidbringer authoritative commit packet finality' voidbringer-commit-packet-finality.log
 
+      - name: Run Fold damage and dead-contact safety proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_fold_damage_and_dead_contact.gd 2>&1 | tee voidbringer-fold-damage-dead-contact.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-fold-damage-dead-contact.log; then
+            echo "Voidbringer Fold damage or dead-contact safety regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer Fold damage and dead-contact safety' voidbringer-fold-damage-dead-contact.log
+
       - name: Run playable skill sandbox proof
         shell: bash
         run: |
@@ -109,6 +121,7 @@ jobs:
             voidbringer-fold-line-3d.log
             voidbringer-skill-slice.log
             voidbringer-commit-packet-finality.log
+            voidbringer-fold-damage-dead-contact.log
             voidbringer-playable-skill-sandbox.log
           if-no-files-found: warn
           retention-days: 14
