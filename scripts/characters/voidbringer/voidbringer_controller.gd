@@ -22,6 +22,7 @@ var _next_cast_serial := 1
 var _next_projectile_serial := 1
 var _transaction_depth := 0
 var _snapshot_dirty := false
+var _suppress_anchor_signal_processing := false
 
 
 func _init() -> void:
@@ -137,6 +138,9 @@ func execute_mass_brand_command(
 		entered_breach
 	)
 	last_impact_result = mass_impact
+
+	_prepare_placement_fold_rebuilds(placement)
+	_end_transaction(true)
 	var result_data := {
 		"success": true,
 		"reason": &"ok",
@@ -155,9 +159,8 @@ func execute_mass_brand_command(
 	}
 	last_skill_commit = VoidbringerSkillCommit.new(result_data)
 
+	_publish_placement_events(placement)
 	runtime_session.ability_executor.emit_committed_cast(runtime_character, definition)
-	anchors.emit_placement_events(placement)
-	_end_transaction(true)
 	impact_committed.emit(mass_impact)
 	skill_committed.emit(last_skill_commit)
 	return last_skill_commit.snapshot()
@@ -227,6 +230,8 @@ func execute_null_shard_command(
 	var was_in_breach := instability.in_breach
 	var instability_applied := instability.commit_spatial_ability(definition.instability_delta)
 	var entered_breach := not was_in_breach and instability.in_breach
+	projectile.commit_launch_state(instability_applied, entered_breach, instability.in_breach)
+	_end_transaction(true)
 	var result_data := {
 		"success": true,
 		"reason": &"ok",
@@ -247,7 +252,6 @@ func execute_null_shard_command(
 
 	null_shard_spawned.emit(projectile)
 	runtime_session.ability_executor.emit_committed_cast(runtime_character, definition)
-	_end_transaction(true)
 	skill_committed.emit(last_skill_commit)
 	return last_skill_commit.snapshot()
 
@@ -369,6 +373,20 @@ func _connect_null_shard_callbacks(projectile: VoidbringerNullShardProjectile) -
 	)
 
 
+func _prepare_placement_fold_rebuilds(placement: Dictionary) -> void:
+	var removed_events: Array = placement.get("removed_events", [])
+	for _event: Variant in removed_events:
+		_rebuild_fold_lines()
+	if not (placement.get("anchor", {}) as Dictionary).is_empty():
+		_rebuild_fold_lines()
+
+
+func _publish_placement_events(placement: Dictionary) -> void:
+	_suppress_anchor_signal_processing = true
+	anchors.emit_placement_events(placement)
+	_suppress_anchor_signal_processing = false
+
+
 func _begin_transaction() -> void:
 	_transaction_depth += 1
 
@@ -390,11 +408,15 @@ func _request_snapshot() -> void:
 
 
 func _on_anchor_state_changed(_anchor: Dictionary) -> void:
+	if _suppress_anchor_signal_processing:
+		return
 	_rebuild_fold_lines()
 	_request_snapshot()
 
 
 func _on_anchor_removed(_anchor_id: StringName, _reason: StringName) -> void:
+	if _suppress_anchor_signal_processing:
+		return
 	_rebuild_fold_lines()
 	_request_snapshot()
 
