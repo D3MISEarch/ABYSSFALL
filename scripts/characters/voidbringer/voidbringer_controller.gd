@@ -14,8 +14,10 @@ var instability := VoidbringerInstabilityController.new()
 var runtime_session: RuntimeSession
 var runtime_character: RuntimeCharacter
 var last_skill_commit: VoidbringerSkillCommit
+var last_impact_result: VoidbringerImpactResult
 var active_null_shards: Dictionary = {}
 
+var _mass_brand_impact_resolver := VoidbringerMassBrandImpactResolver.new()
 var _next_cast_serial := 1
 var _next_projectile_serial := 1
 var _transaction_depth := 0
@@ -67,7 +69,8 @@ func execute_mass_brand_command(
 	position: Vector3,
 	mass: float = 0.0,
 	metadata: Dictionary = {},
-	equipped_ability_ids: Variant = null
+	equipped_ability_ids: Variant = null,
+	projection: PlayableCombatProjection = null
 ) -> Dictionary:
 	if not is_runtime_bound():
 		return _reject_skill(definition, &"runtime_unbound")
@@ -116,11 +119,24 @@ func execute_mass_brand_command(
 		push_error("Mass Brand placement invariant failed after a successful no-callback revalidation")
 		return _reject_skill(definition, &"placement_invariant_failed", ability_result)
 
+	var cast_id := _next_cast_id()
 	var was_in_breach := instability.in_breach
 	var instability_applied := instability.commit_spatial_ability(definition.instability_delta)
 	var entered_breach := not was_in_breach and instability.in_breach
-	var cast_id := _next_cast_id()
 	var anchor: Dictionary = placement.get("anchor", {})
+	var mass_impact := _mass_brand_impact_resolver.resolve(
+		definition,
+		cast_id,
+		carrier_type,
+		carrier,
+		position,
+		anchor,
+		projection,
+		metadata,
+		instability_applied,
+		entered_breach
+	)
+	last_impact_result = mass_impact
 	var result_data := {
 		"success": true,
 		"reason": &"ok",
@@ -130,6 +146,7 @@ func execute_mass_brand_command(
 		"carrier_type": carrier_type,
 		"anchor": anchor.duplicate(true),
 		"projectile": {},
+		"impact": mass_impact.snapshot(),
 		"removed_anchor_events": (placement.get("removed_events", []) as Array).duplicate(true),
 		"instability_applied": instability_applied,
 		"entered_breach": entered_breach,
@@ -141,6 +158,7 @@ func execute_mass_brand_command(
 	runtime_session.ability_executor.emit_committed_cast(runtime_character, definition)
 	anchors.emit_placement_events(placement)
 	_end_transaction(true)
+	impact_committed.emit(mass_impact)
 	skill_committed.emit(last_skill_commit)
 	return last_skill_commit.snapshot()
 
@@ -218,6 +236,7 @@ func execute_null_shard_command(
 		"carrier_type": &"",
 		"anchor": {},
 		"projectile": projectile.snapshot(),
+		"impact": {},
 		"removed_anchor_events": [],
 		"instability_applied": instability_applied,
 		"entered_breach": entered_breach,
@@ -277,6 +296,7 @@ func clear() -> void:
 	fold_lines.clear()
 	instability.clear()
 	last_skill_commit = null
+	last_impact_result = null
 	_emit_snapshot()
 
 
@@ -315,6 +335,7 @@ func _reject_skill(
 		"build_id": "" if runtime_character == null else runtime_character.build_id,
 		"anchor": {},
 		"projectile": {},
+		"impact": {},
 		"removed_anchor_events": [],
 		"instability_applied": 0.0,
 		"entered_breach": false,
@@ -391,6 +412,7 @@ func _on_breach_ended() -> void:
 
 
 func _on_null_shard_impact(result: VoidbringerImpactResult) -> void:
+	last_impact_result = result
 	impact_committed.emit(result)
 
 
