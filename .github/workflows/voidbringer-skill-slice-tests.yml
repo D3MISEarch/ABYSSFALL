@@ -63,6 +63,17 @@ jobs:
           fi
           grep -Fxq 'PASS: Voidbringer full-3D Fold Line crossings' voidbringer-fold-line-3d.log
 
+      - name: Run complete Mass Brand and Null Shard proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_skill_slice.gd 2>&1 | tee voidbringer-skill-slice.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-skill-slice.log; then
+            echo "Voidbringer Mass Brand and Null Shard regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer Mass Brand and Null Shard skill slice' voidbringer-skill-slice.log
+
       - name: Upload focused logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -71,5 +82,6 @@ jobs:
           path: |
             voidbringer-mass-brand-transaction.log
             voidbringer-fold-line-3d.log
+            voidbringer-skill-slice.log
           if-no-files-found: warn
           retention-days: 14
