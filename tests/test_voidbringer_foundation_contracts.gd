@@ -3,6 +3,7 @@ extends SceneTree
 const CATALOG_SCRIPT = preload("res://scripts/characters/voidbringer/voidbringer_ability_catalog.gd")
 const COMMAND_CONTRACT_SCRIPT = preload("res://scripts/characters/voidbringer/voidbringer_command_contract.gd")
 const DAMAGE_BRIDGE_SCRIPT = preload("res://scripts/characters/voidbringer/voidbringer_damage_bridge.gd")
+const CONTROLLER_SCRIPT = preload("res://scripts/characters/voidbringer/voidbringer_controller.gd")
 const PROJECTION_SCRIPT = preload("res://scripts/core/playable_combat_projection.gd")
 
 var failures: Array[String] = []
@@ -16,6 +17,7 @@ func _run() -> void:
 	_test_stable_catalog_and_approved_base_definitions()
 	_test_six_slot_command_contract()
 	_test_compatibility_damage_bridge_and_single_critical_consumption()
+	_test_controller_uses_authoritative_runtime_session()
 	if failures.is_empty():
 		print("PASS: Voidbringer command and damage foundation")
 		quit(0)
@@ -91,6 +93,35 @@ func _test_compatibility_damage_bridge_and_single_critical_consumption() -> void
 
 	var legacy_damage := projection.resolve_outgoing_damage(18)
 	_expect(legacy_damage == 22, "The legacy integer API should delegate once without double-advancing the critical meter")
+
+
+func _test_controller_uses_authoritative_runtime_session() -> void:
+	var catalog = CATALOG_SCRIPT.new()
+	var definition: AbilityDefinition = catalog.mass_brand_definition()
+	var character := RuntimeCharacter.new()
+	character.build_id = "voidbringer-foundation-test"
+	character.class_id = &"void_warlock"
+	character.level = 5
+	character.unlocked_abilities = [definition.ability_id]
+	character.class_resource.configure(&"corruption", 100.0)
+	character.class_resource.fill()
+
+	var session := RuntimeSession.new()
+	session.character = character
+	var controller = CONTROLLER_SCRIPT.new()
+	_expect(controller.bind_runtime(session, character), "The class adapter should bind the existing authoritative RuntimeSession")
+	_expect(controller.is_runtime_bound(), "The controller should expose its bound runtime state")
+	_expect(int(controller.snapshot().get("capacity", controller.anchors.capacity())) == 3 or controller.anchors.capacity() == 3, "Runtime binding should configure level-five Anchor capacity")
+
+	var equipped := [definition.ability_id]
+	var cast: Dictionary = controller.execute_ability(definition, equipped)
+	_expect(bool(cast.get("success", false)), "The controller should route casts through RuntimeSession AbilityExecutor")
+	_expect(int(cast.get("charges_remaining", -1)) == 1, "The authoritative runtime should consume exactly one Mass Brand charge")
+	var rejected: Dictionary = controller.execute_ability(definition, [])
+	_expect(rejected.get("reason", &"") == &"ability_not_equipped", "The runtime adapter should preserve equipped-state rejection")
+	_expect(session.ability_executor.charges_remaining(character.build_id, definition.ability_id) == 1, "Rejected casts must not create a second charge owner or consume a charge")
+
+	session.free()
 
 
 func _expect(condition: bool, message: String) -> void:
