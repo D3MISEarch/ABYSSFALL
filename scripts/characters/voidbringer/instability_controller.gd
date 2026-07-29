@@ -46,11 +46,17 @@ func tick(delta: float) -> void:
 			breach_ended.emit()
 		return
 
+	var idle_before := seconds_since_spatial_commit
 	seconds_since_spatial_commit += step
-	if seconds_since_spatial_commit <= DECAY_DELAY_SECONDS or current <= 0.0:
+	if current <= 0.0:
+		return
+	var decay_before := maxf(idle_before - DECAY_DELAY_SECONDS, 0.0)
+	var decay_after := maxf(seconds_since_spatial_commit - DECAY_DELAY_SECONDS, 0.0)
+	var decay_seconds := maxf(decay_after - decay_before, 0.0)
+	if decay_seconds <= 0.0:
 		return
 	var before := current
-	current = maxf(0.0, current - DECAY_PER_SECOND * step)
+	current = maxf(0.0, current - DECAY_PER_SECOND * decay_seconds)
 	if not is_equal_approx(before, current):
 		instability_changed.emit(current, MAXIMUM)
 
