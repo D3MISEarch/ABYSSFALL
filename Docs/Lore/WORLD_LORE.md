@@ -8,7 +8,7 @@ AbyssFall does not yet have a committed narrative bible in the repository. This 
 - The current playable region is the Sunken Crypts, culminating in a three-phase Hollow King boss encounter (`PROJECT_OVERVIEW.md`, `README.md`).
 - Corruption (Void Warlock's resource) is characterized in-world as living, parasitic, organic, wet, and hungry — an aesthetic/lore descriptor, not just a mechanical one (`PROJECT_OVERVIEW.md`).
 - Fervor (The Penitent's resource) is characterized as fanatical, geometric, and increasingly unstable, tied to ritual completion and sacrifice rather than consumption (`design/FERVOR_SYSTEM_V1.md`).
-- The Penitent's identity: someone who "carves laws into flesh and forces reality to obey them" — rituals, brands, and sigils are the class's core relationship to the world's magic (`docs/PENITENT_CLASS.md`).
+- The Penitent's identity: someone who "carves laws into flesh and forces reality to obey them" — rituals, brands, and sigils are the class's core relationship to the world's magic (`Docs/PENITENT_CLASS.md`).
 - Visual/tonal identity: cracked obsidian, ritual metal, blood sigils, void portals, wet organic corruption, bone masks, chains, and neon contamination (`PROJECT_OVERVIEW.md` pillar 5).
 
 ## Proposed

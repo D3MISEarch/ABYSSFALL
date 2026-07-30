@@ -100,7 +100,7 @@ jobs:
           Built UTC: ${BUILT_AT}
           Toggle diagnostics in game: F3
           EOF
-          cp docs/WINDOWS_PLAYTEST_HANDOFF.md "dist/$PACKAGE_NAME/README.txt"
+          cp Docs/WINDOWS_PLAYTEST_HANDOFF.md "dist/$PACKAGE_NAME/README.txt"
 
       - name: Import project
         shell: bash

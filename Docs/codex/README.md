@@ -36,7 +36,7 @@ Every class narrative must comply with [`SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`]
 | Class | Status | Location |
 |---|---|---|
 | Voidbringer | Complete approved design, audit-corrected; implementation foundation not yet merged | [`characters/voidbringer/README.md`](characters/voidbringer/README.md) |
-| Penitent | Existing prototype/design sources; full Codex not yet reconciled | Existing `design/` and `docs/` sources |
+| Penitent | Existing prototype/design sources; full Codex not yet reconciled | Existing `design/` and `Docs/` sources |
 | Graftborn | Core concept approved; full Codex not started | Pending |
 | Somnarch | Core concept approved; full Codex not started | Pending |
 | Relic Host | Core concept approved; full Codex not started | Pending |
@@ -66,4 +66,4 @@ The template is a completeness standard, not a requirement that classes share me
 
 ## Directory-casing note
 
-This Codex currently lives under the pre-existing lowercase `docs/` tree. The repository separately tracks uppercase `Docs/`; normalization is already recorded as dedicated technical debt. Do not perform partial case-only moves in unrelated class work.
+This Codex lives under the canonical `Docs/` root. Do not introduce alternate documentation roots or partial case-only moves in unrelated class work.

@@ -66,7 +66,7 @@ PR #24 is accepted for code and automated behavior. Issues `#21` and `#22` remai
 - Live prompt switching between mouse/keyboard and controller
 - Subjective Ritual Blade reach, step-in, slash readability, and survivability
 
-Use `docs/SPRINT1_PENITENT_DUALSENSE_PLAYTEST.md` for the focused retest.
+Use `Docs/SPRINT1_PENITENT_DUALSENSE_PLAYTEST.md` for the focused retest.
 
 ## Earlier accepted milestones
 

@@ -30,4 +30,4 @@ Placeholder geometry and placeholder art are acceptable until mechanics are vali
 
 ## Independent verification
 
-Some changes go through an additional independent-verifier pass before merge (see [`Docs/Governance/AI_GUIDELINES.md`](Docs/Governance/AI_GUIDELINES.md) and `docs/IMPLEMENTER_VERIFIER_HANDOFF.md`). Provide the verifier with an exact branch or commit and a one-line change summary; do not substitute an untracked local build for the tracked verifier artifact.
+Some changes go through an additional independent-verifier pass before merge (see [`Docs/Governance/AI_GUIDELINES.md`](Docs/Governance/AI_GUIDELINES.md) and `Docs/IMPLEMENTER_VERIFIER_HANDOFF.md`). Provide the verifier with an exact branch or commit and a one-line change summary; do not substitute an untracked local build for the tracked verifier artifact.

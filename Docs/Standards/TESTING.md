@@ -196,4 +196,4 @@ Per the [Engineering Constitution](../Governance/ENGINEERING_CONSTITUTION.md), e
 
 ## Independent verification pipeline
 
-Implementation testing and independent verification are separate gates. Frozen artifact mechanics, report format, and reviewer duties are documented in `docs/CLAUDE_VERIFIER_SETUP.md`, `docs/IMPLEMENTER_VERIFIER_HANDOFF.md`, and `docs/VERIFICATION_REPORT_TEMPLATE.md`. Role ownership is defined in [`Docs/Governance/AI_GUIDELINES.md`](../Governance/AI_GUIDELINES.md).
+Implementation testing and independent verification are separate gates. Frozen artifact mechanics, report format, and reviewer duties are documented in `Docs/CLAUDE_VERIFIER_SETUP.md`, `Docs/IMPLEMENTER_VERIFIER_HANDOFF.md`, and `Docs/VERIFICATION_REPORT_TEMPLATE.md`. Role ownership is defined in [`Docs/Governance/AI_GUIDELINES.md`](../Governance/AI_GUIDELINES.md).

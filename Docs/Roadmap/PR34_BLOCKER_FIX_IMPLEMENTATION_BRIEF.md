@@ -27,8 +27,8 @@ The branch is currently one commit behind because PR #40 merged the canonical ca
 Requirements:
 
 - preserve every PR #40 document exactly unless a real conflict requires a focused reconciliation;
-- do not overwrite `docs/design/ABYSSFALL_CANONICAL_DESIGN_FOUNDATION.md`;
-- do not overwrite `docs/design/ABYSSFALL_CAMERA_AND_COMBAT_PRESENTATION_CANONICAL.md`;
+- do not overwrite `Docs/design/ABYSSFALL_CANONICAL_DESIGN_FOUNDATION.md`;
+- do not overwrite `Docs/design/ABYSSFALL_CAMERA_AND_COMBAT_PRESENTATION_CANONICAL.md`;
 - do not rewrite owner decision records;
 - report any merge conflict instead of choosing silently;
 - rerun all workflows after synchronization.

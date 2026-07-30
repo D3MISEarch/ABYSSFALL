@@ -14,8 +14,8 @@ The original broad review returned **PASS WITH REQUIRED REVISIONS**. The human o
 
 Review these new files first:
 
-1. `docs/design/ABYSSFALL_OWNER_DECISION_LEDGER.md`
-2. `docs/design/ABYSSFALL_PR40_REQUIRED_REVISIONS_PROPOSED.md`
+1. `Docs/design/ABYSSFALL_OWNER_DECISION_LEDGER.md`
+2. `Docs/design/ABYSSFALL_PR40_REQUIRED_REVISIONS_PROPOSED.md`
 
 Use the existing campaign bible, class bibles, review ledger, owner packet, and approved Voidbringer Codex only as grounding material needed to validate the revisions.
 
