@@ -19,6 +19,7 @@ on:
       - "tests/test_voidbringer_immutable_impact_presenter.gd"
       - "tests/test_voidbringer_impact_showcase_sandbox.gd"
       - "tests/test_voidbringer_environment_reaction.gd"
+      - "tests/probe_voidbringer_impact_audio.gd"
       - "tests/test_voidbringer_impact_audio.gd"
       - ".github/workflows/voidbringer-impact-presentation-tests.yml"
   workflow_dispatch:
@@ -125,6 +126,13 @@ jobs:
           fi
           grep -Fxq 'PASS: Voidbringer bounded environment reaction' voidbringer-environment-reaction.log
 
+      - name: Probe impact audio crash boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --audio-driver Dummy --path . --script res://tests/probe_voidbringer_impact_audio.gd 2>&1 | tee voidbringer-impact-audio-probe.log
+          grep -Fxq 'PASS: Voidbringer impact audio probe' voidbringer-impact-audio-probe.log
+
       - name: Run deterministic impact audio proof
         shell: bash
         run: |
@@ -170,6 +178,7 @@ jobs:
             voidbringer-immutable-impact-presenter.log
             voidbringer-impact-showcase-sandbox.log
             voidbringer-environment-reaction.log
+            voidbringer-impact-audio-probe.log
             voidbringer-impact-audio.log
             voidbringer-impact-showcase-route.log
           if-no-files-found: warn
