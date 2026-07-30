@@ -23,8 +23,8 @@ func _run() -> void:
 	camera.current = true
 	var settings := SETTINGS_SCRIPT.new() as VoidbringerPresentationSettings
 	var audio := AUDIO_SCRIPT.new() as VoidbringerImpactAudio
-	host.add_child(audio)
 	audio.configure(settings)
+	host.add_child(audio)
 	audio.audio_finished.connect(func(voice_id: StringName) -> void: finished_voice_ids.append(voice_id))
 	await process_frame
 
