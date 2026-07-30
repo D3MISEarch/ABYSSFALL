@@ -5,6 +5,9 @@ signal damaged(amount: int, health: int)
 signal died()
 signal reset_completed()
 
+const IMPACT_FEEDBACK_SCRIPT = preload("res://scripts/impact_feedback.gd")
+const PRESENTATION_SETTINGS_SCRIPT = preload("res://scripts/presentation/voidbringer_presentation_settings.gd")
+
 @export var maximum_health := 100
 @export var collision_radius := 0.72
 
@@ -55,24 +58,56 @@ func take_damage(amount: int) -> int:
 		health = 0
 		alive = false
 		died.emit()
-	_refresh_visual()
+	_refresh_state_visuals()
 	return applied
+
+
+func present_voidbringer_impact_result(
+	impact: Dictionary,
+	presentation_settings: Dictionary
+) -> void:
+	if not is_instance_valid(visual_root):
+		return
+	var effective_mode := StringName(str(
+		presentation_settings.get("effective_mode", presentation_settings.get("mode", &"full"))
+	))
+	if effective_mode == PRESENTATION_SETTINGS_SCRIPT.MODE_DISABLED:
+		return
+	var direction: Vector3 = impact.get("travel_direction", Vector3.FORWARD)
+	var primary_hit := effective_mode == PRESENTATION_SETTINGS_SCRIPT.MODE_FULL
+	IMPACT_FEEDBACK_SCRIPT.play_contact(
+		visual_root,
+		direction,
+		&"light",
+		primary_hit,
+		bool(impact.get("fatal", false))
+	)
 
 
 func reset_target() -> void:
 	health = maximum_health
 	alive = true
 	hit_calls = 0
-	_refresh_visual()
+	_reset_presentation_root()
+	_refresh_state_visuals()
 	reset_completed.emit()
 
 
-func _refresh_visual() -> void:
+func _reset_presentation_root() -> void:
+	if not is_instance_valid(visual_root):
+		return
+	var feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
+	if is_instance_valid(feedback):
+		visual_root.remove_child(feedback)
+		feedback.queue_free()
+	visual_root.position = Vector3.ZERO
+	visual_root.scale = Vector3.ONE
+	visual_root.rotation_degrees = Vector3.ZERO
+
+
+func _refresh_state_visuals() -> void:
 	if body_mesh != null:
 		body_mesh.material_override = _alive_material if alive else _dead_material
-	if visual_root != null:
-		visual_root.scale = Vector3.ONE if alive else Vector3(1.0, 0.32, 1.0)
-		visual_root.rotation_degrees = Vector3.ZERO if alive else Vector3(0.0, 0.0, 78.0)
 	if health_label != null:
 		health_label.text = "ENEMY  %d / %d" % [health, maximum_health]
 		health_label.modulate = Color(0.95, 0.90, 0.92) if alive else Color(0.55, 0.32, 0.35)
