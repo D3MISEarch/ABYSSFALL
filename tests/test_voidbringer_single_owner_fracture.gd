@@ -66,9 +66,9 @@ func _test_enemy_source_ownership() -> void:
 func _test_contact_restart_and_restoration(host: Node3D) -> void:
 	var enemy = await _spawn_enemy(host, SKELETON_SCRIPT, "ContactRestartEnemy")
 	var visual_root: Node3D = enemy.visual_root
-	var body_position := enemy.global_position
-	var collision_layer := enemy.collision_layer
-	var collision_mask := enemy.collision_mask
+	var body_position: Vector3 = enemy.global_position
+	var collision_layer: int = enemy.collision_layer
+	var collision_mask: int = enemy.collision_mask
 	var health_before := int(enemy.health)
 	var base_position := visual_root.position
 	var base_scale := visual_root.scale
