@@ -1,0 +1,187 @@
+name: Savage Impact Showcase Windows Package
+
+on:
+  pull_request:
+    paths:
+      - "project.godot"
+      - "main.tscn"
+      - "export_presets.cfg"
+      - "scripts/boot.gd"
+      - "scripts/impact_feedback.gd"
+      - "scripts/characters/voidbringer/voidbringer_foundation_sandbox.gd"
+      - "scripts/characters/voidbringer/voidbringer_sandbox_target.gd"
+      - "scripts/presentation/**"
+      - "scenes/voidbringer_impact_showcase_sandbox.tscn"
+      - "tests/test_voidbringer_impact_showcase_sandbox.gd"
+      - "tests/test_voidbringer_showcase_owner_controls.gd"
+      - ".github/workflows/voidbringer-impact-showcase-windows-package.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: savage-impact-showcase-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-package:
+    name: Savage Impact owner playtest package
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot 4.4.1 and Windows export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="4.4.1"
+          RELEASE="https://github.com/godotengine/godot/releases/download/${VERSION}-stable"
+          curl --fail --location --retry 3 "$RELEASE/Godot_v${VERSION}-stable_linux.x86_64.zip" --output /tmp/godot.zip
+          curl --fail --location --retry 3 "$RELEASE/Godot_v${VERSION}-stable_export_templates.tpz" --output /tmp/templates.tpz
+          mkdir -p "$HOME/godot"
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          BIN="$(find "$HOME/godot" -maxdepth 1 -type f -name 'Godot_v*-stable_linux.x86_64' | head -n 1)"
+          chmod +x "$BIN"
+          ln -s "$BIN" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -q /tmp/templates.tpz -d /tmp/export-templates
+          cp -a /tmp/export-templates/templates/. "$TEMPLATE_DIR/"
+          test -f "$TEMPLATE_DIR/windows_release_x86_64.exe"
+
+      - name: Generate exact package metadata and launcher
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REVIEW_BRANCH: ${{ github.head_ref || github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${REVIEW_SHA:0:7}"
+          BUILT_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          PACKAGE_NAME="AbyssFall-Savage-Impact-Showcase-${SHORT_SHA}"
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
+          mkdir -p "dist/$PACKAGE_NAME"
+          cat > "dist/$PACKAGE_NAME/BUILD_INFO.txt" <<EOF
+          AbyssFall Savage Impact Showcase Owner Playtest
+          Commit: ${REVIEW_SHA}
+          Short commit: ${SHORT_SHA}
+          Branch: ${REVIEW_BRANCH}
+          Workflow run: ${RUN_ID}
+          Built UTC: ${BUILT_AT}
+          EOF
+          cat > "dist/$PACKAGE_NAME/README.txt" <<EOF
+          ABYSSFALL SAVAGE IMPACT SHOWCASE
+
+          1. Keep every file in this folder together.
+          2. Connect your controller before launching.
+          3. Double-click: Launch Savage Impact Showcase.bat
+
+          Controls:
+          7 = Full presentation
+          8 = Reduced presentation
+          9 = Disabled presentation
+          PS5 D-pad Left / Up / Right also selects Full / Reduced / Disabled
+          H = Toggle haptics
+          Z = Combo demonstration
+          X = Lethal demonstration
+          C = Clear and reset
+
+          Exact commit: ${REVIEW_SHA}
+          EOF
+          printf '@echo off\r\ncd /d "%%~dp0"\r\n"AbyssFall.exe" -- --sandbox=voidbringer_showcase\r\n' > "dist/$PACKAGE_NAME/Launch Savage Impact Showcase.bat"
+
+      - name: Import project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --editor --path . --quit 2>&1 | tee showcase-windows-import.log
+
+      - name: Run owner controls and visibility regression
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --audio-driver Dummy --path . --script res://tests/test_voidbringer_showcase_owner_controls.gd 2>&1 | tee showcase-owner-controls.log
+
+      - name: Verify isolated showcase route
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          timeout 10s godot --headless --audio-driver Dummy --path . -- --sandbox=voidbringer_showcase > showcase-route.log 2>&1
+          status=$?
+          set -e
+          cat showcase-route.log
+          if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+            exit "$status"
+          fi
+          grep -Fq 'ABYSSFALL_SANDBOX_LAUNCHED:voidbringer_showcase' showcase-route.log
+          if grep -Fq 'ABYSSFALL_CLASS_LAUNCHED:' showcase-route.log; then
+            echo "Dedicated package route launched campaign gameplay."
+            exit 1
+          fi
+
+      - name: Export Windows executable
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --export-release "Windows Desktop" "dist/$PACKAGE_NAME/AbyssFall.exe" 2>&1 | tee showcase-windows-export.log
+          test -s "dist/$PACKAGE_NAME/AbyssFall.exe"
+          test -s "dist/$PACKAGE_NAME/AbyssFall.pck"
+
+      - name: Reject hidden Godot and launcher errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat showcase-windows-import.log showcase-owner-controls.log showcase-route.log showcase-windows-export.log > showcase-windows-combined.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|Compile Error:|Failed to load script|ERROR:|Invalid access|Invalid set index|Cannot call method|ASSERTION FAILED|^FAIL:" showcase-windows-combined.log; then
+            echo "Godot emitted an import, test, route, export, parser, script, or runtime error."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer showcase owner controls and visibility' showcase-owner-controls.log
+          grep -Fq 'AbyssFall.exe" -- --sandbox=voidbringer_showcase' "dist/$PACKAGE_NAME/Launch Savage Impact Showcase.bat"
+
+      - name: Audit extracted package contents
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          cd "dist/$PACKAGE_NAME"
+          sha256sum AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README.txt "Launch Savage Impact Showcase.bat" > SHA256SUMS.txt
+          grep -F "$REVIEW_SHA" BUILD_INFO.txt
+          sha256sum --check SHA256SUMS.txt
+          find . -maxdepth 1 -type f -printf '%f\n' | sort | tee ../showcase-package-contents.log
+          for required in "AbyssFall.exe" "AbyssFall.pck" "BUILD_INFO.txt" "README.txt" "Launch Savage Impact Showcase.bat" "SHA256SUMS.txt"; do
+            grep -Fx "$required" ../showcase-package-contents.log
+          done
+
+      - name: Upload Savage Impact Showcase package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}
+          path: dist/${{ env.PACKAGE_NAME }}/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload package audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: savage-impact-showcase-windows-audit-logs
+          path: |
+            showcase-windows-import.log
+            showcase-owner-controls.log
+            showcase-route.log
+            showcase-windows-export.log
+            showcase-windows-combined.log
+            dist/showcase-package-contents.log
+          if-no-files-found: warn
+          retention-days: 90
