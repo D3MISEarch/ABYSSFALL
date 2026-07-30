@@ -1,0 +1,68 @@
+name: Voidbringer Presentation Hold Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/impact_feedback.gd"
+      - "scripts/characters/voidbringer/voidbringer_sandbox_target.gd"
+      - "scripts/presentation/voidbringer_impact_presenter.gd"
+      - "scripts/presentation/voidbringer_presentation_hold.gd"
+      - "tests/test_voidbringer_presentation_only_hold.gd"
+      - ".github/workflows/voidbringer-presentation-hold-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voidbringer-presentation-hold-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  presentation-only-hold:
+    name: Godot 4.4.1 Presentation-Only Hold
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --editor --path . --quit 2>&1 | tee voidbringer-presentation-hold-import.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ERROR:' voidbringer-presentation-hold-import.log; then
+            exit 1
+          fi
+
+      - name: Run presentation-only hold proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_presentation_only_hold.gd 2>&1 | tee voidbringer-presentation-only-hold.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-presentation-only-hold.log; then
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer presentation-only impact hold' voidbringer-presentation-only-hold.log
+
+      - name: Upload focused logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voidbringer-presentation-hold-logs
+          path: |
+            voidbringer-presentation-hold-import.log
+            voidbringer-presentation-only-hold.log
+          if-no-files-found: warn
+          retention-days: 14
