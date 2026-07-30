@@ -27,6 +27,6 @@ These conventions are descriptive of the current codebase (`scripts/runtime/`, `
 
 ## Documentation file naming
 
-- ADRs: `ADR-0NN-TITLE-IN-CAPS.md` (the two current exceptions, `018_PROCEDURAL_ITEM_GENERATION.md` and `Docs/Stage3/ABILITY-EXECUTION-REVIEW.md`, are pre-existing and preserved as-is — see [`Docs/README.md`](../README.md) for the note on this inconsistency).
+- ADRs: `ADR-0NN-TITLE-IN-CAPS.md` (the remaining legacy exception, `Docs/Stage3/ABILITY-EXECUTION-REVIEW.md`, is preserved as-is — see [`Docs/README.md`](../README.md) for the note on this inconsistency).
 - Roadmap stage documents: `STAGE_<N>_<TOPIC>.md`.
 - Everything under the new `Docs/Governance/`, `Docs/Architecture/`, `Docs/Standards/`, `Docs/Planning/` tree: `SCREAMING_SNAKE_CASE.md`, one document per concern named after that concern.

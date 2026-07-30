@@ -1,5 +1,15 @@
 name: Repository Health
 
+# Two independent audits share this workflow.
+#
+# The trigger is intentionally unfiltered. Both audits scan the entire tracked
+# tree, so a violation can be introduced by a change to any path: a stale
+# lowercase documentation reference can appear in a script comment or a workflow
+# file, and an ADR/UID violation can ride along with an otherwise unrelated edit.
+# No `paths:` filter may therefore let root documentation, `Docs/**`,
+# `.gitattributes` (validated by tools/repository_health_check.ps1), or any other
+# path bypass these checks.
+
 on:
   push:
   pull_request:
@@ -19,3 +29,15 @@ jobs:
 
       - name: Validate documentation path casing
         run: python3 scripts/audit/check_documentation_paths.py
+
+  repository-health:
+    name: Repository governance health
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate repository governance records
+        shell: pwsh
+        run: ./tools/repository_health_check.ps1

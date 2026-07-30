@@ -1,5 +1,6 @@
 .godot/
 .import/
+# Godot 4.4.1 GDScript UID sidecars (*.gd.uid) are intentionally tracked.
 builds/
 exports/
 *.log

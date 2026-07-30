@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted for Stage 5 implementation. Amended after independent architecture review to separate item identity from generation provenance.
+ACCEPTED FOR STAGE 5 IMPLEMENTATION
+
+Amended after independent architecture review to separate item identity from generation provenance.
 
 ## Decision
 

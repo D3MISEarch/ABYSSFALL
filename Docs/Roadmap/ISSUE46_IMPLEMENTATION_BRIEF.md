@@ -6,7 +6,7 @@
 - **Dependency:** PR #34 must merge into `main` before any implementation branch begins
 - **Required working model:** separate bounded implementation PRs, independent verification, graphical playtest, owner merge authorization
 
-> **ADR sequence note:** ADR-018 and ADR-019 belong to the pending runtime/itemization lineage. The class-tree decision is intentionally numbered ADR-020 to prevent a future collision during branch reconciliation.
+> **ADR sequence note:** ADR-018 is the merged procedural-item-generation record. ADR-019 remains reserved for the already-reviewed live runtime equipment-projection boundary; no ADR-019 record is present in this repository. The class-tree decision intentionally retains ADR-020 to prevent a future collision.
 
 ## 1. Goal
 

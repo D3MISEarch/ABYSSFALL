@@ -91,9 +91,8 @@ Explicitly out of scope:
 
 ## Known follow-ups that do not block the slice
 
-- Add `scripts/core/character_factory.gd` to the full-stack workflow trigger paths until that correction reaches approved `main`.
 - Decide whether freeze branches should trigger workflows on push.
-- Decide and document the Godot 4.4 `*.gd.uid` policy.
+- Maintain every Godot 4.4.1 GDScript `.uid` sidecar and keep the one-to-one policy green through `tools/repository_health_check.ps1`.
 - Documentation-path casing normalization is complete under the canonical `Docs/` root; package paths must use that root only.
 - Keep PR frozen-head metadata synchronized after correction passes; tracked by [Issue #84](https://github.com/D3MISEarch/ABYSSFALL/issues/84).
 

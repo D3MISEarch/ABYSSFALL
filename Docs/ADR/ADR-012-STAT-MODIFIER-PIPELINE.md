@@ -1,7 +1,10 @@
 # ADR-012 — Stat and Modifier Pipeline
 
-Status: PROPOSED  
-Release target: CORE / Stage 2
+## Status
+
+PROPOSED
+
+**Release target:** CORE / Stage 2
 
 ## Decision
 

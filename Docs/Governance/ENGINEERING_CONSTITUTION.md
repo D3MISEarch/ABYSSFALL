@@ -4,7 +4,7 @@ These are the foundational laws of the AbyssFall codebase. They are derived from
 
 **Violating one of these laws requires an explicit ADR.** Not a comment, not a TODO, not a "just this once." If a task seems to require breaking a law below, stop and propose an ADR (ChatGPT's role, approved by the User — see [`AI_GUIDELINES.md`](AI_GUIDELINES.md)) instead of writing the code.
 
-1. **Determinism first.** Identical inputs produce identical outputs, always. Combat, stat rebuilds, and item generation are all specified this way. See [ADR-012](../ADR/ADR-012-STAT-MODIFIER-PIPELINE.md), [ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md).
+1. **Determinism first.** Identical inputs produce identical outputs, always. Combat, stat rebuilds, and item generation are all specified this way. See [ADR-012](../ADR/ADR-012-STAT-MODIFIER-PIPELINE.md), [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md).
 
 2. **Data-driven systems over hardcoded content.** Abilities, items, and affixes are immutable catalog definitions referenced by stable IDs, not hardcoded branches. See [ADR-013](../ADR/ADR-013-ABILITY-RESOURCE-ARCHITECTURE.md), [ADR-014](../ADR/ADR-014-INVENTORY-EQUIPMENT-OWNERSHIP.md). Where this law is not yet fully met (e.g. rarity rules), it is tracked as tech debt, not silently accepted — see [`Docs/Planning/TECH_DEBT.md`](../Planning/TECH_DEBT.md).
 
@@ -12,13 +12,13 @@ These are the foundational laws of the AbyssFall codebase. They are derived from
 
 4. **Runtime owns mutable gameplay state.** `RuntimeCharacter` is constructed from durable `BuildData` and never performs disk I/O itself. See [ADR-011](../ADR/ADR-011-RUNTIME-CHARACTER-STATE.md).
 
-5. **RuntimeSession owns session-scoped services.** The event bus, ability executor, item identity service, inventory, and equipment manager for one session are all owned by exactly one `RuntimeSession` composition root. See [ADR-016](../ADR/ADR-016-RUNTIME-EVENT-BUS-OWNERSHIP.md), [ADR-017](../ADR/ADR-017-ABILITY-EXECUTION-OWNERSHIP.md), [ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md).
+5. **RuntimeSession owns session-scoped services.** The event bus, ability executor, item identity service, inventory, and equipment manager for one session are all owned by exactly one `RuntimeSession` composition root. See [ADR-016](../ADR/ADR-016-RUNTIME-EVENT-BUS-OWNERSHIP.md), [ADR-017](../ADR/ADR-017-ABILITY-EXECUTION-OWNERSHIP.md), [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md).
 
 6. **One clear owner per responsibility.** Every piece of state and every side effect has exactly one system that owns it. Ownership is stated explicitly in the owning ADR, not inferred from usage.
 
-7. **Catalog definitions remain immutable.** `ItemDefinition`, `AffixDefinition`, and `AbilityDefinition` are read-only and returned as defensive copies. See [ADR-014](../ADR/ADR-014-INVENTORY-EQUIPMENT-OWNERSHIP.md), [ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md).
+7. **Catalog definitions remain immutable.** `ItemDefinition`, `AffixDefinition`, and `AbilityDefinition` are read-only and returned as defensive copies. See [ADR-014](../ADR/ADR-014-INVENTORY-EQUIPMENT-OWNERSHIP.md), [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md).
 
-8. **Item identity is separate from generation provenance.** A generation seed determines an item's rolled contents; an identity token determines which individual physical item it is. Two calls with identical inputs may produce identical contents but must never produce colliding identities. See [ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md).
+8. **Item identity is separate from generation provenance.** A generation seed determines an item's rolled contents; an identity token determines which individual physical item it is. Two calls with identical inputs may produce identical contents but must never produce colliding identities. See [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md).
 
 9. **No hidden global gameplay state.** Gameplay state lives in objects owned by a session or a character, never in ambient globals that different sessions could accidentally share. See [ADR-016](../ADR/ADR-016-RUNTIME-EVENT-BUS-OWNERSHIP.md).
 
@@ -34,9 +34,9 @@ These are the foundational laws of the AbyssFall codebase. They are derived from
 
 15. **CI must be green before merge.** See the merge gates in [`Docs/Roadmap/`](../Roadmap/) and the workflow definitions in `.github/workflows/`.
 
-16. **Optimize only after measuring.** Affix pools stay unindexed and rarity rules stay simple until catalog scale or profiling justifies the change. See [ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md) deferred decisions and [`Docs/Planning/TECH_DEBT.md`](../Planning/TECH_DEBT.md).
+16. **Optimize only after measuring.** Affix pools stay unindexed and rarity rules stay simple until catalog scale or profiling justifies the change. See [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md) deferred decisions and [`Docs/Planning/TECH_DEBT.md`](../Planning/TECH_DEBT.md).
 
-17. **One authoritative identity minter exists per active build/session.** Only one `RuntimeSession` may mint item identities for a build at a time. A future multiplayer implementation must move minting behind network authority before two concurrent sessions can mutate the same build. See [ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md).
+17. **One authoritative identity minter exists per active build/session.** Only one `RuntimeSession` may mint item identities for a build at a time. A future multiplayer implementation must move minting behind network authority before two concurrent sessions can mutate the same build. See [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md).
 
 18. **The event bus is the only runtime gameplay event bus.** No gameplay system may create an ad-hoc second bus for the same session. See [ADR-016](../ADR/ADR-016-RUNTIME-EVENT-BUS-OWNERSHIP.md).
 

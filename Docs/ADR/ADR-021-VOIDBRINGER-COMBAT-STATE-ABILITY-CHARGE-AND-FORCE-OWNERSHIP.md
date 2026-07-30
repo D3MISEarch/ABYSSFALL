@@ -1,6 +1,9 @@
 # ADR-021 — Voidbringer Combat State, Ability Charge, and Force Ownership
 
-- **Status:** OWNER APPROVED — PENDING MERGE
+## Status
+
+OWNER APPROVED — PENDING MERGE
+
 - **Proposal date:** 2026-07-28
 - **Owner approval date:** 2026-07-28
 - **Human owner:** D3MISEarch

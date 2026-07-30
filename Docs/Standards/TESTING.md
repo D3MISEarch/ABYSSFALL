@@ -45,7 +45,7 @@ godot --headless --path . --script res://scripts/runtime/tests/test_stage5_item_
 
 ## Persistence and JSON round-trip requirements
 
-Per [ADR-015](../ADR/ADR-015-RUNTIME-PERSISTENCE-SYNCHRONIZATION.md) and [ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md), `PersistenceService`/`SaveManager` is the only disk-I/O boundary. Every persistence-affecting feature must be exercised through a real JSON path, not only an in-memory snapshot:
+Per [ADR-015](../ADR/ADR-015-RUNTIME-PERSISTENCE-SYNCHRONIZATION.md) and [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md), `PersistenceService`/`SaveManager` is the only disk-I/O boundary. Every persistence-affecting feature must be exercised through a real JSON path, not only an in-memory snapshot:
 
 ```gdscript
 var parsed: Variant = JSON.parse_string(JSON.stringify(data))

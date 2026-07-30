@@ -1,7 +1,10 @@
 # ADR-014 — Inventory and Equipment Ownership
 
-Status: PROPOSED  
-Release target: CORE / Stage 2
+## Status
+
+PROPOSED
+
+**Release target:** CORE / Stage 2
 
 ## Decision
 
