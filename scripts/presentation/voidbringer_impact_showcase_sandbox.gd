@@ -3,11 +3,13 @@ extends VoidbringerFoundationSandbox
 
 const SETTINGS_SCRIPT = preload("res://scripts/presentation/voidbringer_presentation_settings.gd")
 const HAPTICS_SCRIPT = preload("res://scripts/presentation/voidbringer_haptics.gd")
+const AUDIO_SCRIPT = preload("res://scripts/presentation/voidbringer_impact_audio.gd")
 const PRESENTER_SCRIPT = preload("res://scripts/presentation/voidbringer_impact_presenter.gd")
 const ENVIRONMENT_REACTION_SCRIPT = preload("res://scripts/presentation/voidbringer_environment_reaction.gd")
 
 var presentation_settings: VoidbringerPresentationSettings
 var haptics: VoidbringerHaptics
+var impact_audio: VoidbringerImpactAudio
 var impact_presenter: VoidbringerImpactPresenter
 var environment_reaction: VoidbringerEnvironmentReaction
 var showcase_label: Label
@@ -21,6 +23,10 @@ func _ready() -> void:
 	presentation_settings = SETTINGS_SCRIPT.new()
 	presentation_settings.configure(&"full", true, true)
 	haptics = HAPTICS_SCRIPT.new(presentation_settings)
+	impact_audio = AUDIO_SCRIPT.new() as VoidbringerImpactAudio
+	impact_audio.name = "VoidbringerImpactAudio"
+	impact_audio.configure(presentation_settings)
+	add_child(impact_audio)
 	_configure_connected_controller()
 	impact_presenter = PRESENTER_SCRIPT.new(presentation_settings, haptics)
 	impact_presenter.impact_presented.connect(_on_showcase_impact_presented)
@@ -38,6 +44,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	super._process(delta)
+	if impact_audio != null:
+		impact_audio.tick(delta)
 	if environment_reaction != null:
 		environment_reaction.tick(delta)
 
@@ -45,6 +53,8 @@ func _process(delta: float) -> void:
 func _exit_tree() -> void:
 	if impact_presenter != null:
 		impact_presenter.clear()
+	if impact_audio != null:
+		impact_audio.clear()
 	if environment_reaction != null:
 		environment_reaction.clear()
 
@@ -74,8 +84,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func simulate_command(command: StringName) -> bool:
-	if command in [&"clear", &"reset"] and haptics != null:
-		haptics.clear()
+	if command in [&"clear", &"reset"]:
+		if haptics != null:
+			haptics.clear()
+		if impact_audio != null:
+			impact_audio.clear()
 	var result := super.simulate_command(command)
 	if command in [&"clear", &"reset"] and environment_reaction != null:
 		environment_reaction.reset_reactions()
@@ -123,6 +136,7 @@ func debug_showcase_snapshot() -> Dictionary:
 	return {
 		"presentation": presentation_settings.snapshot(),
 		"presenter": {} if impact_presenter == null else impact_presenter.debug_snapshot(),
+		"audio": {} if impact_audio == null else impact_audio.debug_snapshot(),
 		"environment": {} if environment_reaction == null else environment_reaction.debug_snapshot(),
 		"last_showcase_report": last_showcase_report.duplicate(true),
 		"contact_visual_count": contact_flashes.size(),
@@ -136,6 +150,8 @@ func _set_presentation_mode(mode: StringName) -> void:
 	presentation_settings.configure(mode, true, haptics_enabled)
 	if mode == &"disabled":
 		haptics.clear()
+		if impact_audio != null:
+			impact_audio.clear()
 		_clear_children(contact_visual_root)
 		contact_flashes.clear()
 		if environment_reaction != null:
@@ -155,7 +171,7 @@ func _build_showcase_hud() -> void:
 	add_child(canvas)
 	showcase_label = Label.new()
 	showcase_label.position = Vector2(1020.0, 18.0)
-	showcase_label.size = Vector2(560.0, 360.0)
+	showcase_label.size = Vector2(560.0, 380.0)
 	showcase_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	showcase_label.add_theme_font_size_override("font_size", 17)
 	showcase_label.add_theme_color_override("font_color", Color(0.90, 0.88, 1.0))
@@ -170,6 +186,7 @@ func _refresh_showcase_hud() -> void:
 		return
 	var settings_snapshot := presentation_settings.snapshot()
 	var haptic_snapshot := {} if haptics == null else haptics.debug_snapshot()
+	var audio_snapshot := {} if impact_audio == null else impact_audio.debug_snapshot()
 	var environment_snapshot := {} if environment_reaction == null else environment_reaction.debug_snapshot()
 	showcase_label.text = "\n".join([
 		"SAVAGE IMPACT SHOWCASE",
@@ -178,6 +195,10 @@ func _refresh_showcase_hud() -> void:
 		"MODE %s   HAPTICS %s" % [
 			String(settings_snapshot.get("effective_mode", &"full")).to_upper(),
 			"ON" if haptics_enabled else "OFF",
+		],
+		"AUDIO SCALE x%.2f   ACTIVE %d" % [
+			float(settings_snapshot.get("audio_scale", 0.0)),
+			int(audio_snapshot.get("active_voice_count", 0)),
 		],
 		"RUMBLE SCALE x%.2f   START CALLS %d" % [
 			float(settings_snapshot.get("rumble_scale", 0.0)),
@@ -196,12 +217,16 @@ func _refresh_showcase_hud() -> void:
 
 func _on_showcase_impact_presented(report: Dictionary) -> void:
 	last_showcase_report = report.duplicate(true)
+	if impact_audio != null:
+		impact_audio.play_impact(report.get("impact", {}))
 	if environment_reaction != null:
 		environment_reaction.consume_impact(report.get("impact", {}))
 	_refresh_showcase_hud()
 
 
 func _on_showcase_skill_presented(report: Dictionary) -> void:
+	if impact_audio != null:
+		impact_audio.play_skill_commit(report.get("skill", {}))
 	if last_showcase_report.is_empty():
 		last_showcase_report = report.duplicate(true)
 	_refresh_showcase_hud()
