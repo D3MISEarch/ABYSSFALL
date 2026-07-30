@@ -19,7 +19,7 @@ Sources: `PROJECT_OVERVIEW.md`, current runtime implementation and existing play
 - Core loop: **Anchor → Load → Bend → Collapse**.
 - Core systems: Mass Anchors, Fold Lines, Instability, Breach, Closure, Personal Mass and Velocity Reserve.
 - Disciplines: Event Horizon, Redshift and Hollow Form.
-- Complete approved specification: [`../../docs/codex/characters/voidbringer/README.md`](../../docs/codex/characters/voidbringer/README.md).
+- Complete approved specification: [`../../Docs/codex/characters/voidbringer/README.md`](../../Docs/codex/characters/voidbringer/README.md).
 
 The detailed Codex is canonical for Voidbringer's player-facing design. Engineering implementation remains subordinate to the Engineering Constitution, ADRs and current architecture.
 
@@ -27,7 +27,7 @@ The detailed Codex is canonical for Voidbringer's player-facing design. Engineer
 
 - Fantasy: carve laws into flesh and force reality to obey them. Close-to-mid-range ritual combat; melee carves and completes magic rather than replacing it.
 - Current implemented/prototype resource: **Fervor**.
-- Existing detailed sources: `design/FERVOR_SYSTEM_V1.md`, `docs/PENITENT_CLASS.md`, `design/PENITENT_ITEM_POOL_V1.md`.
+- Existing detailed sources: `design/FERVOR_SYSTEM_V1.md`, `Docs/PENITENT_CLASS.md`, `design/PENITENT_ITEM_POOL_V1.md`.
 - The eventual full Penitent Codex must use the shared character-bible template and reconcile existing implementation before replacing it as authority.
 
 ### Shared architecture constraint
@@ -49,7 +49,7 @@ Every class receives a personal journey layered through that campaign:
 
 Class stories do not become mutually incompatible replacement campaigns. Class antagonists are not automatically universal campaign villains, and class finales cannot erase shared regions, chronology or endgame infrastructure.
 
-Binding narrative doctrine: [`../../docs/codex/SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](../../docs/codex/SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md).
+Binding narrative doctrine: [`../../Docs/codex/SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](../../Docs/codex/SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md).
 
 ### Approved full launch roster direction
 
@@ -91,7 +91,7 @@ Every complete class must define:
 - a class mastery finale that preserves universal campaign continuity,
 - implementation, balance and verification contracts.
 
-Template: [`../../docs/codex/characters/CHARACTER_BIBLE_TEMPLATE.md`](../../docs/codex/characters/CHARACTER_BIBLE_TEMPLATE.md).
+Template: [`../../Docs/codex/characters/CHARACTER_BIBLE_TEMPLATE.md`](../../Docs/codex/characters/CHARACTER_BIBLE_TEMPLATE.md).
 
 ## Open questions
 

@@ -190,7 +190,7 @@ Only one implementation agent edits an owning system at a time. Additional agent
 
 - One focused feature or fix per branch
 - Branch from current `main`; normal work stays one PR deep, with two levels allowed only for a real dependency
-- Maximum one active gameplay implementation PR and one non-overlapping docs/tooling PR
+- Maximum one active gameplay implementation PR and one non-overlapping documentation/tooling PR
 - Every branch must have explicit acceptance criteria
 - Every pull request must show tests and limitations
 - No feature branch may silently change another class

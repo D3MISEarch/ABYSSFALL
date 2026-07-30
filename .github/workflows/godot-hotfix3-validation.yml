@@ -286,7 +286,7 @@ jobs:
           4. Run class selection, Void Warlock, and Penitent headless paths.
           5. Read `AGENTS.md`, especially the standing bug-pattern log.
           6. Manually trace changed code for lifecycle ordering, transforms, input routing, physics math, timing, cleanup, replacement, and overlapping effects.
-          7. Report PASS, PASS WITH FOLLOW-UP, FAIL, or NEEDS GRAPHICAL PLAYTEST using `docs/VERIFICATION_REPORT_TEMPLATE.md`.
+          7. Report PASS, PASS WITH FOLLOW-UP, FAIL, or NEEDS GRAPHICAL PLAYTEST using `Docs/VERIFICATION_REPORT_TEMPLATE.md`.
 
           ## Integrity manifest
 
@@ -438,10 +438,10 @@ jobs:
           cp -R "$SOURCE/scripts" ./scripts
           [[ -d "$SOURCE/concept" ]] && cp -R "$SOURCE/concept" ./concept
 
-          mkdir -p docs/v0.4-hotfix3
+          mkdir -p Docs/v0.4-hotfix3
           for FILE in HOTFIX3_NOTES.md NEXT_STEPS.md PLAYTEST_CHECKLIST.md PROJECT_ROADMAP.md README.md V0_4_SYSTEMS.md; do
             if [[ -f "$SOURCE/$FILE" ]]; then
-              cp "$SOURCE/$FILE" "docs/v0.4-hotfix3/$FILE"
+              cp "$SOURCE/$FILE" "Docs/v0.4-hotfix3/$FILE"
             fi
           done
 
@@ -449,7 +449,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add project.godot main.tscn gdlintrc scripts concept docs/v0.4-hotfix3 abyssfall_void_warlock_v0_4_hotfix3.zip
+          git add project.godot main.tscn gdlintrc scripts concept Docs/v0.4-hotfix3 abyssfall_void_warlock_v0_4_hotfix3.zip
 
           if git diff --cached --quiet; then
             echo "No source promotion changes were required."

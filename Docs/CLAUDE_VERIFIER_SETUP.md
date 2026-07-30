@@ -11,7 +11,7 @@ When the GitHub connection is available, connect Claude to `D3MISEarch/ABYSSFALL
 - `main.tscn`
 - `scripts/`
 - `tests/`
-- `docs/`
+- `Docs/`
 - `.github/workflows/`
 
 The repository connection is for navigation, code reading, and awareness of the maintained project. It is not the authority for a formal pass/fail verdict because the connected branch may move after a review begins.
@@ -57,7 +57,7 @@ Claude should not modify implementation files unless the project owner explicitl
 
 ## Report delivery
 
-Use `docs/VERIFICATION_REPORT_TEMPLATE.md` and return one verdict:
+Use `Docs/VERIFICATION_REPORT_TEMPLATE.md` and return one verdict:
 
 - PASS
 - PASS WITH FOLLOW-UP

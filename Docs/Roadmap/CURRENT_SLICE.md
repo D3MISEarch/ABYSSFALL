@@ -83,7 +83,7 @@ Explicitly out of scope:
 
 - Start every task from current `main` and record the exact base SHA.
 - One implementation agent owns a system at a time.
-- Maximum one active gameplay implementation PR and one non-overlapping docs/tooling PR.
+- Maximum one active gameplay implementation PR and one non-overlapping documentation/tooling PR.
 - Normal work stays one PR deep; two levels require a real dependency; deeper stacks are consolidated before more work.
 - Every feature begins with a production packet: player goal, scope, exclusions, owners, ADRs, acceptance criteria, tests, manual playtest, persistence impact, performance risk, and Definition of Done.
 - A feature is complete only after Godot execution, explicit PASS markers, frozen exact-head verification, a Windows artifact when player-facing, owner playtest, and explicit merge approval.
@@ -94,7 +94,7 @@ Explicitly out of scope:
 - Add `scripts/core/character_factory.gd` to the full-stack workflow trigger paths until that correction reaches approved `main`.
 - Decide whether freeze branches should trigger workflows on push.
 - Decide and document the Godot 4.4 `*.gd.uid` policy.
-- Resolve or formally contain the `Docs/` and `docs/` casing overlap before a packaging path touches both.
+- Documentation-path casing normalization is complete under the canonical `Docs/` root; package paths must use that root only.
 - Keep PR frozen-head metadata synchronized after correction passes; tracked by [Issue #84](https://github.com/D3MISEarch/ABYSSFALL/issues/84).
 
 ## Deferred milestones

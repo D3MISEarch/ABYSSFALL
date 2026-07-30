@@ -18,7 +18,7 @@ on:
       - "tests/test_voidbringer_lethal_mass_brand_corpse_anchor.gd"
       - "tests/test_voidbringer_playable_foundation_sandbox.gd"
       - "tests/test_voidbringer_playable_skill_sandbox.gd"
-      - "docs/VOIDBRINGER_SKILL_SLICE_PLAYTEST.md"
+      - "Docs/VOIDBRINGER_SKILL_SLICE_PLAYTEST.md"
       - ".github/workflows/voidbringer-skill-slice-windows-package.yml"
   workflow_dispatch:
 
@@ -96,7 +96,7 @@ jobs:
           Gameplay controls: Q / W / E / Space
           Reset: C
           EOF
-          cp docs/VOIDBRINGER_SKILL_SLICE_PLAYTEST.md "dist/$PACKAGE_NAME/README_VOIDBRINGER_SKILL_SLICE.txt"
+          cp Docs/VOIDBRINGER_SKILL_SLICE_PLAYTEST.md "dist/$PACKAGE_NAME/README_VOIDBRINGER_SKILL_SLICE.txt"
           printf '@echo off\r\ncd /d "%%~dp0"\r\nstart "AbyssFall Voidbringer Skill Slice" "AbyssFall.exe" -- --sandbox=voidbringer_anchor\r\n' > "dist/$PACKAGE_NAME/Launch Voidbringer Skill Slice Sandbox.bat"
 
       - name: Verify generated launcher command

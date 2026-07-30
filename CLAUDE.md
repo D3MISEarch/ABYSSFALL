@@ -42,7 +42,7 @@ Report the conflict plainly and wait for direction rather than picking a side yo
 
 ## Detailed character Codex
 
-Before implementing or changing a playable class, read its approved detailed Codex in addition to the required engineering documents above. For Voidbringer, start with [`docs/codex/characters/voidbringer/README.md`](docs/codex/characters/voidbringer/README.md) and read `09_AUDIT_RESOLUTIONS.md` before the numbered bibles.
+Before implementing or changing a playable class, read its approved detailed Codex in addition to the required engineering documents above. For Voidbringer, start with [`Docs/codex/characters/voidbringer/README.md`](Docs/codex/characters/voidbringer/README.md) and read `09_AUDIT_RESOLUTIONS.md` before the numbered bibles.
 
 The Codex specifies approved player-facing behavior; it does not authorize new architecture. Translate its requirements through the existing `RuntimeSession`, event, ability, equipment and persistence boundaries. If that translation requires a new system owner, global event bus, durable field or dependency not already covered by an ADR, stop and ask for an ADR.
 

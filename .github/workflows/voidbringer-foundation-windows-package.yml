@@ -12,7 +12,7 @@ on:
       - "tests/test_voidbringer_anchor_instability_sandbox.gd"
       - "tests/test_voidbringer_foundation_contracts.gd"
       - "tests/test_voidbringer_playable_foundation_sandbox.gd"
-      - "docs/VOIDBRINGER_FOUNDATION_PLAYTEST.md"
+      - "Docs/VOIDBRINGER_FOUNDATION_PLAYTEST.md"
       - ".github/workflows/voidbringer-foundation-windows-package.yml"
   workflow_dispatch:
 
@@ -90,7 +90,7 @@ jobs:
           Diagnostics: F3
           Report capture: F8
           EOF
-          cp docs/VOIDBRINGER_FOUNDATION_PLAYTEST.md "dist/$PACKAGE_NAME/README_VOIDBRINGER_SANDBOX.txt"
+          cp Docs/VOIDBRINGER_FOUNDATION_PLAYTEST.md "dist/$PACKAGE_NAME/README_VOIDBRINGER_SANDBOX.txt"
           printf '@echo off\r\ncd /d "%%~dp0"\r\nstart "AbyssFall Voidbringer Foundation" "AbyssFall.exe" -- --sandbox=voidbringer_anchor\r\n' > "dist/$PACKAGE_NAME/Launch Voidbringer Foundation Sandbox.bat"
 
       - name: Verify generated launcher command

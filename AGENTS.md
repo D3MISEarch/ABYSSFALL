@@ -34,7 +34,7 @@ For contribution mechanics (branching, PR expectations, placeholder-art norms), 
 | [`Docs/Standards/`](Docs/Standards/) | GDScript style, testing, naming, documentation conventions. |
 | [`Docs/Planning/`](Docs/Planning/) | Non-blocking tech debt and its severity/milestone. |
 | [`Docs/Roadmap/`](Docs/Roadmap/) | Stage-by-stage delivery plan and status. |
-| `design/` and `docs/` (repo root, lowercase) | Pre-existing detailed design/playtest/verification documents; still authoritative, not superseded by this structure. See [`Docs/README.md`](Docs/README.md) for the full index and a note on the casing overlap with `Docs/`. |
+| `design/` and `Docs/` | Pre-existing detailed design/playtest/verification documents; still authoritative, not superseded by this structure. See [`Docs/README.md`](Docs/README.md) for the full index. |
 
 ## Running tests / CI
 
@@ -58,8 +58,8 @@ Full command reference, PASS-marker convention, and failure rules live in [`Docs
 
 ## Detailed character Codex
 
-Approved full-depth character design is indexed under [`docs/codex/`](docs/codex/). It is canonical for player-facing design inside the documented class scope, but it does not override the Engineering Constitution, ADRs, Architecture, Standards, persistence ownership, or test requirements.
+Approved full-depth character design is indexed under [`Docs/codex/`](Docs/codex/). It is canonical for player-facing design inside the documented class scope, but it does not override the Engineering Constitution, ADRs, Architecture, Standards, persistence ownership, or test requirements.
 
-Before changing a documented class, read its folder README and any audit-resolution document before the numbered bibles. For Voidbringer, begin at [`docs/codex/characters/voidbringer/README.md`](docs/codex/characters/voidbringer/README.md).
+Before changing a documented class, read its folder README and any audit-resolution document before the numbered bibles. For Voidbringer, begin at [`Docs/codex/characters/voidbringer/README.md`](Docs/codex/characters/voidbringer/README.md).
 
 If a Codex requirement implies a new owner, event bus, persistence field, session service, or cross-system dependency not covered by an ADR, stop and request an ADR rather than treating the Codex as architectural approval. Approved design changes must update the affected Codex document and class changelog in the same pull request.

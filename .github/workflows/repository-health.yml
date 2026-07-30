@@ -1,0 +1,21 @@
+name: Repository Health
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  documentation-path-health:
+    name: Documentation path health
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate documentation path casing
+        run: python3 scripts/audit/check_documentation_paths.py

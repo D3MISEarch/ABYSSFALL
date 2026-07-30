@@ -4,7 +4,7 @@
 
 **Documentation must change when a public system contract changes.** If your change alters what a class owns, what an ADR's rules require, what an event means, or what a save field contains, the change is not done until the relevant document is updated in the same pull request. See the Engineering Constitution's final law.
 
-**When a behavior change affects manual or graphical playtesting, update the relevant playtest checklist in the same pull request, in addition to updating the owning system document.** (e.g. `docs/v0.4-hotfix3/PLAYTEST_CHECKLIST.md`, `docs/PENITENT_PLAYTEST.md`, `docs/UI_PLAYTEST.md` — whichever checklist covers the affected class or system.) A system document describes the contract; the playtest checklist is what an independent verifier or the User actually walks through by hand, and it goes stale just as fast as any other documentation if a behavior change doesn't update it.
+**When a behavior change affects manual or graphical playtesting, update the relevant playtest checklist in the same pull request, in addition to updating the owning system document.** (e.g. `Docs/v0.4-hotfix3/PLAYTEST_CHECKLIST.md`, `Docs/PENITENT_PLAYTEST.md`, `Docs/UI_PLAYTEST.md` — whichever checklist covers the affected class or system.) A system document describes the contract; the playtest checklist is what an independent verifier or the User actually walks through by hand, and it goes stale just as fast as any other documentation if a behavior change doesn't update it.
 
 ## Ownership by category
 
@@ -21,13 +21,13 @@ Don't duplicate a rule in more than one document — link to the document that o
 | GDScript style, testing, naming conventions | [`Docs/Standards/`](.) |
 | Non-blocking known issues | [`Docs/Planning/TECH_DEBT.md`](../Planning/TECH_DEBT.md) |
 | Stage-by-stage delivery plan and status | [`Docs/Roadmap/`](../Roadmap/) |
-| Automated CI / independent verification / graphical playtest status per milestone | `docs/BASELINE_TEST_RESULTS.md` |
+| Automated CI / independent verification / graphical playtest status per milestone | `Docs/BASELINE_TEST_RESULTS.md` |
 
 ## Baseline test results ledger ownership
 
 *(Migrated from the pre-restructuring root `AGENTS.md` "Documentation ownership" section.)*
 
-- The implementer (Claude Code, per [`Docs/Governance/AI_GUIDELINES.md`](../Governance/AI_GUIDELINES.md)) owns `docs/BASELINE_TEST_RESULTS.md` and keeps it current after accepted milestones and verification-changing fixes.
+- The implementer (Claude Code, per [`Docs/Governance/AI_GUIDELINES.md`](../Governance/AI_GUIDELINES.md)) owns `Docs/BASELINE_TEST_RESULTS.md` and keeps it current after accepted milestones and verification-changing fixes.
 - The independent verifier (Claude) supplies independent results and findings but does not edit that document unless the User explicitly requests it.
 - The document must clearly separate automated CI, independent verification, and graphical playtest status.
 

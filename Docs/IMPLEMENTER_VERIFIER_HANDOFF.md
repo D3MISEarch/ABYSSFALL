@@ -18,7 +18,7 @@ Responsibilities:
 - Do not merge solely because the implementation's own CI passed when independent review is requested.
 - Prepare a handoff package or branch link for the verifier.
 - Include a one-line change summary and the exact branch or commit being reviewed.
-- Own and update `docs/BASELINE_TEST_RESULTS.md` whenever an accepted milestone or verification-changing fix changes project status.
+- Own and update `Docs/BASELINE_TEST_RESULTS.md` whenever an accepted milestone or verification-changing fix changes project status.
 
 ### Independent verifier
 
@@ -54,7 +54,7 @@ The workflow explicitly checks out and validates the pull request's real head co
 - `VERIFIER_HANDOFF.md` with branch, full commit, pull request, CI run, and review instructions
 - `VERIFIER_CHANGED_FILES.txt` with the exact diff file list
 - `AGENTS.md` and its standing bug-pattern log
-- `docs/VERIFICATION_REPORT_TEMPLATE.md`
+- `Docs/VERIFICATION_REPORT_TEMPLATE.md`
 
 The downloaded artifact ZIP is the authority for the independent verdict. A GitHub-connected repository may be used for convenient navigation, but it must not replace the exact package because the live branch can move after review begins.
 
@@ -85,7 +85,7 @@ Example:
 
 ## Verifier report
 
-The verifier returns `docs/VERIFICATION_REPORT_TEMPLATE.md` completed with one verdict:
+The verifier returns `Docs/VERIFICATION_REPORT_TEMPLATE.md` completed with one verdict:
 
 - **PASS**
 - **PASS WITH FOLLOW-UP**
@@ -103,7 +103,7 @@ The project owner decides the outcome after independent verification:
 - **Fail:** return the branch to the implementer with specific reproduction details.
 - **Needs graphical playtest:** keep implementation status explicit and do not claim feel/readability is verified.
 
-After the decision, the implementer updates `docs/BASELINE_TEST_RESULTS.md` so automated CI, independent verification, and graphical playtest status remain visibly separate.
+After the decision, the implementer updates `Docs/BASELINE_TEST_RESULTS.md` so automated CI, independent verification, and graphical playtest status remain visibly separate.
 
 ## Collision rule
 
