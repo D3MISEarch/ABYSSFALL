@@ -4,10 +4,12 @@ extends VoidbringerFoundationSandbox
 const SETTINGS_SCRIPT = preload("res://scripts/presentation/voidbringer_presentation_settings.gd")
 const HAPTICS_SCRIPT = preload("res://scripts/presentation/voidbringer_haptics.gd")
 const PRESENTER_SCRIPT = preload("res://scripts/presentation/voidbringer_impact_presenter.gd")
+const ENVIRONMENT_REACTION_SCRIPT = preload("res://scripts/presentation/voidbringer_environment_reaction.gd")
 
 var presentation_settings: VoidbringerPresentationSettings
 var haptics: VoidbringerHaptics
 var impact_presenter: VoidbringerImpactPresenter
+var environment_reaction: VoidbringerEnvironmentReaction
 var showcase_label: Label
 var haptics_enabled := true
 var last_showcase_report: Dictionary = {}
@@ -24,14 +26,27 @@ func _ready() -> void:
 	impact_presenter.impact_presented.connect(_on_showcase_impact_presented)
 	impact_presenter.skill_presented.connect(_on_showcase_skill_presented)
 	impact_presenter.bind(controller)
+	environment_reaction = ENVIRONMENT_REACTION_SCRIPT.new()
+	environment_reaction.name = "BoundedEnvironmentReaction"
+	environment_reaction.configure(presentation_settings)
+	add_child(environment_reaction)
+	environment_reaction.build_showcase_props()
 	_build_showcase_hud()
 	_refresh_showcase_hud()
 	print("ABYSSFALL_SANDBOX_LAUNCHED:voidbringer_showcase")
 
 
+func _process(delta: float) -> void:
+	super._process(delta)
+	if environment_reaction != null:
+		environment_reaction.tick(delta)
+
+
 func _exit_tree() -> void:
 	if impact_presenter != null:
 		impact_presenter.clear()
+	if environment_reaction != null:
+		environment_reaction.clear()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -62,6 +77,8 @@ func simulate_command(command: StringName) -> bool:
 	if command in [&"clear", &"reset"] and haptics != null:
 		haptics.clear()
 	var result := super.simulate_command(command)
+	if command in [&"clear", &"reset"] and environment_reaction != null:
+		environment_reaction.reset_reactions()
 	_refresh_showcase_hud()
 	return result
 
@@ -106,6 +123,7 @@ func debug_showcase_snapshot() -> Dictionary:
 	return {
 		"presentation": presentation_settings.snapshot(),
 		"presenter": {} if impact_presenter == null else impact_presenter.debug_snapshot(),
+		"environment": {} if environment_reaction == null else environment_reaction.debug_snapshot(),
 		"last_showcase_report": last_showcase_report.duplicate(true),
 		"contact_visual_count": contact_flashes.size(),
 		"target_feedback_count": _count_named_nodes(enemy_fixture, "VoidbringerImpactFeedback"),
@@ -120,6 +138,8 @@ func _set_presentation_mode(mode: StringName) -> void:
 		haptics.clear()
 		_clear_children(contact_visual_root)
 		contact_flashes.clear()
+		if environment_reaction != null:
+			environment_reaction.reset_reactions()
 	last_status = "PRESENTATION %s" % String(mode).to_upper()
 
 
@@ -135,7 +155,7 @@ func _build_showcase_hud() -> void:
 	add_child(canvas)
 	showcase_label = Label.new()
 	showcase_label.position = Vector2(1020.0, 18.0)
-	showcase_label.size = Vector2(560.0, 340.0)
+	showcase_label.size = Vector2(560.0, 360.0)
 	showcase_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	showcase_label.add_theme_font_size_override("font_size", 17)
 	showcase_label.add_theme_color_override("font_color", Color(0.90, 0.88, 1.0))
@@ -150,6 +170,7 @@ func _refresh_showcase_hud() -> void:
 		return
 	var settings_snapshot := presentation_settings.snapshot()
 	var haptic_snapshot := {} if haptics == null else haptics.debug_snapshot()
+	var environment_snapshot := {} if environment_reaction == null else environment_reaction.debug_snapshot()
 	showcase_label.text = "\n".join([
 		"SAVAGE IMPACT SHOWCASE",
 		"F1 FULL   F2 REDUCED   F3 DISABLED",
@@ -162,6 +183,10 @@ func _refresh_showcase_hud() -> void:
 			float(settings_snapshot.get("rumble_scale", 0.0)),
 			int(haptic_snapshot.get("start_call_count", 0)),
 		],
+		"ENVIRONMENT ACTIVE %d / %d" % [
+			int(environment_snapshot.get("active_prop_count", 0)),
+			int(environment_snapshot.get("prop_count", 0)),
+		],
 		"LAST VISUAL %s   LAST HAPTIC %s" % [
 			"YES" if bool(last_showcase_report.get("visual_requested", false)) else "NO",
 			"YES" if bool(last_showcase_report.get("haptic_requested", false)) else "NO",
@@ -171,6 +196,8 @@ func _refresh_showcase_hud() -> void:
 
 func _on_showcase_impact_presented(report: Dictionary) -> void:
 	last_showcase_report = report.duplicate(true)
+	if environment_reaction != null:
+		environment_reaction.consume_impact(report.get("impact", {}))
 	_refresh_showcase_hud()
 
 
