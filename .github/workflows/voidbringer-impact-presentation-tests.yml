@@ -18,6 +18,7 @@ on:
       - "tests/test_voidbringer_presentation_modes_haptics.gd"
       - "tests/test_voidbringer_immutable_impact_presenter.gd"
       - "tests/test_voidbringer_impact_showcase_sandbox.gd"
+      - "tests/test_voidbringer_showcase_owner_controls.gd"
       - "tests/test_voidbringer_environment_reaction.gd"
       - "tests/test_voidbringer_impact_audio.gd"
       - ".github/workflows/voidbringer-impact-presentation-tests.yml"
@@ -114,6 +115,17 @@ jobs:
           fi
           grep -Fxq 'PASS: Voidbringer savage impact showcase sandbox' voidbringer-impact-showcase-sandbox.log
 
+      - name: Run owner controls and visibility proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --audio-driver Dummy --path . --script res://tests/test_voidbringer_showcase_owner_controls.gd 2>&1 | tee voidbringer-showcase-owner-controls.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-showcase-owner-controls.log; then
+            echo "Voidbringer showcase owner controls or visibility regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer showcase owner controls and visibility' voidbringer-showcase-owner-controls.log
+
       - name: Run bounded environment reaction proof
         shell: bash
         run: |
@@ -169,6 +181,7 @@ jobs:
             voidbringer-presentation-modes-haptics.log
             voidbringer-immutable-impact-presenter.log
             voidbringer-impact-showcase-sandbox.log
+            voidbringer-showcase-owner-controls.log
             voidbringer-environment-reaction.log
             voidbringer-impact-audio.log
             voidbringer-impact-showcase-route.log
