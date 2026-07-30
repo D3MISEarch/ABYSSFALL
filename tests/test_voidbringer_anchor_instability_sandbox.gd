@@ -37,7 +37,7 @@ func _test_anchor_caps_durations_stages_and_cleanup() -> void:
 	_expect(manager.capacity() == 2, "Levels 1-4 should allow two anchors")
 	_expect(manager.place_anchor(&"self", null, Vector3.ZERO, 10.0).is_empty(), "Self anchors should remain unavailable in this slice")
 	_expect(manager.place_anchor(&"enemy", null, Vector3.ZERO, 10.0).is_empty(), "Enemy Anchors should reject missing carriers")
-	_expect(manager.place_anchor(&"corpse", null, Vector3.ZERO, 10.0).is_empty(), "Corpse Anchors should reject missing carriers")
+	_expect(manager.validate_placement(&"corpse", null) == &"ok", "Detached corpse Anchors should allow a frozen position without retaining a carrier")
 
 	var enemy := Node3D.new()
 	root.add_child(enemy)
