@@ -62,12 +62,12 @@ func _test_feedback_only_hold(host: Node3D) -> void:
 	host.add_child(visual_root)
 	var base_scale := visual_root.scale
 	var feedback := ImpactFeedback.play_contact(visual_root, Vector3.FORWARD, &"light", true, false)
-	var hold := HOLD_SCRIPT.apply(feedback, 0.050)
+	var hold: Variant = HOLD_SCRIPT.apply(feedback, 0.050)
 	_expect(hold != null, "Valid impact feedback must accept a presentation-only hold")
 	_expect(not feedback.is_processing(), "Presentation hold must pause only ImpactFeedback processing")
 	_expect(visual_root.scale != base_scale, "Presentation hold must freeze an already deformed contact pose")
 	_expect(_count_nodes_named(feedback, "VoidbringerPresentationHold") == 1, "Impact feedback may own only one hold node")
-	var extended := HOLD_SCRIPT.apply(feedback, 0.065)
+	var extended: Variant = HOLD_SCRIPT.apply(feedback, 0.065)
 	_expect(extended == hold, "Repeated hold requests must extend one owner rather than add timers")
 	_expect(is_equal_approx(float(hold.debug_snapshot().get("requested_seconds", 0.0)), 0.065), "Hold extension must preserve the longest requested duration")
 	var ticks_before := clock.ticks
