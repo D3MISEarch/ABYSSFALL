@@ -3,17 +3,21 @@ name: Voidbringer Impact Presentation Tests
 on:
   pull_request:
     paths:
+      - "scripts/boot.gd"
+      - "scenes/voidbringer_impact_showcase_sandbox.tscn"
       - "scripts/impact_feedback.gd"
       - "scripts/skeleton.gd"
       - "scripts/bone_archer.gd"
       - "scripts/crypt_brute.gd"
       - "scripts/hollow_king.gd"
       - "scripts/void_bolt.gd"
+      - "scripts/characters/voidbringer/voidbringer_sandbox_target.gd"
       - "scripts/presentation/**"
       - "tests/test_voidbringer_impact_feedback.gd"
       - "tests/test_voidbringer_single_owner_fracture.gd"
       - "tests/test_voidbringer_presentation_modes_haptics.gd"
       - "tests/test_voidbringer_immutable_impact_presenter.gd"
+      - "tests/test_voidbringer_impact_showcase_sandbox.gd"
       - ".github/workflows/voidbringer-impact-presentation-tests.yml"
   workflow_dispatch:
 
@@ -28,7 +32,7 @@ jobs:
   single-owner-fracture:
     name: Godot 4.4.1 Single-Owner Fracture
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
 
     steps:
       - name: Check out exact PR head
@@ -97,6 +101,38 @@ jobs:
           fi
           grep -Fxq 'PASS: Voidbringer immutable impact presentation' voidbringer-immutable-impact-presenter.log
 
+      - name: Run playable impact showcase proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_impact_showcase_sandbox.gd 2>&1 | tee voidbringer-impact-showcase-sandbox.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-impact-showcase-sandbox.log; then
+            echo "Voidbringer impact showcase regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer savage impact showcase sandbox' voidbringer-impact-showcase-sandbox.log
+
+      - name: Verify isolated showcase boot route
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          timeout 10s godot --headless --path . -- --sandbox=voidbringer_showcase > voidbringer-impact-showcase-route.log 2>&1
+          status=$?
+          set -e
+          cat voidbringer-impact-showcase-route.log
+          if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+            exit "$status"
+          fi
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ERROR:' voidbringer-impact-showcase-route.log; then
+            exit 1
+          fi
+          grep -Fq 'ABYSSFALL_SANDBOX_LAUNCHED:voidbringer_showcase' voidbringer-impact-showcase-route.log
+          if grep -Fq 'ABYSSFALL_CLASS_LAUNCHED:' voidbringer-impact-showcase-route.log; then
+            echo "Showcase boot route launched campaign gameplay."
+            exit 1
+          fi
+
       - name: Upload focused logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -108,5 +144,7 @@ jobs:
             voidbringer-single-owner-fracture.log
             voidbringer-presentation-modes-haptics.log
             voidbringer-immutable-impact-presenter.log
+            voidbringer-impact-showcase-sandbox.log
+            voidbringer-impact-showcase-route.log
           if-no-files-found: warn
           retention-days: 14
