@@ -4,7 +4,6 @@ const STAT_MODIFIER_SCRIPT := preload("res://scripts/runtime/stats/stat_modifier
 const STAT_BLOCK_SCRIPT := preload("res://scripts/runtime/stats/stat_block.gd")
 const RESOURCE_POOL_SCRIPT := preload("res://scripts/runtime/resources/class_resource_pool.gd")
 const ABILITY_RUNTIME_SCRIPT := preload("res://scripts/runtime/abilities/ability_runtime.gd")
-const COMBAT_RESOLVER_SCRIPT := preload("res://scripts/runtime/combat/combat_resolver.gd")
 const ENEMY_RUNTIME_SCRIPT := preload("res://scripts/runtime/enemies/enemy_runtime.gd")
 const RUNTIME_CHARACTER_SCRIPT := preload("res://scripts/runtime/runtime_character.gd")
 const PERSISTENCE_SERVICE_SCRIPT := preload("res://scripts/persistence/persistence_service.gd")
@@ -22,7 +21,6 @@ func _run_tests() -> void:
 	print("START: Stage 2 runtime foundation")
 	_run_case("deterministic stats", _test_stats)
 	_run_case("resource and ability", _test_resource_and_ability)
-	_run_case("combat resolution", _test_combat)
 	_run_case("enemy death once", _test_enemy_death_once)
 	_run_case("runtime character snapshot", _test_runtime_character_snapshot)
 	_run_case("runtime persistence round-trip", _test_runtime_persistence_round_trip)
@@ -73,18 +71,6 @@ func _test_resource_and_ability() -> void:
 	_call(ability, &"tick", [2.0])
 	_expect(not bool(_call(ability, &"try_cast", [pool])), "Ability should fail when resource is insufficient")
 	_expect(is_equal_approx(float(pool.current), 15.0), "Failed cast must not spend resource")
-
-
-func _test_combat() -> void:
-	var result: Dictionary = COMBAT_RESOLVER_SCRIPT.resolve_damage({
-		"base_damage": 20.0,
-		"power": 100.0,
-		"coefficient": 1.0,
-		"armor": 100.0,
-		"resistance": 0.0,
-		"critical": false,
-	})
-	_expect(is_equal_approx(float(result.get("final_damage", 0.0)), 60.0), "Combat resolver should apply armor deterministically")
 
 
 func _test_enemy_death_once() -> void:

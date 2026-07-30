@@ -75,6 +75,8 @@ func _test_logically_dead_contact_is_ignored() -> void:
 	var setup := _setup("dead-contact")
 	var controller: VoidbringerController = setup.controller
 	var definition: AbilityDefinition = setup.definition
+	var projection := PlayableCombatProjection.new()
+	projection.configure({"power": 0.0, "critical_chance": 0.5})
 	var impact_events := [0]
 	controller.impact_committed.connect(
 		func(_result: VoidbringerImpactResult) -> void:
@@ -84,7 +86,7 @@ func _test_logically_dead_contact_is_ignored() -> void:
 		definition,
 		Vector3.ZERO,
 		Vector3.BACK,
-		null,
+		projection,
 		{},
 		[definition.ability_id]
 	)
@@ -100,9 +102,14 @@ func _test_logically_dead_contact_is_ignored() -> void:
 	_expect(projectile.active and not projectile.contact_committed, "Ignoring a dead target should leave the projectile available for a later valid contact")
 	_expect(dead_target.hit_calls == 0 and dead_target.health == 0, "A dead target must receive no damage callback")
 	_expect(impact_events[0] == 0, "A dead target must produce no false impact presentation event")
+	var valid_target := DamageTarget.new()
+	root.add_child(valid_target)
+	var valid_impact := projectile.commit_contact(valid_target, Vector3(0.0, 0.0, 1.0), Vector3.FORWARD)
+	_expect(not bool(valid_impact.get("critical", true)) and int(valid_impact.get("damage", 0)) == 18, "Rejected contacts must not advance the critical meter before the first valid impact")
+	_expect(valid_target.hit_calls == 1 and valid_target.health == 82, "The first valid impact after rejection must apply damage exactly once")
 
-	projectile.invalidate(&"teardown")
 	dead_target.free()
+	valid_target.free()
 	controller.clear()
 	setup.session.free()
 
