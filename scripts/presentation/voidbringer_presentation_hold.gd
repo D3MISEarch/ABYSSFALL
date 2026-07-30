@@ -2,6 +2,8 @@ class_name VoidbringerPresentationHold
 extends Node
 
 const NODE_NAME := "VoidbringerPresentationHold"
+const MODE_REDUCED: StringName = &"reduced"
+const MODE_DISABLED: StringName = &"disabled"
 
 var remaining_seconds := 0.0
 var requested_seconds := 0.0
@@ -14,24 +16,24 @@ static func duration_for(
 	critical: bool,
 	fatal: bool
 ) -> float:
-	if mode == VoidbringerPresentationSettings.MODE_DISABLED:
+	if mode == MODE_DISABLED:
 		return 0.0
 	var duration := 0.035
 	if fatal:
 		duration = 0.065
 	elif critical:
 		duration = 0.050
-	if mode == VoidbringerPresentationSettings.MODE_REDUCED:
+	if mode == MODE_REDUCED:
 		duration *= 0.50
 	return duration
 
 
-static func apply(feedback: ImpactFeedback, duration: float) -> VoidbringerPresentationHold:
+static func apply(feedback: Node, duration: float):
 	if not is_instance_valid(feedback) or duration <= 0.0:
 		return null
-	var existing := feedback.get_node_or_null(NODE_NAME) as VoidbringerPresentationHold
-	if is_instance_valid(existing):
-		existing.extend(duration)
+	var existing := feedback.get_node_or_null(NODE_NAME)
+	if is_instance_valid(existing) and existing.has_method("extend"):
+		existing.call("extend", duration)
 		return existing
 	var hold := VoidbringerPresentationHold.new()
 	hold.name = NODE_NAME
@@ -68,12 +70,13 @@ func debug_snapshot() -> Dictionary:
 	}
 
 
-func _configure(feedback: ImpactFeedback, duration: float) -> void:
+func _configure(feedback: Node, duration: float) -> void:
 	_feedback_ref = weakref(feedback)
 	var bounded := clampf(duration, 0.0, 0.10)
 	requested_seconds = bounded
 	remaining_seconds = bounded
-	feedback._process(minf(0.018, bounded))
+	if feedback.has_method("_process"):
+		feedback.call("_process", minf(0.018, bounded))
 	feedback.set_process(false)
 	set_process(true)
 
@@ -99,7 +102,7 @@ func _exit_tree() -> void:
 		feedback.set_process(true)
 
 
-func _feedback() -> ImpactFeedback:
+func _feedback() -> Node:
 	if _feedback_ref == null:
 		return null
-	return _feedback_ref.get_ref() as ImpactFeedback
+	return _feedback_ref.get_ref() as Node
