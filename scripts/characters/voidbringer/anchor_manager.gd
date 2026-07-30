@@ -82,7 +82,7 @@ func place_anchor_transaction(
 	var anchor := {
 		"anchor_id": anchor_id,
 		"carrier_type": carrier_type,
-		"carrier_ref": weakref(carrier) if carrier is Object else null,
+		"carrier_ref": _carrier_reference(carrier_type, carrier),
 		"position": position,
 		"mass": clampf(mass, 0.0, 100.0),
 		"mass_stage": mass_stage(mass),
@@ -108,8 +108,10 @@ func reclassify_pending_anchor(
 	if validate_placement(carrier_type, carrier) != PLACEMENT_OK:
 		return {}
 	var anchor: Dictionary = _anchors[anchor_id]
+	if carrier is Node3D and is_instance_valid(carrier):
+		anchor["position"] = (carrier as Node3D).global_position
 	anchor["carrier_type"] = carrier_type
-	anchor["carrier_ref"] = weakref(carrier) if carrier is Object else null
+	anchor["carrier_ref"] = _carrier_reference(carrier_type, carrier)
 	anchor["remaining_seconds"] = _duration_for(carrier_type)
 	_anchors[anchor_id] = anchor
 	return _public_snapshot(anchor)
@@ -233,13 +235,19 @@ func _carrier_type_is_allowed(carrier_type: StringName) -> bool:
 
 
 func _carrier_is_valid(carrier_type: StringName, carrier: Variant) -> bool:
-	if carrier_type == CARRIER_TERRAIN and carrier == null:
+	if carrier_type in [CARRIER_TERRAIN, CARRIER_CORPSE] and carrier == null:
 		return true
 	if not carrier is Object or not is_instance_valid(carrier):
 		return false
 	if carrier_type == CARRIER_ENEMY and _object_has_property(carrier as Object, &"alive"):
 		return bool((carrier as Object).get("alive"))
 	return true
+
+
+func _carrier_reference(carrier_type: StringName, carrier: Variant) -> WeakRef:
+	if carrier_type == CARRIER_CORPSE:
+		return null
+	return weakref(carrier) if carrier is Object else null
 
 
 func _object_has_property(object: Object, property_name: StringName) -> bool:
