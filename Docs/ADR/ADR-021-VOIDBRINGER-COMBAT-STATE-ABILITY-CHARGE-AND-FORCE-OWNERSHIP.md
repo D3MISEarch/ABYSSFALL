@@ -2,14 +2,16 @@
 
 ## Status
 
-OWNER APPROVED — PENDING MERGE
+ACCEPTED — MERGED
 
 - **Proposal date:** 2026-07-28
 - **Owner approval date:** 2026-07-28
+- **ADR-021 merge commit:** `39615749d35f5849851e591ad2e5c02dd0e09ead` (PR #102)
+- **Later PR #104 merge:** `272d5101e9869fc5ed68c5c38dd284e428de913a`
 - **Human owner:** D3MISEarch
-- **Implementation authority:** NONE UNTIL THIS OWNER-APPROVED ADR IS MERGED AND THE RESULTING MAIN SHA IS RECORDED
+- **Implementation authority:** ACTIVE. Individual provisions remain subject to their documented scope and verification gates; acceptance does not claim every provision is implemented.
 - **Primary tracker:** Issue #97
-- **First dependent implementation:** Issue #89
+- **Initial dependent implementation:** Issue #89 (the approved Voidbringer foundation was implemented by PR #106)
 
 ## 1. Context
 
@@ -415,7 +417,7 @@ This ADR does not define network authority, replication, rollback or co-op owner
 
 ## 17. Required implementation evidence
 
-Before Issue #89 or later integration may merge, focused tests must prove:
+Current and future implementations under this ADR must prove:
 
 1. one existing session/event bus/executor is reused;
 2. failed initial bind and failed rebind preserve the prior valid runtime;
@@ -441,11 +443,15 @@ Before Issue #89 or later integration may merge, focused tests must prove:
 1. independent read-only architecture review;
 2. every required wording correction on frozen exact head `8e9d1492967312f2ef59f48169b0eb7130b7401d`;
 3. independent verdict `PASS — CORRECTIONS COMPLETE`;
-4. explicit human owner approval.
+4. explicit human owner approval;
+5. ADR-021 merged through PR #102 at `39615749d35f5849851e591ad2e5c02dd0e09ead`;
+6. PR #106 implemented the approved Voidbringer foundation;
+7. PR #110 implemented only the bounded Mass Brand / Null Shard slice;
+8. PR #118 reconciled the live combat calculation authority.
 
-### Remaining
+### Future Design / Remaining
 
-1. merge ADR-021 and the synchronized Future Design section into `main`;
-2. record the resulting exact `main` SHA in Issues #97 and #89.
+1. Provisions not covered by the delivered foundation, the bounded Mass Brand / Null Shard slice, or the combat-authority reconciliation remain Future Design and require their own scoped implementation, verification, owner-playtest, and merge gates.
+2. Future work must preserve the ownership and evidence rules in this ADR without treating acceptance as proof that every provision is implemented.
 
-This owner-approved ADR grants no implementation authority before merge. Issue #89 may begin only after merge and SHA recording. No architecture rule changed during this status synchronization.
+ADR-021 is active architecture authority. `272d5101e9869fc5ed68c5c38dd284e428de913a` is the later PR #104 merge, not the resulting ADR-021 merge SHA.

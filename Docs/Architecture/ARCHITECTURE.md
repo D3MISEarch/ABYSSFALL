@@ -247,13 +247,21 @@ Godot typed arrays do not survive JSON stringify/parse with their static type. `
 
 Allocator snapshots also round-trip through JSON. A restored service resumes from the next unused sequence and observes live restored IDs as a collision safety net.
 
-## Future design — not yet implemented
+## ADR-021 implementation status
 
-### Owner-approved Voidbringer combat-state boundary
+### Delivered scope and Future Design boundary
 
-[ADR-021](../ADR/ADR-021-VOIDBRINGER-COMBAT-STATE-ABILITY-CHARGE-AND-FORCE-OWNERSHIP.md) records the owner-approved ownership boundary required before Issue #89. It is not current implementation. Implementation remains unauthorized until ADR-021 merges into `main` and the resulting exact `main` SHA is recorded.
+[ADR-021](../ADR/ADR-021-VOIDBRINGER-COMBAT-STATE-ABILITY-CHARGE-AND-FORCE-OWNERSHIP.md) is merged, accepted, and active architecture authority. PR #102 merged the ADR at `39615749d35f5849851e591ad2e5c02dd0e09ead`; `272d5101e9869fc5ed68c5c38dd284e428de913a` is the later PR #104 merge, not the resulting ADR-021 merge SHA.
 
-Under the approved decision:
+The delivered scope is deliberately bounded:
+
+- PR #106 implemented the approved Voidbringer foundation;
+- PR #110 implemented only the bounded Mass Brand / Null Shard slice; and
+- PR #118 reconciled the live combat calculation authority, including `PlayableCombatProjection` as the single live compatibility calculation authority documented above.
+
+This does not claim that every ADR-021 provision is implemented. Unimplemented provisions remain **Future Design** and require their own scoped implementation, verification, owner-playtest, and merge gates.
+
+Under the approved decision, the following broader boundary applies wherever it is not already represented by the delivered scope:
 
 - `VoidWarlockCharacter` composes one character-combat-scoped `VoidbringerController` only after the existing `RuntimeSession`/`RuntimeCharacter` bind succeeds;
 - the controller composes one `AnchorManager`, `FoldLineManager`, and `InstabilityController` and owns only Voidbringer transient state/orchestration;
@@ -265,7 +273,9 @@ Under the approved decision:
 - a generation token and ordered teardown reject stale effects across death, rebind, menu return and scene replacement;
 - the durable compatibility ID remains `void_warlock`, and no save-schema migration is part of the foundation.
 
-The controller/managers, charge extension and force vocabulary must remain described here as Future Design until their own implementation PRs merge. This subsection must stay synchronized if ADR-021 is revised.
+The controller/managers, charge extension, force vocabulary, and any other unimplemented ADR-021 provision remain Future Design until their own implementation PRs merge. This subsection must stay synchronized if ADR-021 is revised.
+
+## Future design — not yet implemented
 
 ### Other deferred architecture
 
