@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          godot --verbose --headless --path . --script res://tests/test_voidbringer_presentation_only_hold.gd 2>&1 | tee voidbringer-presentation-only-hold.log
+          godot --verbose --headless --audio-driver Dummy --path . --script res://tests/test_voidbringer_presentation_only_hold.gd 2>&1 | tee voidbringer-presentation-only-hold.log
           if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-presentation-only-hold.log; then
             exit 1
           fi
