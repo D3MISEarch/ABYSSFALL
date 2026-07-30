@@ -5,6 +5,7 @@ signal health_changed(current_health: int, maximum_health: int, phase: int)
 signal summon_requested(position_value: Vector3, enemy_type: String)
 signal phase_changed(phase: int)
 
+const IMPACT_FEEDBACK_SCRIPT = preload("res://scripts/impact_feedback.gd")
 const ENEMY_BOLT_SCRIPT = preload("res://scripts/enemy_bolt.gd")
 
 var target: Node3D
@@ -99,9 +100,7 @@ func _melee_strike() -> void:
 		offset.y = 0.0
 		if offset.length() <= melee_range + 0.35:
 			target.take_damage(attack_damage + (4 if phase == 2 else (8 if phase == 3 else 0)))
-	var tween := create_tween()
-	tween.tween_property(visual_root, "scale", Vector3(1.18, 0.88, 1.18), 0.09)
-	tween.tween_property(visual_root, "scale", Vector3.ONE, 0.16)
+	IMPACT_FEEDBACK_SCRIPT.play_pulse(visual_root, &"attack_heavy")
 
 
 func _cast_volley(direction: Vector3) -> void:
@@ -186,6 +185,16 @@ func take_damage(amount: int) -> void:
 		_die()
 
 
+func present_void_bolt_impact(
+	incoming_direction: Vector3, primary_hit: bool, lethal_hit: bool
+) -> void:
+	if not is_instance_valid(visual_root):
+		return
+	IMPACT_FEEDBACK_SCRIPT.play_contact(
+		visual_root, incoming_direction, &"boss", primary_hit, lethal_hit
+	)
+
+
 func _update_phase() -> void:
 	var next_phase := 1
 	var ratio := float(health) / float(max_health)
@@ -208,10 +217,9 @@ func _begin_phase_transition() -> void:
 		core_material.emission_energy_multiplier = 4.0 + float(phase)
 	if is_instance_valid(corruption_material):
 		corruption_material.emission_energy_multiplier = 3.4 + float(phase) * 0.8
-	var tween := create_tween()
-	tween.tween_property(visual_root, "scale", Vector3(1.35, 1.35, 1.35), 0.22)
-	tween.tween_property(visual_root, "scale", Vector3.ONE, 0.28).set_trans(Tween.TRANS_BACK)
-	tween.tween_callback(_finish_phase_transition)
+	IMPACT_FEEDBACK_SCRIPT.play_pulse(
+		visual_root, &"boss_phase", Callable(self, "_finish_phase_transition")
+	)
 
 
 func _finish_phase_transition() -> void:
@@ -221,18 +229,12 @@ func _finish_phase_transition() -> void:
 
 func _die() -> void:
 	alive = false
+	phase_lock = false
 	collision_layer = 0
 	collision_mask = 0
 	velocity = Vector3.ZERO
+	IMPACT_FEEDBACK_SCRIPT.play_fatal(visual_root, Vector3.ZERO, &"boss", self)
 	died.emit(self)
-	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(visual_root, "scale", Vector3(1.55, 1.55, 1.55), 0.18)
-	tween.tween_property(
-		visual_root, "rotation_degrees:y", visual_root.rotation_degrees.y + 150.0, 0.45
-	)
-	tween.chain().tween_property(visual_root, "scale", Vector3(0.02, 0.02, 0.02), 0.55)
-	tween.chain().tween_callback(queue_free)
 
 
 func _hit_flash() -> void:
@@ -291,7 +293,6 @@ func _build_visual() -> void:
 	hood_mesh.size = Vector3(1.25, 1.25, 1.05)
 	hood.mesh = hood_mesh
 	hood.position = Vector3(0.0, 1.55, 0.0)
-	hood.rotation_degrees.x = 180.0
 	hood.material_override = armor_material
 	visual_root.add_child(hood)
 
