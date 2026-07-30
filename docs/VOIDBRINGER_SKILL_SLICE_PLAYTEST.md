@@ -117,6 +117,24 @@ Expected:
 - class state returns to `CONTAINED`;
 - no stale flash, projectile, label or line remains.
 
+### 6. Targeted lethal Mass Brand corpse finalization
+
+1. Press `C`.
+2. Press `Space` five times. The enemy should reach `10` health.
+3. Press `Q` once. The enemy should reach `2` health.
+4. Press `Q` a second time to deliver the lethal Mass Brand hit.
+
+Expected:
+
+- the enemy becomes dead;
+- the last Mass Brand impact reports a fatal result;
+- the newly committed Anchor is immediately labeled `CORPSE`, never a dead `ENEMY` carrier;
+- its timer starts near `8.0s` and counts down normally;
+- the earlier enemy Anchor may disappear because its carrier became logically dead;
+- no duplicate Anchor event or false rejection appears.
+
+The automated lethal-corpse regression additionally frees the enemy node and proves the detached corpse Anchor survives for its own full eight-second lifetime before expiring normally.
+
 ## Feel/readability gate
 
 Answer each with `YES`, `MIXED`, or `NO`:
