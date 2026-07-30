@@ -1,0 +1,85 @@
+name: Voidbringer Impact Presentation Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/impact_feedback.gd"
+      - "scripts/skeleton.gd"
+      - "scripts/bone_archer.gd"
+      - "scripts/crypt_brute.gd"
+      - "scripts/hollow_king.gd"
+      - "scripts/void_bolt.gd"
+      - "tests/test_voidbringer_impact_feedback.gd"
+      - "tests/test_voidbringer_single_owner_fracture.gd"
+      - ".github/workflows/voidbringer-impact-presentation-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voidbringer-impact-presentation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  single-owner-fracture:
+    name: Godot 4.4.1 Single-Owner Fracture
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --editor --path . --quit 2>&1 | tee voidbringer-impact-import.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ERROR:' voidbringer-impact-import.log; then
+            echo "Voidbringer impact presentation import failed."
+            exit 1
+          fi
+
+      - name: Run inherited impact and payoff regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_impact_feedback.gd 2>&1 | tee voidbringer-impact-feedback.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-impact-feedback.log; then
+            echo "Inherited Voidbringer impact regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer impact and Corruption payoff' voidbringer-impact-feedback.log
+
+      - name: Run single-owner Fracture proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_single_owner_fracture.gd 2>&1 | tee voidbringer-single-owner-fracture.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-single-owner-fracture.log; then
+            echo "Voidbringer single-owner Fracture regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer combat physics and showcase feedback' voidbringer-single-owner-fracture.log
+
+      - name: Upload focused logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voidbringer-impact-presentation-logs
+          path: |
+            voidbringer-impact-import.log
+            voidbringer-impact-feedback.log
+            voidbringer-single-owner-fracture.log
+          if-no-files-found: warn
+          retention-days: 14
