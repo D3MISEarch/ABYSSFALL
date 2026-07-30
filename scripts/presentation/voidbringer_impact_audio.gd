@@ -68,9 +68,7 @@ func tick(delta: float) -> void:
 		if remaining <= 0.0 or not is_instance_valid(player):
 			var voice_id := StringName(str(voice.get("voice_id", "")))
 			active_voices.remove_at(index)
-			if is_instance_valid(player):
-				player.stop()
-				player.queue_free()
+			_dispose_player(player)
 			audio_finished.emit(voice_id)
 		else:
 			voice["remaining"] = remaining
@@ -79,10 +77,7 @@ func tick(delta: float) -> void:
 
 func clear() -> void:
 	for voice: Dictionary in active_voices:
-		var player := voice.get("player") as AudioStreamPlayer3D
-		if is_instance_valid(player):
-			player.stop()
-			player.queue_free()
+		_dispose_player(voice.get("player") as AudioStreamPlayer3D)
 	active_voices.clear()
 	last_audio_report.clear()
 
@@ -164,10 +159,16 @@ func _play_profile(
 func _prune_to_budget() -> void:
 	while active_voices.size() >= MAX_ACTIVE_VOICES:
 		var oldest: Dictionary = active_voices.pop_front()
-		var player := oldest.get("player") as AudioStreamPlayer3D
-		if is_instance_valid(player):
-			player.stop()
-			player.queue_free()
+		_dispose_player(oldest.get("player") as AudioStreamPlayer3D)
+
+
+func _dispose_player(player: AudioStreamPlayer3D) -> void:
+	if not is_instance_valid(player):
+		return
+	player.stop()
+	if player.get_parent() == self:
+		remove_child(player)
+	player.queue_free()
 
 
 func _stream_for(profile_id: StringName, fold_count: int) -> AudioStreamWAV:
