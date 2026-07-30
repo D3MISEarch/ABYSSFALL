@@ -111,6 +111,45 @@ Stat effects use deterministic `class_tree:<node>:<rank>:<effect>` source IDs. R
 
 Owned one-per-session and constructed with that session's event bus. Cooldowns are keyed per build/ability inside the executor. Execution follows **validate → spend cost → start cooldown → execute effects**. A rejected attempt changes neither resources nor cooldown state. ([ADR-013](../ADR/ADR-013-ABILITY-RESOURCE-ARCHITECTURE.md), [ADR-017](../ADR/ADR-017-ABILITY-EXECUTION-OWNERSHIP.md))
 
+### Live playable outgoing-damage boundary
+
+`PlayableCombatProjection` (`scripts/core/playable_combat_projection.gd`) is the sole live compatibility authority for a playable class's outgoing damage result. This is the narrow compatibility boundary in [ADR-021 §11](../ADR/ADR-021-VOIDBRINGER-COMBAT-STATE-ABILITY-CHARGE-AND-FORCE-OWNERSHIP.md); it does not implement the broader future Voidbringer foundation described below.
+
+Before Issue #114, the repository contained two calculation implementations:
+
+```text
+test-only: CombatResolver.resolve_damage(request) → Dictionary
+live:      CharacterFactory → PenitentPlayable / VoidWarlockCharacter
+             → PlayableCombatProjection.resolve_outgoing_result*()
+             → validated target.take_damage()
+```
+
+`CombatResolver` had no production preload, scene reference, factory reference, or caller. It was used only by the Stage 2 runtime-foundation test, so it could neither resolve live damage nor cause a live double application. It was removed rather than kept as a misleading second authority.
+
+The live graph is now:
+
+```text
+CharacterFactory → PenitentPlayable / VoidWarlockCharacter
+  → PlayableCombatProjection.resolve_outgoing_result*()
+  → spatial/ability caller validates a hit
+  → target.take_damage() / apply_damage() mutates target health and death state once
+
+Voidbringer skill caller
+  → VoidbringerDamageBridge → PlayableCombatProjection structured result
+  → Mass Brand / Null Shard applies that result to the target once
+  → VoidbringerImpactResult → controller impact event
+```
+
+Responsibility is intentionally split at this boundary:
+
+- spatial ability callers own hit/target validation and reject invalid contacts before resolution;
+- `PlayableCombatProjection` owns outgoing power calculation, deterministic critical determination, exactly-once critical-meter mutation for a valid positive base damage, and the one-pass structured result (`damage`, `critical`, `pre_critical_damage`, `base_damage`, `damage_multiplier`);
+- `resolve_outgoing_damage()` is a legacy integer adapter that delegates once to that structured authority;
+- `PlayableCombatProjection` owns only the playable source's incoming armor projection; target-specific mitigation, health mutation, and death consequences remain with the target's existing `take_damage()` / `apply_damage()` owner;
+- `AbilityExecutor` retains generic ability validation/commit events, while Voidbringer's controller emits its class-specific committed impact after the target application.
+
+This preserves the existing damage values and keeps one resolved result, one critical-meter mutation, and one target application per accepted hit. It adds no persistence state, class-ID change, or save-schema change.
+
 ### ItemCatalog / AffixCatalog
 
 Immutable registries of `ItemDefinition`/`AffixDefinition`, keyed by stable IDs and returned as defensive copies. `AffixCatalog.eligible_definitions(tags, item_level, kind)` supplies candidate pools to item generation. ([ADR-014](../ADR/ADR-014-INVENTORY-EQUIPMENT-OWNERSHIP.md), [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md))

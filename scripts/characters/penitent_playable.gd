@@ -118,8 +118,12 @@ func get_class_tree_combat_snapshot() -> Dictionary:
 	return class_tree_combat.snapshot()
 
 
+func resolve_outgoing_damage_result(base_damage: int) -> Dictionary:
+	return class_tree_combat.resolve_outgoing_result(base_damage)
+
+
 func _resolve_outgoing_damage(base_damage: int) -> int:
-	return class_tree_combat.resolve_outgoing_damage(base_damage)
+	return int(resolve_outgoing_damage_result(base_damage).get("damage", 0))
 
 
 func _resolve_incoming_damage(base_damage: int) -> int:
