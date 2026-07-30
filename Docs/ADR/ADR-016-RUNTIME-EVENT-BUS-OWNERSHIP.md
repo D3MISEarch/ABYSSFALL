@@ -1,7 +1,10 @@
 # ADR-016 — Runtime Event Bus Ownership
 
-Status: PROPOSED  
-Release target: CORE / Stage 3
+## Status
+
+PROPOSED
+
+**Release target:** CORE / Stage 3
 
 ## Decision
 

@@ -1,13 +1,16 @@
 # ADR-020 — Persistent Class Tree and Progression UI
 
-- **Status:** OWNER APPROVED AT DESIGN-FOUNDATION LEVEL
+## Status
+
+OWNER APPROVED AT DESIGN-FOUNDATION LEVEL
+
 - **Decision date:** 2026-07-23/24
 - **Human owner:** D3MISEarch
 - **Implementation authority:** NONE BY DEFAULT
 - **Implementation dependency:** PR #34 durable runtime/persistence foundation must merge before production work begins
 - **Primary implementation tracker:** Issue #46
 
-> **ADR sequence note:** ADR-018 and ADR-019 are reserved for the already-reviewed pending runtime/itemization lineage: procedural item generation and the live runtime equipment-projection boundary. This decision uses ADR-020 to prevent duplicate numbering when those branches reconcile with `main`.
+> **ADR sequence note:** ADR-018 is the merged procedural-item-generation record. ADR-019 remains reserved for the already-reviewed live runtime equipment-projection boundary; no ADR-019 record is present in this repository. ADR-020 intentionally preserves that reserved number and prevents a duplicate record.
 
 ## 1. Context
 

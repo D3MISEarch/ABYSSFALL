@@ -1,7 +1,10 @@
 # ADR-013 — Ability and Class-Resource Architecture
 
-Status: PROPOSED  
-Release target: CORE / Stage 2
+## Status
+
+PROPOSED
+
+**Release target:** CORE / Stage 2
 
 ## Decision
 

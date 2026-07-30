@@ -1,8 +1,11 @@
 # ADR-010 — Persistent Character Continuity
 
-Status: APPROVED  
-Release target: CORE  
-Verification: Pending Stage 1 implementation
+## Status
+
+APPROVED
+
+**Release target:** CORE
+**Verification:** Pending Stage 1 implementation
 
 ## Context
 

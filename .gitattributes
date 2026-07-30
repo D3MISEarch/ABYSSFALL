@@ -1,0 +1,3 @@
+# Godot writes generated metadata with LF on every supported platform.
+*.import text eol=lf
+*.gd.uid text eol=lf

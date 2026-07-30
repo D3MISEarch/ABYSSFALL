@@ -1,8 +1,12 @@
 # Architecture
 
-This document describes the architecture that **currently exists in code**, verified against `scripts/runtime/`, `scripts/persistence/`, the merged Stages 3–5 foundation, and the repository ADR record through ADR-020. It does not describe planned-but-unbuilt systems except where explicitly marked under **Future design**.
+This document describes the architecture that **currently exists in code**, verified against `scripts/runtime/`, `scripts/persistence/`, the merged Stages 3–5 foundation, and the repository ADR record through ADR-021. It does not describe planned-but-unbuilt systems except where explicitly marked under **Future design**.
 
 For *why* each boundary exists, see the linked ADR. This document describes *what exists*.
+
+## Repository metadata policy
+
+Godot 4.4.1 generates one `.gd.uid` sidecar for each GDScript. AbyssFall tracks every GDScript sidecar, including test scripts, so a clean import cannot leave generated UID files untracked. These files are editor metadata, not gameplay, persistence, or architecture state; the repository-health check verifies the one-to-one policy and every declared `uid://` value.
 
 ## Composition root: RuntimeSession
 
@@ -23,7 +27,7 @@ RuntimeSession
  └── equipment            : EquipmentManager        (constructed on bind, wired to item_catalog + character.stats)
 ```
 
-`RuntimeSession` is a `Node`, but never an autoload. One instance exists per session, and no gameplay system may reach a session's services except through the session that owns them. ([ADR-016](../ADR/ADR-016-RUNTIME-EVENT-BUS-OWNERSHIP.md), [ADR-017](../ADR/ADR-017-ABILITY-EXECUTION-OWNERSHIP.md), [ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md))
+`RuntimeSession` is a `Node`, but never an autoload. One instance exists per session, and no gameplay system may reach a session's services except through the session that owns them. ([ADR-016](../ADR/ADR-016-RUNTIME-EVENT-BUS-OWNERSHIP.md), [ADR-017](../ADR/ADR-017-ABILITY-EXECUTION-OWNERSHIP.md), [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md))
 
 ### Transactional character binding
 
@@ -109,7 +113,7 @@ Owned one-per-session and constructed with that session's event bus. Cooldowns a
 
 ### ItemCatalog / AffixCatalog
 
-Immutable registries of `ItemDefinition`/`AffixDefinition`, keyed by stable IDs and returned as defensive copies. `AffixCatalog.eligible_definitions(tags, item_level, kind)` supplies candidate pools to item generation. ([ADR-014](../ADR/ADR-014-INVENTORY-EQUIPMENT-OWNERSHIP.md), [ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md))
+Immutable registries of `ItemDefinition`/`AffixDefinition`, keyed by stable IDs and returned as defensive copies. `AffixCatalog.eligible_definitions(tags, item_level, kind)` supplies candidate pools to item generation. ([ADR-014](../ADR/ADR-014-INVENTORY-EQUIPMENT-OWNERSHIP.md), [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md))
 
 ### InventoryContainer (`scripts/runtime/items/inventory_container.gd`)
 
@@ -146,7 +150,7 @@ The data tag `two_handed` is an occupancy rule: a tagged item may equip only in 
 
 ### EnemyRewardService / LootGenerator / ItemGenerator
 
-`EnemyRewardService.grant(...)` is invoked through `RuntimeSession` and owns exactly-once experience and loot grants. `LootGenerator` performs seeded table selection and requests unique physical IDs from the active allocator. `ItemGenerator.generate(...)` is a pure static function over immutable definition/catalog data, item level, rarity, generation seed, and explicit identity token. It returns a complete `ItemInstance` or `null` without mutating callers. ([ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md))
+`EnemyRewardService.grant(...)` is invoked through `RuntimeSession` and owns exactly-once experience and loot grants. `LootGenerator` performs seeded table selection and requests unique physical IDs from the active allocator. `ItemGenerator.generate(...)` is a pure static function over immutable definition/catalog data, item level, rarity, generation seed, and explicit identity token. It returns a complete `ItemInstance` or `null` without mutating callers. ([ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md))
 
 ### ItemIdentityService (`scripts/runtime/items/item_identity_service.gd`)
 
@@ -154,7 +158,7 @@ Owned one-per-active-build by `RuntimeSession`. It scopes IDs to the durable bui
 
 `item:<build_id>:<sequence>`
 
-The next unused sequence persists in `build_specific_progress.item_identity`. Restoration observes inventory/equipment IDs before any new mint. Only one authoritative session may mint for a build at a time; multiplayer requires future network authority. ([ADR-018](../ADR/018_PROCEDURAL_ITEM_GENERATION.md))
+The next unused sequence persists in `build_specific_progress.item_identity`. Restoration observes inventory/equipment IDs before any new mint. Only one authoritative session may mint for a build at a time; multiplayer requires future network authority. ([ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md))
 
 ### Playable prototype inventory adapter (`scripts/ui/playable_inventory_bridge.gd`)
 

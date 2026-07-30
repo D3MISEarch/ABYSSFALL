@@ -8,7 +8,6 @@ on:
       - "gameplay.tscn"
       - "scripts/core/character_factory.gd"
       - "scripts/multiclass_main.gd"
-      - "scripts/full_stack_controller_boot.gd"
       - "scripts/full_stack_controller_main.gd"
       - "scripts/shared/class_ids.gd"
       - "scripts/core/controller_ui_input_map.gd"
