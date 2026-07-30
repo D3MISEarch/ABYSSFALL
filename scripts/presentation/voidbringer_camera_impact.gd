@@ -24,8 +24,10 @@ func configure(presentation_settings: VoidbringerPresentationSettings, target_ca
 func bind_camera(target_camera: Camera3D = null) -> void:
 	cancel_and_restore()
 	camera = target_camera
-	if not is_instance_valid(camera):
-		camera = get_viewport().get_camera_3d()
+	if not is_instance_valid(camera) and is_inside_tree():
+		var viewport := get_viewport()
+		if viewport != null:
+			camera = viewport.get_camera_3d()
 	if is_instance_valid(camera):
 		_capture_base()
 
