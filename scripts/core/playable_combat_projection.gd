@@ -16,19 +16,36 @@ func configure(snapshot: Dictionary) -> void:
 	_critical_meter = clampf(_critical_meter, 0.0, 0.999999)
 
 
+func peek_pre_critical_damage(base_damage: int) -> int:
+	return peek_pre_critical_damage_with_multiplier(base_damage, 1.0)
+
+
+func peek_pre_critical_damage_with_multiplier(base_damage: int, damage_multiplier: float) -> int:
+	if base_damage <= 0:
+		return 0
+	var projected := maxf(float(base_damage) + power, 0.0)
+	return maxi(0, int(round(projected * maxf(damage_multiplier, 0.0))))
+
+
 func resolve_outgoing_damage(base_damage: int) -> int:
 	return int(resolve_outgoing_result(base_damage).get("damage", 0))
 
 
 func resolve_outgoing_result(base_damage: int) -> Dictionary:
+	return resolve_outgoing_result_with_multiplier(base_damage, 1.0)
+
+
+func resolve_outgoing_result_with_multiplier(base_damage: int, damage_multiplier: float) -> Dictionary:
+	var clamped_multiplier := maxf(damage_multiplier, 0.0)
 	if base_damage <= 0:
 		return {
 			"damage": 0,
 			"critical": false,
 			"pre_critical_damage": 0,
 			"base_damage": maxi(base_damage, 0),
+			"damage_multiplier": clamped_multiplier,
 		}
-	var pre_critical := maxi(0, int(round(float(base_damage) + power)))
+	var pre_critical := peek_pre_critical_damage_with_multiplier(base_damage, clamped_multiplier)
 	_critical_meter += critical_chance
 	var critical := false
 	var resolved := pre_critical
@@ -41,6 +58,7 @@ func resolve_outgoing_result(base_damage: int) -> Dictionary:
 		"critical": critical,
 		"pre_critical_damage": pre_critical,
 		"base_damage": base_damage,
+		"damage_multiplier": clamped_multiplier,
 	}
 
 

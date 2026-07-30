@@ -5,6 +5,10 @@ const FOLD_LINE_MANAGER_SCRIPT = preload("res://scripts/characters/voidbringer/f
 const INSTABILITY_CONTROLLER_SCRIPT = preload("res://scripts/characters/voidbringer/instability_controller.gd")
 const VOIDBRINGER_CONTROLLER_SCRIPT = preload("res://scripts/characters/voidbringer/voidbringer_controller.gd")
 
+class CarrierFixture:
+	extends Node3D
+	var alive := true
+
 var failures: Array[String] = []
 
 
@@ -14,6 +18,7 @@ func _init() -> void:
 
 func _run() -> void:
 	_test_anchor_caps_durations_stages_and_cleanup()
+	_test_capacity_reason_split_and_dead_carrier_liveness()
 	_test_fold_line_geometry_is_deterministic_and_non_colliding()
 	_test_instability_delay_decay_and_base_breach()
 	_test_composed_controller_cleanup()
@@ -32,7 +37,7 @@ func _test_anchor_caps_durations_stages_and_cleanup() -> void:
 	_expect(manager.capacity() == 2, "Levels 1-4 should allow two anchors")
 	_expect(manager.place_anchor(&"self", null, Vector3.ZERO, 10.0).is_empty(), "Self anchors should remain unavailable in this slice")
 	_expect(manager.place_anchor(&"enemy", null, Vector3.ZERO, 10.0).is_empty(), "Enemy Anchors should reject missing carriers")
-	_expect(manager.place_anchor(&"corpse", null, Vector3.ZERO, 10.0).is_empty(), "Corpse Anchors should reject missing carriers")
+	_expect(manager.validate_placement(&"corpse", null) == &"ok", "Detached corpse Anchors should allow a frozen position without retaining a carrier")
 
 	var enemy := Node3D.new()
 	root.add_child(enemy)
@@ -69,6 +74,52 @@ func _test_anchor_caps_durations_stages_and_cleanup() -> void:
 	_expect(not manager.has_anchor(third_anchor.get("anchor_id", &"")), "Invalid carrier references should clean up their anchors")
 	manager.clear()
 	_expect(manager.active_count() == 0, "Anchor teardown should leave no transient registry entries")
+
+
+func _test_capacity_reason_split_and_dead_carrier_liveness() -> void:
+	var manager = ANCHOR_MANAGER_SCRIPT.new()
+	var removal_reasons: Array[StringName] = []
+	manager.anchor_removed.connect(
+		func(_anchor_id: StringName, reason: StringName) -> void:
+			removal_reasons.append(reason)
+	)
+
+	var dead_enemy := CarrierFixture.new()
+	root.add_child(dead_enemy)
+	dead_enemy.alive = false
+	_expect(manager.validate_placement(&"enemy", dead_enemy) == &"carrier_invalidated", "A logically dead enemy must fail placement even while its Node is still instance-valid")
+	_expect(manager.place_anchor(&"enemy", dead_enemy, Vector3.ZERO).is_empty(), "A dead enemy must never receive a CARRIER_ENEMY Anchor")
+	dead_enemy.free()
+
+	var live_enemy := CarrierFixture.new()
+	root.add_child(live_enemy)
+	var live_anchor: Dictionary = manager.place_anchor(&"enemy", live_enemy, Vector3.ZERO)
+	_expect(not live_anchor.is_empty(), "A logically alive enemy should accept an enemy Anchor")
+	live_enemy.alive = false
+	manager.tick(0.1)
+	_expect(not manager.has_anchor(live_anchor.get("anchor_id", &"")), "An enemy Anchor should clean up when its carrier becomes logically dead")
+	_expect(removal_reasons.back() == &"carrier_invalidated", "Logical death cleanup should report carrier_invalidated")
+	live_enemy.free()
+
+	removal_reasons.clear()
+	manager.clear()
+	manager.configure(1)
+	manager.place_anchor(&"terrain", null, Vector3(-2.0, 0.0, 0.0))
+	manager.place_anchor(&"terrain", null, Vector3(0.0, 0.0, 0.0))
+	manager.place_anchor(&"terrain", null, Vector3(2.0, 0.0, 0.0))
+	_expect(removal_reasons.has(&"capacity_replacement"), "In-cast capacity eviction should report capacity_replacement")
+
+	removal_reasons.clear()
+	manager.clear()
+	manager.configure(5)
+	manager.place_anchor(&"terrain", null, Vector3(-2.0, 0.0, 0.0))
+	manager.place_anchor(&"terrain", null, Vector3(0.0, 0.0, 0.0))
+	manager.place_anchor(&"terrain", null, Vector3(2.0, 0.0, 0.0))
+	manager.configure(1)
+	_expect(manager.active_count() == 2, "Level downgrade should enforce the lower Anchor capacity")
+	_expect(removal_reasons.has(&"capacity_downgrade"), "Level-driven capacity reduction should report capacity_downgrade")
+	_expect(not removal_reasons.has(&"capacity_replacement"), "Capacity downgrade must remain independently observable from cast eviction")
+	manager.clear()
 
 
 func _test_fold_line_geometry_is_deterministic_and_non_colliding() -> void:

@@ -1,0 +1,140 @@
+name: Voidbringer Skill Slice Tests
+
+on:
+  pull_request:
+    paths:
+      - "scenes/voidbringer_foundation_sandbox.tscn"
+      - "scripts/characters/voidbringer/**"
+      - "scripts/core/playable_combat_projection.gd"
+      - "scripts/runtime/abilities/**"
+      - "tests/test_voidbringer_mass_brand_transaction.gd"
+      - "tests/test_voidbringer_fold_line_3d.gd"
+      - "tests/test_voidbringer_skill_slice.gd"
+      - "tests/test_voidbringer_commit_packet_finality.gd"
+      - "tests/test_voidbringer_fold_damage_and_dead_contact.gd"
+      - "tests/test_voidbringer_lethal_mass_brand_corpse_anchor.gd"
+      - "tests/test_voidbringer_playable_skill_sandbox.gd"
+      - ".github/workflows/voidbringer-skill-slice-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voidbringer-skill-slice-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  transactional-skill-contracts:
+    name: Godot 4.4.1 Voidbringer Skill Contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+
+      - name: Run transactional Mass Brand proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_mass_brand_transaction.gd 2>&1 | tee voidbringer-mass-brand-transaction.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-mass-brand-transaction.log; then
+            echo "Voidbringer Mass Brand transaction regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer transactional Mass Brand' voidbringer-mass-brand-transaction.log
+
+      - name: Run full-3D Fold Line proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --script res://tests/test_voidbringer_fold_line_3d.gd 2>&1 | tee voidbringer-fold-line-3d.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-fold-line-3d.log; then
+            echo "Voidbringer full-3D Fold Line regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer full-3D Fold Line crossings' voidbringer-fold-line-3d.log
+
+      - name: Run complete Mass Brand and Null Shard proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_skill_slice.gd 2>&1 | tee voidbringer-skill-slice.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-skill-slice.log; then
+            echo "Voidbringer Mass Brand and Null Shard regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer Mass Brand and Null Shard skill slice' voidbringer-skill-slice.log
+
+      - name: Run authoritative commit-packet finality proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_commit_packet_finality.gd 2>&1 | tee voidbringer-commit-packet-finality.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-commit-packet-finality.log; then
+            echo "Voidbringer commit-packet finality regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer authoritative commit packet finality' voidbringer-commit-packet-finality.log
+
+      - name: Run Fold damage and dead-contact safety proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_fold_damage_and_dead_contact.gd 2>&1 | tee voidbringer-fold-damage-dead-contact.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-fold-damage-dead-contact.log; then
+            echo "Voidbringer Fold damage or dead-contact safety regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer Fold damage and dead-contact safety' voidbringer-fold-damage-dead-contact.log
+
+      - name: Run lethal Mass Brand corpse-Anchor proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_lethal_mass_brand_corpse_anchor.gd 2>&1 | tee voidbringer-lethal-mass-brand-corpse-anchor.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-lethal-mass-brand-corpse-anchor.log; then
+            echo "Voidbringer lethal Mass Brand corpse-Anchor regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer lethal Mass Brand corpse Anchor' voidbringer-lethal-mass-brand-corpse-anchor.log
+
+      - name: Run playable skill sandbox proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_playable_skill_sandbox.gd 2>&1 | tee voidbringer-playable-skill-sandbox.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-playable-skill-sandbox.log; then
+            echo "Voidbringer playable skill sandbox regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer playable skill sandbox' voidbringer-playable-skill-sandbox.log
+
+      - name: Upload focused logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voidbringer-skill-slice-logs
+          path: |
+            voidbringer-mass-brand-transaction.log
+            voidbringer-fold-line-3d.log
+            voidbringer-skill-slice.log
+            voidbringer-commit-packet-finality.log
+            voidbringer-fold-damage-dead-contact.log
+            voidbringer-lethal-mass-brand-corpse-anchor.log
+            voidbringer-playable-skill-sandbox.log
+          if-no-files-found: warn
+          retention-days: 14

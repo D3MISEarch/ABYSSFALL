@@ -14,6 +14,10 @@ const STAGE_DORMANT: StringName = &"dormant"
 const STAGE_DENSE: StringName = &"dense"
 const STAGE_CRITICAL: StringName = &"critical"
 
+const PLACEMENT_OK: StringName = &"ok"
+const REASON_CARRIER_TYPE_NOT_ALLOWED: StringName = &"carrier_type_not_allowed"
+const REASON_CARRIER_INVALIDATED: StringName = &"carrier_invalidated"
+
 const ENEMY_DURATION := 12.0
 const TERRAIN_DURATION := 18.0
 const CORPSE_DURATION := 8.0
@@ -36,6 +40,14 @@ func capacity() -> int:
 	return 3 if owner_level >= 5 else 2
 
 
+func validate_placement(carrier_type: StringName, carrier: Variant) -> StringName:
+	if not _carrier_type_is_allowed(carrier_type):
+		return REASON_CARRIER_TYPE_NOT_ALLOWED
+	if not _carrier_is_valid(carrier_type, carrier):
+		return REASON_CARRIER_INVALIDATED
+	return PLACEMENT_OK
+
+
 func place_anchor(
 	carrier_type: StringName,
 	carrier: Variant,
@@ -43,17 +55,34 @@ func place_anchor(
 	mass: float = 0.0,
 	metadata: Dictionary = {}
 ) -> Dictionary:
-	if not _carrier_type_is_allowed(carrier_type) or not _carrier_is_valid(carrier_type, carrier):
+	var transaction := place_anchor_transaction(carrier_type, carrier, position, mass, metadata)
+	if transaction.is_empty():
 		return {}
+	emit_placement_events(transaction)
+	return (transaction.get("anchor", {}) as Dictionary).duplicate(true)
+
+
+func place_anchor_transaction(
+	carrier_type: StringName,
+	carrier: Variant,
+	position: Vector3,
+	mass: float = 0.0,
+	metadata: Dictionary = {}
+) -> Dictionary:
+	if validate_placement(carrier_type, carrier) != PLACEMENT_OK:
+		return {}
+	var removed_events: Array[Dictionary] = []
 	while _order.size() >= capacity():
-		remove_anchor(_order.front(), &"capacity_replacement")
+		var removed_id: StringName = _order.front()
+		if _remove_anchor_internal(removed_id):
+			removed_events.append({"anchor_id": removed_id, "reason": &"capacity_replacement"})
 
 	var anchor_id := StringName("vb.anchor.%04d" % _next_serial)
 	_next_serial += 1
 	var anchor := {
 		"anchor_id": anchor_id,
 		"carrier_type": carrier_type,
-		"carrier_ref": weakref(carrier) if carrier is Object else null,
+		"carrier_ref": _carrier_reference(carrier_type, carrier),
 		"position": position,
 		"mass": clampf(mass, 0.0, 100.0),
 		"mass_stage": mass_stage(mass),
@@ -63,8 +92,42 @@ func place_anchor(
 	}
 	_anchors[anchor_id] = anchor
 	_order.append(anchor_id)
-	anchor_created.emit(_public_snapshot(anchor))
+	return {
+		"anchor": _public_snapshot(anchor),
+		"removed_events": removed_events.duplicate(true),
+	}
+
+
+func reclassify_pending_anchor(
+	anchor_id: StringName,
+	carrier_type: StringName,
+	carrier: Variant
+) -> Dictionary:
+	if not _anchors.has(anchor_id):
+		return {}
+	if validate_placement(carrier_type, carrier) != PLACEMENT_OK:
+		return {}
+	var anchor: Dictionary = _anchors[anchor_id]
+	if carrier is Node3D and is_instance_valid(carrier):
+		anchor["position"] = (carrier as Node3D).global_position
+	anchor["carrier_type"] = carrier_type
+	anchor["carrier_ref"] = _carrier_reference(carrier_type, carrier)
+	anchor["remaining_seconds"] = _duration_for(carrier_type)
+	_anchors[anchor_id] = anchor
 	return _public_snapshot(anchor)
+
+
+func emit_placement_events(transaction: Dictionary) -> void:
+	for raw_event: Variant in transaction.get("removed_events", []):
+		if raw_event is Dictionary:
+			var event: Dictionary = raw_event
+			anchor_removed.emit(
+				StringName(str(event.get("anchor_id", ""))),
+				StringName(str(event.get("reason", "capacity_replacement")))
+			)
+	var anchor: Dictionary = transaction.get("anchor", {})
+	if not anchor.is_empty():
+		anchor_created.emit(anchor.duplicate(true))
 
 
 func add_mass(anchor_id: StringName, amount: float) -> Dictionary:
@@ -97,10 +160,11 @@ func tick(delta: float) -> void:
 		if not _anchors.has(anchor_id):
 			continue
 		var anchor: Dictionary = _anchors[anchor_id]
+		var carrier_type: StringName = anchor.get("carrier_type", &"")
 		var carrier_ref: WeakRef = anchor.get("carrier_ref") as WeakRef
 		var carrier: Object = carrier_ref.get_ref() if carrier_ref != null else null
-		if carrier_ref != null and not is_instance_valid(carrier):
-			remove_anchor(anchor_id, &"carrier_invalidated")
+		if not _carrier_is_valid(carrier_type, carrier):
+			remove_anchor(anchor_id, REASON_CARRIER_INVALIDATED)
 			continue
 		if carrier is Node3D:
 			anchor["position"] = (carrier as Node3D).global_position
@@ -112,11 +176,17 @@ func tick(delta: float) -> void:
 
 
 func remove_anchor(anchor_id: StringName, reason: StringName = &"removed") -> bool:
+	if not _remove_anchor_internal(anchor_id):
+		return false
+	anchor_removed.emit(anchor_id, reason)
+	return true
+
+
+func _remove_anchor_internal(anchor_id: StringName) -> bool:
 	if not _anchors.has(anchor_id):
 		return false
 	_anchors.erase(anchor_id)
 	_order.erase(anchor_id)
-	anchor_removed.emit(anchor_id, reason)
 	return true
 
 
@@ -165,9 +235,28 @@ func _carrier_type_is_allowed(carrier_type: StringName) -> bool:
 
 
 func _carrier_is_valid(carrier_type: StringName, carrier: Variant) -> bool:
-	if carrier_type == CARRIER_TERRAIN and carrier == null:
+	if carrier_type in [CARRIER_TERRAIN, CARRIER_CORPSE] and carrier == null:
 		return true
-	return carrier is Object and is_instance_valid(carrier)
+	if not carrier is Object or not is_instance_valid(carrier):
+		return false
+	if carrier_type == CARRIER_ENEMY and _object_has_property(carrier as Object, &"alive"):
+		return bool((carrier as Object).get("alive"))
+	return true
+
+
+func _carrier_reference(carrier_type: StringName, carrier: Variant) -> WeakRef:
+	if carrier_type == CARRIER_CORPSE:
+		return null
+	return weakref(carrier) if carrier is Object else null
+
+
+func _object_has_property(object: Object, property_name: StringName) -> bool:
+	if object == null:
+		return false
+	for property: Dictionary in object.get_property_list():
+		if StringName(str(property.get("name", ""))) == property_name:
+			return true
+	return false
 
 
 func _duration_for(carrier_type: StringName) -> float:
@@ -185,7 +274,7 @@ func _duration_for(carrier_type: StringName) -> float:
 
 func _enforce_capacity() -> void:
 	while _order.size() > capacity():
-		remove_anchor(_order.front(), &"capacity_replacement")
+		remove_anchor(_order.front(), &"capacity_downgrade")
 
 
 func _public_snapshot(anchor: Dictionary) -> Dictionary:

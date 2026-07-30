@@ -47,16 +47,23 @@ func _test_stable_catalog_and_approved_base_definitions() -> void:
 	_expect(is_equal_approx(mass_brand.recharge_seconds, 4.0), "Mass Brand should recharge each charge in four seconds")
 	_expect(is_equal_approx(mass_brand.instability_delta, 5.0), "Mass Brand should generate five Instability")
 	_expect(is_equal_approx(mass_brand.resource_cost, 0.0), "Foundation migration should not invent a Corruption cost")
+	_expect(is_equal_approx(mass_brand.damage_coefficient, 0.35), "Mass Brand should own its approved 35 percent coefficient in catalog data")
+	_expect(mass_brand.base_damage_for_weapon_power(24.0) == 8, "Mass Brand catalog data should produce the approved eight base damage")
 
 	var null_shard: AbilityDefinition = catalog.null_shard_definition()
 	_expect(null_shard.ability_id == &"vb.skill.null_shard", "Null Shard should use its approved stable ID")
 	_expect(not null_shard.uses_charges(), "Null Shard should have no charge gate")
 	_expect(is_equal_approx(null_shard.cooldown_seconds, 0.0), "Null Shard should have no cooldown")
 	_expect(is_equal_approx(null_shard.instability_delta, 4.0), "Null Shard should generate four Instability")
+	_expect(is_equal_approx(null_shard.damage_coefficient, 0.75), "Null Shard should own its approved 75 percent coefficient in catalog data")
+	_expect(null_shard.base_damage_for_weapon_power(24.0) == 18, "Null Shard catalog data should produce the approved eighteen base damage")
 
 	var closure: AbilityDefinition = catalog.closure_definition()
 	_expect(closure.slot_type == &"closure", "Closure should occupy the dedicated class-action channel")
 	_expect(is_equal_approx(closure.cooldown_seconds, 0.7), "Closure should preserve its approved base cooldown")
+
+	var invalid_coefficient := AbilityDefinition.new(&"invalid", &"corruption", 0.0, 0.0, &"active", 0, 0.0, 0.0, [], -0.1)
+	_expect(not invalid_coefficient.is_valid(), "Negative damage coefficients should be rejected instead of silently repaired")
 
 
 func _test_six_slot_command_contract() -> void:
@@ -76,18 +83,28 @@ func _test_six_slot_command_contract() -> void:
 
 
 func _test_compatibility_damage_bridge_and_single_critical_consumption() -> void:
+	var catalog = CATALOG_SCRIPT.new()
 	var bridge = DAMAGE_BRIDGE_SCRIPT.new()
-	_expect(bridge.base_damage_for_coefficient(0.75) == 18, "Null Shard 75% should preserve the current eighteen-damage baseline")
-	_expect(bridge.base_damage_for_coefficient(0.35) == 8, "Mass Brand 35% should resolve from the same compatibility Weapon Power")
+	var mass_brand: AbilityDefinition = catalog.mass_brand_definition()
+	var null_shard: AbilityDefinition = catalog.null_shard_definition()
+	_expect(bridge.base_damage_for_definition(null_shard) == 18, "Null Shard should resolve its eighteen base damage from definition data")
+	_expect(bridge.base_damage_for_definition(mass_brand) == 8, "Mass Brand should resolve its eight base damage from definition data")
+
+	mass_brand.damage_coefficient = 0.5
+	_expect(bridge.base_damage_for_definition(mass_brand) == 12, "Changing catalog definition data should change damage without changing resolver code")
 
 	var projection: PlayableCombatProjection = PROJECTION_SCRIPT.new()
 	projection.configure({"power": 4.0, "critical_chance": 0.5})
-	var first: Dictionary = bridge.resolve_with_projection(0.75, projection)
-	_expect(int(first.get("base_damage", 0)) == 18, "The bridge should apply coefficient before class-tree power")
-	_expect(int(first.get("pre_critical_damage", 0)) == 22, "Projected power should apply before the critical multiplier")
-	_expect(not bool(first.get("critical", true)) and int(first.get("damage", 0)) == 22, "The first half-meter hit should remain non-critical")
+	for _index in range(5):
+		var preview: Dictionary = bridge.preview_definition(null_shard, projection)
+		_expect(int(preview.get("pre_critical_damage", 0)) == 22, "Damage previews should include power without deciding a critical")
 
-	var second: Dictionary = bridge.resolve_with_projection(0.75, projection)
+	var first: Dictionary = bridge.resolve_definition(null_shard, projection)
+	_expect(int(first.get("base_damage", 0)) == 18, "The bridge should apply definition coefficient before class-tree power")
+	_expect(int(first.get("pre_critical_damage", 0)) == 22, "Projected power should apply before the critical multiplier")
+	_expect(not bool(first.get("critical", true)) and int(first.get("damage", 0)) == 22, "Repeated previews must not advance the critical meter")
+
+	var second: Dictionary = bridge.resolve_definition(null_shard, projection)
 	_expect(bool(second.get("critical", false)), "The second half-meter hit should consume exactly one deterministic critical")
 	_expect(int(second.get("damage", 0)) == 33, "The detailed result should report the resolved critical damage")
 
@@ -114,6 +131,10 @@ func _test_controller_uses_authoritative_runtime_session() -> void:
 	_expect(int(controller.snapshot().get("capacity", controller.anchors.capacity())) == 3 or controller.anchors.capacity() == 3, "Runtime binding should configure level-five Anchor capacity")
 
 	var equipped := [definition.ability_id]
+	var preflight: Dictionary = session.ability_executor.preflight(character, definition, equipped)
+	_expect(bool(preflight.get("success", false)), "Ability preflight should report an available Mass Brand")
+	_expect(int(preflight.get("charges_remaining", -1)) == 2, "Ability preflight must not spend a Mass Brand charge")
+
 	var cast: Dictionary = controller.execute_ability(definition, equipped)
 	_expect(bool(cast.get("success", false)), "The controller should route casts through RuntimeSession AbilityExecutor")
 	_expect(int(cast.get("charges_remaining", -1)) == 1, "The authoritative runtime should consume exactly one Mass Brand charge")
