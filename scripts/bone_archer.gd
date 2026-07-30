@@ -3,7 +3,6 @@ extends CharacterBody3D
 signal died(enemy: Node)
 
 const IMPACT_FEEDBACK_SCRIPT = preload("res://scripts/impact_feedback.gd")
-
 const ENEMY_BOLT_SCRIPT = preload("res://scripts/enemy_bolt.gd")
 
 var target: Node3D
@@ -85,9 +84,7 @@ func _fire_bone_bolt(direction: Vector3) -> void:
 	get_tree().current_scene.add_child(bolt)
 	bolt.global_position = global_position + direction * 0.75 + Vector3(0.0, 0.58, 0.0)
 	bolt.setup(direction, 12.5, attack_damage, self, Color(0.60, 0.05, 1.0))
-	var tween := create_tween()
-	tween.tween_property(visual_root, "scale", Vector3(0.90, 1.12, 0.90), 0.06)
-	tween.tween_property(visual_root, "scale", Vector3.ONE, 0.12)
+	IMPACT_FEEDBACK_SCRIPT.play_pulse(visual_root, &"attack_light")
 
 
 func apply_rift_pull(center: Vector3, strength: float, hold_time: float = 0.12) -> void:
@@ -123,15 +120,9 @@ func _die() -> void:
 	alive = false
 	collision_layer = 0
 	collision_mask = 0
-	IMPACT_FEEDBACK_SCRIPT.spawn_death_consequence(get_parent(), global_position, &"light")
+	velocity = Vector3.ZERO
+	IMPACT_FEEDBACK_SCRIPT.play_fatal(visual_root, Vector3.ZERO, &"light", self)
 	died.emit(self)
-	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(visual_root, "scale", Vector3(0.06, 0.06, 0.06), 0.28)
-	tween.tween_property(
-		visual_root, "rotation_degrees:y", visual_root.rotation_degrees.y + 170.0, 0.28
-	)
-	tween.chain().tween_callback(queue_free)
 
 
 func _hit_flash() -> void:
