@@ -139,6 +139,21 @@ func execute_mass_brand_command(
 	)
 	last_impact_result = mass_impact
 
+	var committed_carrier_type := carrier_type
+	if carrier_type == VoidbringerAnchorManager.CARRIER_ENEMY and mass_impact.is_fatal():
+		var anchor_id := StringName(str(anchor.get("anchor_id", "")))
+		var corpse_anchor := anchors.reclassify_pending_anchor(
+			anchor_id,
+			VoidbringerAnchorManager.CARRIER_CORPSE,
+			carrier
+		)
+		if corpse_anchor.is_empty():
+			push_error("Lethal Mass Brand failed to finalize its committed Anchor as a corpse")
+		else:
+			committed_carrier_type = VoidbringerAnchorManager.CARRIER_CORPSE
+			anchor = corpse_anchor
+			placement["anchor"] = corpse_anchor.duplicate(true)
+
 	_prepare_placement_fold_rebuilds(placement)
 	_end_transaction(true)
 	var result_data := {
@@ -147,7 +162,7 @@ func execute_mass_brand_command(
 		"cast_id": cast_id,
 		"ability_id": definition.ability_id,
 		"build_id": runtime_character.build_id,
-		"carrier_type": carrier_type,
+		"carrier_type": committed_carrier_type,
 		"anchor": anchor.duplicate(true),
 		"projectile": {},
 		"impact": mass_impact.snapshot(),
