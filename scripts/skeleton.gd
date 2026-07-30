@@ -110,17 +110,9 @@ func _die() -> void:
 	alive = false
 	collision_layer = 0
 	collision_mask = 0
-	IMPACT_FEEDBACK_SCRIPT.spawn_death_consequence(get_parent(), global_position, &"light")
+	velocity = Vector3.ZERO
+	IMPACT_FEEDBACK_SCRIPT.play_fatal(visual_root, Vector3.ZERO, &"light", self)
 	died.emit(self)
-	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(visual_root, "scale", Vector3(0.08, 0.08, 0.08), 0.28).set_trans(
-		Tween.TRANS_BACK
-	)
-	tween.tween_property(
-		visual_root, "rotation_degrees:y", visual_root.rotation_degrees.y + 140.0, 0.28
-	)
-	tween.chain().tween_callback(queue_free)
 
 
 func _hit_flash() -> void:
@@ -135,9 +127,7 @@ func _hit_flash() -> void:
 func _attack_pulse() -> void:
 	if not is_instance_valid(visual_root):
 		return
-	var tween := create_tween()
-	tween.tween_property(visual_root, "position:z", -0.28, 0.06)
-	tween.tween_property(visual_root, "position:z", 0.0, 0.10)
+	IMPACT_FEEDBACK_SCRIPT.play_pulse(visual_root, &"attack_lunge")
 
 
 func _build_visual() -> void:
