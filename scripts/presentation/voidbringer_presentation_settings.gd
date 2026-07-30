@@ -56,6 +56,16 @@ func fracture_detail_scale() -> float:
 			return 1.0
 
 
+func audio_scale() -> float:
+	match effective_mode():
+		MODE_REDUCED:
+			return 0.45
+		MODE_DISABLED:
+			return 0.0
+		_:
+			return 1.0
+
+
 func rumble_scale() -> float:
 	if not master_enabled or not haptics_enabled:
 		return 0.0
@@ -77,6 +87,7 @@ func snapshot() -> Dictionary:
 		"transform_scale": transform_scale(),
 		"light_scale": light_scale(),
 		"fracture_detail_scale": fracture_detail_scale(),
+		"audio_scale": audio_scale(),
 		"rumble_scale": rumble_scale(),
 	}
 
