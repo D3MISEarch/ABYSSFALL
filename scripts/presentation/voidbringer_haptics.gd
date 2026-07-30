@@ -42,7 +42,11 @@ func play_impact(result: Variant) -> bool:
 		base_strength = 1.0
 	elif bool(impact.get("critical", false)):
 		base_strength = 0.82
-	base_strength += minf(float(impact.get("fold_crossing_count", 0)) * 0.06, 0.18)
+	base_strength = clampf(
+		base_strength + minf(float(impact.get("fold_crossing_count", 0)) * 0.06, 0.18),
+		0.0,
+		1.0
+	)
 	var duration := 0.18 if bool(impact.get("fatal", false)) else (0.12 if bool(impact.get("critical", false)) else 0.08)
 	return _play(&"impact", base_strength, duration)
 
@@ -83,7 +87,7 @@ func _play(profile_id: StringName, base_strength: float, duration: float) -> boo
 	var mode_scale := settings.rumble_scale()
 	if mode_scale <= 0.0:
 		return false
-	var strong_magnitude := clampf(base_strength * mode_scale, 0.0, 1.0)
+	var strong_magnitude := clampf(clampf(base_strength, 0.0, 1.0) * mode_scale, 0.0, 1.0)
 	var weak_magnitude := clampf(strong_magnitude * 0.55, 0.0, 1.0)
 	if strong_magnitude <= 0.0 and weak_magnitude <= 0.0:
 		return false
