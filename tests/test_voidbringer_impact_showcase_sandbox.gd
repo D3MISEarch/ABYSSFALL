@@ -17,6 +17,7 @@ func _run() -> void:
 	root.add_child(showcase)
 	await process_frame
 	_install_test_haptics(showcase)
+	_expect(showcase.impact_audio != null, "Savage showcase must instantiate its committed impact-audio owner")
 
 	var full := _run_combo(showcase, &"full")
 	var reduced := _run_combo(showcase, &"reduced")
@@ -129,12 +130,24 @@ func _test_mode_specific_presentation(
 	var full_settings := full.get("presentation", {}) as Dictionary
 	var reduced_settings := reduced.get("presentation", {}) as Dictionary
 	var disabled_settings := disabled.get("presentation", {}) as Dictionary
+	var full_audio := full.get("audio", {}) as Dictionary
+	var reduced_audio := reduced.get("audio", {}) as Dictionary
+	var disabled_audio := disabled.get("audio", {}) as Dictionary
+	var full_last_audio := full_audio.get("last_audio_report", {}) as Dictionary
+	var reduced_last_audio := reduced_audio.get("last_audio_report", {}) as Dictionary
+	var disabled_last_audio := disabled_audio.get("last_audio_report", {}) as Dictionary
 	_expect(StringName(str(full_settings.get("effective_mode", ""))) == &"full", "Full run must report full presentation mode")
 	_expect(StringName(str(reduced_settings.get("effective_mode", ""))) == &"reduced", "Reduced run must report reduced presentation mode")
 	_expect(StringName(str(disabled_settings.get("effective_mode", ""))) == &"disabled", "Disabled run must report disabled presentation mode")
 	_expect(is_equal_approx(float(full_settings.get("rumble_scale", -1.0)), 0.65), "Full showcase rumble scale must remain 0.65")
 	_expect(is_equal_approx(float(reduced_settings.get("rumble_scale", -1.0)), 0.35), "Reduced showcase rumble scale must remain 0.35")
 	_expect(is_zero_approx(float(disabled_settings.get("rumble_scale", -1.0))), "Disabled showcase rumble scale must remain zero")
+	_expect(StringName(str(full_last_audio.get("profile_id", ""))) == &"impact", "Full combo must route its committed hit into impact audio")
+	_expect(StringName(str(reduced_last_audio.get("profile_id", ""))) == &"impact", "Reduced combo must retain committed impact audio")
+	_expect(is_equal_approx(float(full_last_audio.get("audio_scale", 0.0)), 1.0), "Full combo audio scale must remain 1.0")
+	_expect(is_equal_approx(float(reduced_last_audio.get("audio_scale", 0.0)), 0.45), "Reduced combo audio scale must remain 0.45")
+	_expect(disabled_last_audio.is_empty(), "Disabled combo must publish no impact audio report")
+	_expect(int(disabled_audio.get("active_voice_count", -1)) == 0, "Disabled combo must keep zero active audio voices")
 	_expect(bool((full.get("last_showcase_report", {}) as Dictionary).get("visual_requested", false)), "Full impact must request target presentation")
 	_expect(bool((reduced.get("last_showcase_report", {}) as Dictionary).get("visual_requested", false)), "Reduced impact must retain target presentation")
 	_expect(not bool((disabled.get("last_showcase_report", {}) as Dictionary).get("visual_requested", true)), "Disabled impact must request zero target presentation")
@@ -159,12 +172,15 @@ func _test_lethal_fracture_and_reset(showcase: VoidbringerImpactShowcaseSandbox)
 	var enemy := foundation.get("enemy", {}) as Dictionary
 	var impact := foundation.get("last_impact", {}) as Dictionary
 	var anchors := foundation.get("anchors", []) as Array
+	var lethal_audio := lethal.get("audio", {}) as Dictionary
+	var lethal_audio_report := lethal_audio.get("last_audio_report", {}) as Dictionary
 	_expect(not bool(enemy.get("alive", true)) and int(enemy.get("health", -1)) == 0, "Lethal showcase command must commit gameplay death")
 	_expect(bool(impact.get("fatal", false)), "Lethal showcase command must preserve the committed fatal result")
 	_expect(int(impact.get("damage", 0)) == 8, "Lethal Mass Brand must preserve committed 8 damage")
 	_expect(anchors.size() == 1, "Lethal showcase command must create exactly one Anchor")
 	if not anchors.is_empty():
 		_expect(StringName(str((anchors[0] as Dictionary).get("carrier_type", ""))) == &"corpse", "Lethal showcase Anchor must finalize as corpse")
+	_expect(StringName(str(lethal_audio_report.get("profile_id", ""))) == &"fatal", "Lethal committed impact must route into the fatal audio profile")
 	_expect(int(lethal.get("target_feedback_count", -1)) == 1, "Lethal showcase must expose one fatal Fracture owner")
 	_expect(start_requests.size() == 1, "Lethal damaging Brand must request one impact haptic without a duplicate skill haptic")
 	var feedback := showcase.enemy_fixture.visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
@@ -176,11 +192,14 @@ func _test_lethal_fracture_and_reset(showcase: VoidbringerImpactShowcaseSandbox)
 	var reset := showcase.debug_showcase_snapshot()
 	var reset_foundation := reset.get("foundation", {}) as Dictionary
 	var reset_enemy := reset_foundation.get("enemy", {}) as Dictionary
+	var reset_audio := reset.get("audio", {}) as Dictionary
 	_expect(bool(reset_enemy.get("alive", false)) and int(reset_enemy.get("health", -1)) == 100, "Showcase reset must restore target gameplay state")
 	_expect((reset_foundation.get("anchors", []) as Array).is_empty(), "Showcase reset must remove all Anchors")
 	_expect((reset_foundation.get("fold_lines", []) as Array).is_empty(), "Showcase reset must remove all Fold Lines")
 	_expect(int(reset.get("target_feedback_count", -1)) == 0, "Showcase reset must remove fatal presentation state")
 	_expect(int(reset.get("contact_visual_count", -1)) == 0, "Showcase reset must remove all contact flashes")
+	_expect(int(reset_audio.get("active_voice_count", -1)) == 0, "Showcase reset must remove all active impact audio voices")
+	_expect((reset_audio.get("last_audio_report", {}) as Dictionary).is_empty(), "Showcase reset must clear the last impact audio report")
 	_expect(stop_requests.size() == 1, "Showcase reset must stop active haptics exactly once")
 
 
