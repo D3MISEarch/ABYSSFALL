@@ -8,6 +8,7 @@ const FRONT_END_BUILD_SERVICE = preload("res://scripts/ui/front_end_build_servic
 const DIAGNOSTIC_OVERLAY_SCRIPT = preload("res://scripts/tooling/playtest_diagnostic_overlay.gd")
 const GAMEPLAY_SCENE = preload("res://gameplay.tscn")
 const VOIDBRINGER_FOUNDATION_SANDBOX_SCENE = preload("res://scenes/voidbringer_foundation_sandbox.tscn")
+const VOIDBRINGER_IMPACT_SHOWCASE_SCENE = preload("res://scenes/voidbringer_impact_showcase_sandbox.tscn")
 
 var front_end: FrontEndScreen
 var class_selection: ClassSelectionScreen
@@ -22,6 +23,9 @@ func _ready() -> void:
 	_install_diagnostic_overlay()
 	_install_front_end_input_map()
 	var command_line_sandbox := _get_command_line_sandbox()
+	if command_line_sandbox == "voidbringer_showcase":
+		call_deferred("_launch_voidbringer_impact_showcase_sandbox")
+		return
 	if command_line_sandbox == "voidbringer_anchor":
 		call_deferred("_launch_voidbringer_foundation_sandbox")
 		return
@@ -184,6 +188,14 @@ func _launch_command_line_gameplay(class_id: String) -> void:
 		if not matching_id.is_empty():
 			Persistence.select_build(matching_id)
 	_launch_gameplay(class_id)
+
+
+func _launch_voidbringer_impact_showcase_sandbox() -> void:
+	if is_instance_valid(sandbox_root):
+		return
+	_clear_front_end_screens()
+	sandbox_root = VOIDBRINGER_IMPACT_SHOWCASE_SCENE.instantiate()
+	add_child(sandbox_root)
 
 
 func _launch_voidbringer_foundation_sandbox() -> void:
