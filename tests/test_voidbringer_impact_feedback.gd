@@ -207,10 +207,10 @@ func _test_interrupted_contact_restoration(host: Node3D) -> void:
 	var health_before := int(enemy.health)
 
 	enemy.present_void_bolt_impact(Vector3.FORWARD, true, false)
-	var canceled_feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
-	_expect(canceled_feedback != null, "Primary contact should create interruptible impact feedback.")
-	if canceled_feedback != null:
-		canceled_feedback._process(0.08)
+	var owner_feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
+	_expect(owner_feedback != null, "Primary contact should create the single impact owner.")
+	if owner_feedback != null:
+		owner_feedback._process(0.08)
 	_expect(
 		visual_root.position != original_position
 			or visual_root.scale != original_scale
@@ -219,34 +219,31 @@ func _test_interrupted_contact_restoration(host: Node3D) -> void:
 	)
 
 	enemy.present_void_bolt_impact(Vector3.RIGHT, true, false)
-	var replacement_feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
+	var restarted_feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
 	_expect(
 		_count_nodes_named(visual_root, "VoidbringerImpactFeedback") == 1,
-		"Interrupted contact must leave exactly one active feedback child."
+		"Interrupted contact must leave exactly one active feedback owner."
 	)
 	_expect(
-		replacement_feedback != null and replacement_feedback != canceled_feedback,
-		"Interrupted contact must replace the canceled feedback instance."
+		restarted_feedback != null and restarted_feedback == owner_feedback,
+		"Interrupted contact must restart the same single transform owner."
 	)
-	if replacement_feedback != null:
-		replacement_feedback._process(0.06)
-	var replacement_position: Vector3 = visual_root.position
-	var replacement_scale: Vector3 = visual_root.scale
-	var replacement_rotation: Vector3 = visual_root.rotation_degrees
-	if canceled_feedback != null:
-		canceled_feedback._process(0.24)
-	_expect(visual_root.position == replacement_position, "Canceled feedback must not write position after replacement begins.")
-	_expect(visual_root.scale == replacement_scale, "Canceled feedback must not write scale after replacement begins.")
-	_expect(visual_root.rotation_degrees == replacement_rotation, "Canceled feedback must not write rotation after replacement begins.")
+	if restarted_feedback != null:
+		var restarted_snapshot: Dictionary = restarted_feedback.debug_snapshot()
+		_expect(
+			is_zero_approx(float(restarted_snapshot.get("elapsed", -1.0))),
+			"Restarted contact must reset its deterministic timeline."
+		)
+		restarted_feedback._process(0.06)
 
 	for direction in [Vector3.LEFT, Vector3.BACK, Vector3.RIGHT]:
 		enemy.present_void_bolt_impact(direction, true, false)
 		_expect(
 			_count_nodes_named(visual_root, "VoidbringerImpactFeedback") == 1,
-			"Repeated interruptions must keep one active feedback child."
+			"Repeated interruptions must keep one active feedback owner."
 		)
 		var active_feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
-		_expect(active_feedback != null, "Repeated interruptions must preserve a replacement feedback instance.")
+		_expect(active_feedback == owner_feedback, "Repeated interruptions must not create competing writers.")
 		if active_feedback != null:
 			active_feedback._process(0.06)
 
@@ -257,7 +254,7 @@ func _test_interrupted_contact_restoration(host: Node3D) -> void:
 	await process_frame
 	_expect(
 		_count_nodes_named(visual_root, "VoidbringerImpactFeedback") == 0,
-		"Completed replacement feedback should clean itself up."
+		"Completed impact owner should clean itself up."
 	)
 	_expect(visual_root.position == original_position, "Interrupted contact feedback must restore the exact original visual position.")
 	_expect(visual_root.scale == original_scale, "Interrupted contact feedback must restore the exact original visual scale.")
@@ -276,14 +273,34 @@ func _test_lethal_feedback_cleanup(host: Node3D) -> void:
 	lethal_target.take_damage(18)
 	_expect(observed_death_count == 1, "Lethal hit must emit death exactly once")
 	_expect(not bool(lethal_target.get("alive")), "Post-death damage calls must remain ignored")
+	var visual_root: Node3D = lethal_target.get("visual_root")
+	var fatal_feedback := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
+	_expect(fatal_feedback != null, "Lethal hit must transition the single impact owner into Fracture.")
 	_expect(
-		_count_nodes_named(host, "VoidbringerDeathConsequence") >= 1,
-		"Lethal hit must create a bounded decorative death consequence"
+		_count_nodes_named(visual_root, "VoidbringerImpactFeedback") == 1,
+		"Lethal hit must keep exactly one visual-root transform owner."
 	)
+	if fatal_feedback != null:
+		_expect(fatal_feedback.is_fatal_active(), "Lethal impact owner must report an active fatal profile.")
+		_expect(
+			fatal_feedback.get_node_or_null("ProceduralFracture") != null,
+			"Fatal profile must expose the bounded procedural Fracture visual."
+		)
+		fatal_feedback._process(0.08)
+		var fatal_scale := visual_root.scale
+		lethal_target.present_void_bolt_impact(Vector3.RIGHT, true, true)
+		lethal_target.present_void_bolt_impact(Vector3.LEFT, true, false)
+		var same_owner := visual_root.get_node_or_null("VoidbringerImpactFeedback") as ImpactFeedback
+		_expect(same_owner == fatal_feedback, "Follow-up contact must not replace an active fatal owner.")
+		_expect(visual_root.scale == fatal_scale, "Follow-up contact must not snap a fatal target back to full scale.")
 	await create_timer(FEEDBACK_CLEANUP_BOUND_SECONDS).timeout
 	_expect(
-		_count_nodes_named(host, "VoidbringerDeathConsequence") == 0,
-		"Transient feedback must clean up within the named bounded duration"
+		not is_instance_valid(lethal_target) or lethal_target.is_queued_for_deletion(),
+		"Fatal owner must queue the gameplay enemy exactly once within the bounded duration."
+	)
+	_expect(
+		_count_nodes_named(host, "VoidbringerImpactFeedback") == 0,
+		"Fatal Fracture feedback must clean up within the named bounded duration."
 	)
 
 
