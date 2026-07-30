@@ -15,6 +15,7 @@ on:
       - "tests/test_voidbringer_skill_slice.gd"
       - "tests/test_voidbringer_commit_packet_finality.gd"
       - "tests/test_voidbringer_fold_damage_and_dead_contact.gd"
+      - "tests/test_voidbringer_lethal_mass_brand_corpse_anchor.gd"
       - "tests/test_voidbringer_playable_foundation_sandbox.gd"
       - "tests/test_voidbringer_playable_skill_sandbox.gd"
       - "docs/VOIDBRINGER_SKILL_SLICE_PLAYTEST.md"
@@ -138,6 +139,7 @@ jobs:
           run_test res://tests/test_voidbringer_skill_slice.gd 'PASS: Voidbringer Mass Brand and Null Shard skill slice' windows-skill-slice.log
           run_test res://tests/test_voidbringer_commit_packet_finality.gd 'PASS: Voidbringer authoritative commit packet finality' windows-skill-commit-finality.log
           run_test res://tests/test_voidbringer_fold_damage_and_dead_contact.gd 'PASS: Voidbringer Fold damage and dead-contact safety' windows-skill-fold-damage-dead-contact.log
+          run_test res://tests/test_voidbringer_lethal_mass_brand_corpse_anchor.gd 'PASS: Voidbringer lethal Mass Brand corpse Anchor' windows-skill-lethal-mass-brand-corpse-anchor.log
           run_test res://tests/test_voidbringer_playable_foundation_sandbox.gd 'PASS: Voidbringer playable foundation sandbox' windows-skill-foundation-sandbox.log
           run_test res://tests/test_voidbringer_playable_skill_sandbox.gd 'PASS: Voidbringer playable skill sandbox' windows-skill-playable-sandbox.log
 
@@ -183,6 +185,7 @@ jobs:
             windows-skill-slice.log \
             windows-skill-commit-finality.log \
             windows-skill-fold-damage-dead-contact.log \
+            windows-skill-lethal-mass-brand-corpse-anchor.log \
             windows-skill-foundation-sandbox.log \
             windows-skill-playable-sandbox.log \
             windows-skill-route.log \
@@ -231,6 +234,7 @@ jobs:
             windows-skill-slice.log
             windows-skill-commit-finality.log
             windows-skill-fold-damage-dead-contact.log
+            windows-skill-lethal-mass-brand-corpse-anchor.log
             windows-skill-foundation-sandbox.log
             windows-skill-playable-sandbox.log
             windows-skill-route.log
