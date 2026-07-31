@@ -15,6 +15,7 @@ on:
       - "tests/test_voidbringer_lethal_mass_brand_corpse_anchor.gd"
       - "tests/test_voidbringer_playable_skill_sandbox.gd"
       - "tests/test_voidbringer_polished_impact_interaction.gd"
+      - "tests/test_voidbringer_spectacle_impact_presentation.gd"
       - "Docs/VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md"
       - ".github/workflows/voidbringer-skill-slice-tests.yml"
   workflow_dispatch:
@@ -136,6 +137,17 @@ jobs:
           fi
           grep -Fxq 'PASS: Voidbringer polished impact interaction' voidbringer-polished-impact.log
 
+      - name: Run Null Shard spectacle impact proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --verbose --headless --path . --script res://tests/test_voidbringer_spectacle_impact_presentation.gd 2>&1 | tee voidbringer-spectacle-impact.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ERROR:' voidbringer-spectacle-impact.log; then
+            echo "Voidbringer spectacle impact regression failed."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Voidbringer spectacle impact presentation' voidbringer-spectacle-impact.log
+
       - name: Upload focused logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -150,5 +162,6 @@ jobs:
             voidbringer-lethal-mass-brand-corpse-anchor.log
             voidbringer-playable-skill-sandbox.log
             voidbringer-polished-impact.log
+            voidbringer-spectacle-impact.log
           if-no-files-found: warn
           retention-days: 14

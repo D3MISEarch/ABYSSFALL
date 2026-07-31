@@ -1,4 +1,4 @@
-name: Voidbringer Polished Impact Windows Package
+name: Voidbringer Spectacle Impact Windows Package
 
 on:
   pull_request:
@@ -19,6 +19,7 @@ on:
       - "tests/test_voidbringer_playable_foundation_sandbox.gd"
       - "tests/test_voidbringer_playable_skill_sandbox.gd"
       - "tests/test_voidbringer_polished_impact_interaction.gd"
+      - "tests/test_voidbringer_spectacle_impact_presentation.gd"
       - "Docs/VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md"
       - ".github/workflows/voidbringer-skill-slice-windows-package.yml"
   workflow_dispatch:
@@ -27,12 +28,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: voidbringer-polished-impact-windows-${{ github.ref }}
+  group: voidbringer-spectacle-impact-windows-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   windows-skill-slice-package:
-    name: Exact-head Voidbringer polished impact interaction
+    name: Exact-head Voidbringer spectacle impact interaction
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -74,11 +75,11 @@ jobs:
           set -euo pipefail
           SHORT_SHA="${REVIEW_SHA:0:7}"
           BUILT_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          PACKAGE_NAME="AbyssFall-Voidbringer-Polished-Impact-${SHORT_SHA}"
+          PACKAGE_NAME="AbyssFall-Voidbringer-Spectacle-Impact-${SHORT_SHA}"
           echo "PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
           cat > BUILD_INFO.cfg <<EOF
           [build]
-          name="AbyssFall Voidbringer polished Null Shard impact interaction"
+          name="AbyssFall Voidbringer spectacle Null Shard impact interaction"
           commit="${REVIEW_SHA}"
           short_commit="${SHORT_SHA}"
           branch="${REVIEW_BRANCH}"
@@ -87,7 +88,7 @@ jobs:
           EOF
           mkdir -p "dist/$PACKAGE_NAME"
           cat > "dist/$PACKAGE_NAME/BUILD_INFO.txt" <<EOF
-          AbyssFall Voidbringer Polished Null Shard Impact Interaction
+          AbyssFall Voidbringer Spectacle Null Shard Impact Interaction
           Commit: ${REVIEW_SHA}
           Short commit: ${SHORT_SHA}
           Branch: ${REVIEW_BRANCH}
@@ -95,19 +96,19 @@ jobs:
           Built UTC: ${BUILT_AT}
           Sandbox route: --sandbox=voidbringer_anchor
           Replay loop: R (reset + fire) / Space (fire) / C (reset)
-          Owner checklist: README_VOIDBRINGER_POLISHED_IMPACT.txt
+          Owner checklist: README_VOIDBRINGER_SPECTACLE_IMPACT.txt
           EOF
-          cp Docs/VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md "dist/$PACKAGE_NAME/README_VOIDBRINGER_POLISHED_IMPACT.txt"
-          printf '@echo off\r\ncd /d "%%~dp0"\r\nstart "AbyssFall Voidbringer Polished Impact" "AbyssFall.exe" -- --sandbox=voidbringer_anchor\r\n' > "dist/$PACKAGE_NAME/Launch Voidbringer Polished Impact Sandbox.bat"
+          cp Docs/VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md "dist/$PACKAGE_NAME/README_VOIDBRINGER_SPECTACLE_IMPACT.txt"
+          printf '@echo off\r\ncd /d "%%~dp0"\r\nstart "AbyssFall Voidbringer Spectacle Impact" "AbyssFall.exe" -- --sandbox=voidbringer_anchor\r\n' > "dist/$PACKAGE_NAME/Launch Voidbringer Spectacle Impact Sandbox.bat"
 
       - name: Verify generated launcher command
         shell: bash
         run: |
           set -euo pipefail
-          LAUNCHER="dist/$PACKAGE_NAME/Launch Voidbringer Polished Impact Sandbox.bat"
+          LAUNCHER="dist/$PACKAGE_NAME/Launch Voidbringer Spectacle Impact Sandbox.bat"
           tr -d '\r' < "$LAUNCHER" | tee windows-skill-launcher-command.log
-          grep -Fxq 'start "AbyssFall Voidbringer Polished Impact" "AbyssFall.exe" -- --sandbox=voidbringer_anchor' windows-skill-launcher-command.log
-          if grep -Fxq 'start "AbyssFall Voidbringer Polished Impact" "AbyssFall.exe" --sandbox=voidbringer_anchor' windows-skill-launcher-command.log; then
+          grep -Fxq 'start "AbyssFall Voidbringer Spectacle Impact" "AbyssFall.exe" -- --sandbox=voidbringer_anchor' windows-skill-launcher-command.log
+          if grep -Fxq 'start "AbyssFall Voidbringer Spectacle Impact" "AbyssFall.exe" --sandbox=voidbringer_anchor' windows-skill-launcher-command.log; then
             echo "Launcher is missing the Godot user-argument separator."
             exit 1
           fi
@@ -144,6 +145,7 @@ jobs:
           run_test res://tests/test_voidbringer_playable_foundation_sandbox.gd 'PASS: Voidbringer playable foundation sandbox' windows-skill-foundation-sandbox.log
           run_test res://tests/test_voidbringer_playable_skill_sandbox.gd 'PASS: Voidbringer playable skill sandbox' windows-skill-playable-sandbox.log
           run_test res://tests/test_voidbringer_polished_impact_interaction.gd 'PASS: Voidbringer polished impact interaction' windows-skill-polished-impact.log
+          run_test res://tests/test_voidbringer_spectacle_impact_presentation.gd 'PASS: Voidbringer spectacle impact presentation' windows-skill-spectacle-impact.log
 
       - name: Verify isolated sandbox boot route
         shell: bash
@@ -191,6 +193,7 @@ jobs:
             windows-skill-foundation-sandbox.log \
             windows-skill-playable-sandbox.log \
             windows-skill-polished-impact.log \
+            windows-skill-spectacle-impact.log \
             windows-skill-route.log \
             windows-skill-export.log > windows-skill-combined.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Compile Error:|Failed to load script|ERROR:|Invalid access|Invalid set index|Cannot call method|Condition .* is true|ASSERTION FAILED|^FAIL:' windows-skill-combined.log; then
@@ -205,16 +208,16 @@ jobs:
         run: |
           set -euo pipefail
           cd "dist/$PACKAGE_NAME"
-          sha256sum AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README_VOIDBRINGER_POLISHED_IMPACT.txt "Launch Voidbringer Polished Impact Sandbox.bat" > SHA256SUMS.txt
+          sha256sum AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README_VOIDBRINGER_SPECTACLE_IMPACT.txt "Launch Voidbringer Spectacle Impact Sandbox.bat" > SHA256SUMS.txt
           grep -F "$REVIEW_SHA" BUILD_INFO.txt
           sha256sum --check SHA256SUMS.txt
           find . -maxdepth 1 -type f -printf '%f\n' | sort | tee ../voidbringer-skill-package-contents.log
-          for required in AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README_VOIDBRINGER_POLISHED_IMPACT.txt SHA256SUMS.txt; do
+          for required in AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README_VOIDBRINGER_SPECTACLE_IMPACT.txt SHA256SUMS.txt; do
             grep -Fx "$required" ../voidbringer-skill-package-contents.log
           done
-          grep -Fx 'Launch Voidbringer Polished Impact Sandbox.bat' ../voidbringer-skill-package-contents.log
+          grep -Fx 'Launch Voidbringer Spectacle Impact Sandbox.bat' ../voidbringer-skill-package-contents.log
 
-      - name: Upload Voidbringer Windows polished impact package
+      - name: Upload Voidbringer Windows spectacle impact package
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PACKAGE_NAME }}
@@ -241,6 +244,7 @@ jobs:
             windows-skill-foundation-sandbox.log
             windows-skill-playable-sandbox.log
             windows-skill-polished-impact.log
+            windows-skill-spectacle-impact.log
             windows-skill-route.log
             windows-skill-export.log
             windows-skill-combined.log
