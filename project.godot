@@ -13,6 +13,7 @@ config/features=PackedStringArray("4.2", "GL Compatibility")
 ControllerUiBootstrap="*res://scripts/controller_ui_bootstrap.gd"
 Persistence="*res://scripts/persistence/persistence_service.gd"
 VisualFoundationLighting="*res://scripts/presentation/visual_foundation_lighting.gd"
+VisualFoundationVFX="*res://scripts/presentation/visual_foundation_vfx.gd"
 
 [debug]
 
