@@ -37,6 +37,8 @@ func _exit_tree() -> void:
 func _try_install_into_current_scene() -> void:
 	var scene := get_tree().current_scene as Node3D
 	if scene == null or scene.get_node_or_null(ROUTE_MARKER) == null:
+		if _installed_scene_id != 0:
+			_clear_effects()
 		return
 	var scene_id := scene.get_instance_id()
 	if _installed_scene_id == scene_id and is_instance_valid(_effect_root):
@@ -53,12 +55,15 @@ func _try_install_into_current_scene() -> void:
 		_effect_root.set_meta("bounded_debris_per_burst", MAX_DEBRIS_PER_BURST)
 		scene.add_child(_effect_root)
 	_installed_scene_id = scene_id
-	_call_deferred_route_settle()
+	_call_deferred_route_settle(scene_id)
 
 
-func _call_deferred_route_settle() -> void:
+func _call_deferred_route_settle(expected_scene_id: int) -> void:
 	await get_tree().create_timer(0.35, true, false, true).timeout
-	if not is_instance_valid(_effect_root):
+	var scene := get_tree().current_scene
+	if scene == null or scene.get_instance_id() != expected_scene_id:
+		return
+	if _installed_scene_id != expected_scene_id or not is_instance_valid(_effect_root):
 		return
 	spawn_dust_burst(Vector3(0.0, 0.18, -20.0), 0.62, 14)
 	spawn_dust_burst(Vector3(0.0, 0.18, -73.0), 0.54, 12)
