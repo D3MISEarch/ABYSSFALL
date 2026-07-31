@@ -47,7 +47,7 @@ This structure organizes governance, architecture, design and standards material
 
 ## Owner playtests
 
-- [`VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md`](VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md) — isolated Null Shard polished-impact loop, Windows launch route, and owner checklist.
+- [`VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md`](VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md) — isolated Null Shard spectacle-impact loop, Windows launch route, and owner checklist.
 
 ## Canonical documentation root
 
