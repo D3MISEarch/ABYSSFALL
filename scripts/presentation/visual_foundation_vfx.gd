@@ -7,12 +7,15 @@ const MAX_ACTIVE_EFFECTS := 18
 const MAX_DEBRIS_PER_BURST := 12
 const DEFAULT_LIFETIME := 1.35
 const INSTALL_INTERVAL_SECONDS := 0.45
+const ROUTE_SETTLE_DELAY_SECONDS := 0.35
 const PALE_VOID := Color(0.72, 0.70, 0.90, 0.72)
 const RESTRAINED_VIOLET := Color(0.43, 0.18, 0.68, 0.62)
 const DUST := Color(0.22, 0.19, 0.25, 0.62)
 const DEBRIS_STONE := Color(0.075, 0.065, 0.085, 1.0)
 
 var _install_timer: Timer
+var _route_settle_timer: Timer
+var _pending_settle_scene_id := 0
 var _installed_scene_id := 0
 var _effect_root: Node3D
 var _active_effects: Array[Node] = []
@@ -27,6 +30,13 @@ func _ready() -> void:
 	_install_timer.autostart = true
 	_install_timer.timeout.connect(_try_install_into_current_scene)
 	add_child(_install_timer)
+
+	_route_settle_timer = Timer.new()
+	_route_settle_timer.name = "VisualFoundationRouteSettleTimer"
+	_route_settle_timer.wait_time = ROUTE_SETTLE_DELAY_SECONDS
+	_route_settle_timer.one_shot = true
+	_route_settle_timer.timeout.connect(_on_route_settle_timeout)
+	add_child(_route_settle_timer)
 	call_deferred("_try_install_into_current_scene")
 
 
@@ -55,11 +65,20 @@ func _try_install_into_current_scene() -> void:
 		_effect_root.set_meta("bounded_debris_per_burst", MAX_DEBRIS_PER_BURST)
 		scene.add_child(_effect_root)
 	_installed_scene_id = scene_id
-	_call_deferred_route_settle(scene_id)
+	_schedule_route_settle(scene_id)
 
 
-func _call_deferred_route_settle(expected_scene_id: int) -> void:
-	await get_tree().create_timer(0.35, true, false, true).timeout
+func _schedule_route_settle(expected_scene_id: int) -> void:
+	_pending_settle_scene_id = expected_scene_id
+	if not is_instance_valid(_route_settle_timer):
+		return
+	_route_settle_timer.stop()
+	_route_settle_timer.start(ROUTE_SETTLE_DELAY_SECONDS)
+
+
+func _on_route_settle_timeout() -> void:
+	var expected_scene_id := _pending_settle_scene_id
+	_pending_settle_scene_id = 0
 	var scene := get_tree().current_scene
 	if scene == null or scene.get_instance_id() != expected_scene_id:
 		return
@@ -205,8 +224,13 @@ func _register_effect(effect: Node3D, lifetime: float) -> void:
 		return
 	_effect_root.add_child(effect)
 	_active_effects.append(effect)
-	var timer := get_tree().create_timer(maxf(lifetime, 0.05), true, false, true)
-	timer.timeout.connect(_expire_effect.bind(effect), CONNECT_ONE_SHOT)
+	var lifetime_timer := Timer.new()
+	lifetime_timer.name = "VisualFoundationEffectLifetime"
+	lifetime_timer.wait_time = maxf(lifetime, 0.05)
+	lifetime_timer.one_shot = true
+	lifetime_timer.timeout.connect(_expire_effect.bind(effect), CONNECT_ONE_SHOT)
+	effect.add_child(lifetime_timer)
+	lifetime_timer.start()
 
 
 func _expire_effect(effect: Node) -> void:
@@ -216,6 +240,9 @@ func _expire_effect(effect: Node) -> void:
 
 
 func _clear_effects(reset_root: bool = true) -> void:
+	if is_instance_valid(_route_settle_timer):
+		_route_settle_timer.stop()
+	_pending_settle_scene_id = 0
 	for effect in _active_effects:
 		if is_instance_valid(effect):
 			effect.queue_free()
