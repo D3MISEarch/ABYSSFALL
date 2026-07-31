@@ -113,14 +113,19 @@ jobs:
             local script="$1"
             local marker="$2"
             local log="$3"
-            godot --headless --path . --script "$script" 2>&1 | tee "$log"
+            local verbose="${4:-false}"
+            if [[ "$verbose" == "true" ]]; then
+              godot --verbose --headless --path . --script "$script" 2>&1 | tee "$log"
+            else
+              godot --headless --path . --script "$script" 2>&1 | tee "$log"
+            fi
             if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ObjectDB|leaked|orphan|ERROR:' "$log"; then
               echo "Godot reported an error in $script."
               exit 1
             fi
             grep -Fxq "$marker" "$log"
           }
-          run_test res://tests/test_visual_foundation_v01.gd 'PASS: AbyssFall Visual Foundation v0.1' visual-foundation-test.log
+          run_test res://tests/test_visual_foundation_v01.gd 'PASS: AbyssFall Visual Foundation v0.1' visual-foundation-test.log true
           run_test res://tests/test_integrated_camera_director.gd 'PASS: Integrated production camera director' visual-foundation-camera.log
           run_test res://tests/test_full_stack_controller_reconciliation.gd 'PASS: Full-stack controller reconciliation' visual-foundation-full-stack.log
           run_test res://tests/test_hollow_king_nova_presentation.gd 'PASS: Hollow King readable Nova intent and payoff' visual-foundation-nova.log
