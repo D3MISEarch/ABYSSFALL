@@ -7,6 +7,7 @@ signal phase_changed(phase: int)
 
 const ENEMY_BOLT_SCRIPT = preload("res://scripts/enemy_bolt.gd")
 const HOLLOW_KING_NOVA_PRESENTATION_SCRIPT = preload("res://scripts/hollow_king_nova_presentation.gd")
+const HOLLOW_KING_DEATH_PRESENTATION_SCRIPT = preload("res://scripts/hollow_king_death_presentation.gd")
 const NOVA_PROXIMITY_RADIUS := 4.4
 
 var target: Node3D
@@ -26,10 +27,12 @@ var visual_root: Node3D
 var armor_material: StandardMaterial3D
 var core_material: StandardMaterial3D
 var corruption_material: StandardMaterial3D
+var chest_core: MeshInstance3D
 var rift_pull_velocity := Vector3.ZERO
 var rift_pull_time := 0.0
 var phase_lock := false
 var nova_presentation: HollowKingNovaPresentation
+var death_presentation: HollowKingDeathPresentation
 
 
 func _ready() -> void:
@@ -43,6 +46,9 @@ func _ready() -> void:
 	nova_presentation.name = "HollowKingNovaPresentation"
 	add_child(nova_presentation)
 	nova_presentation.configure(self)
+	death_presentation = HOLLOW_KING_DEATH_PRESENTATION_SCRIPT.new()
+	death_presentation.name = "HollowKingDeathPresentation"
+	add_child(death_presentation)
 	health_changed.emit(health, max_health, phase)
 
 
@@ -233,11 +239,14 @@ func _finish_phase_transition() -> void:
 
 
 func _die() -> void:
-	_clear_nova_presentation()
+	if not alive:
+		return
 	alive = false
 	collision_layer = 0
 	collision_mask = 0
 	velocity = Vector3.ZERO
+	_clear_nova_presentation()
+	_present_confirmed_death()
 	died.emit(self)
 	var tween := create_tween()
 	tween.set_parallel(true)
@@ -273,6 +282,13 @@ func _cast_pulse(color: Color) -> void:
 func _clear_nova_presentation() -> void:
 	if is_instance_valid(nova_presentation):
 		nova_presentation.clear()
+
+
+func _present_confirmed_death() -> void:
+	if not is_instance_valid(death_presentation):
+		return
+	var chest_position := chest_core.global_position if is_instance_valid(chest_core) else visual_root.global_position
+	death_presentation.observe_confirmed_death(global_position, chest_position)
 
 
 func _build_visual() -> void:
@@ -333,7 +349,7 @@ func _build_visual() -> void:
 		eye.material_override = core_material
 		visual_root.add_child(eye)
 
-	var chest_core := MeshInstance3D.new()
+	chest_core = MeshInstance3D.new()
 	var chest_mesh := SphereMesh.new()
 	chest_mesh.radius = 0.34
 	chest_mesh.height = 0.64

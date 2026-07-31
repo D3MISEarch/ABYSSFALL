@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/*.gd"
       - "scripts/hollow_king_nova_presentation.gd"
+      - "scripts/hollow_king_death_presentation.gd"
       - "project.godot"
       - "main.tscn"
       - "gameplay.tscn"
@@ -25,7 +26,10 @@ on:
       - "tests/test_voidbringer_impact_feedback.gd"
       - "tests/test_grasping_rift_readability_payoff.gd"
       - "tests/test_hollow_king_nova_presentation.gd"
+      - "tests/test_hollow_king_memorable_death.gd"
       - "Docs/HOLLOW_KING_NOVA_PLAYTEST.md"
+      - "Docs/HOLLOW_KING_DEATH_PLAYTEST.md"
+      - "Docs/v0.4-hotfix3/PLAYTEST_CHECKLIST.md"
       - ".github/workflows/godot-hotfix3-validation.yml"
       - ".github/workflows/full-stack-windows-package.yml"
   workflow_dispatch:
@@ -339,5 +343,150 @@ jobs:
             hollow-king-nova-export.log
             hollow-king-nova-combined.log
             dist/hollow-king-nova-package-contents.log
+          if-no-files-found: warn
+          retention-days: 90
+
+  hollow-king-death-package:
+    name: Exact-head Hollow King memorable death package
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+
+    steps:
+      - name: Check out exact review commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot 4.4.1 and Windows export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="4.4.1"
+          ENGINE="Godot_v${VERSION}-stable_linux.x86_64.zip"
+          TEMPLATES="Godot_v${VERSION}-stable_export_templates.tpz"
+          RELEASE="https://github.com/godotengine/godot/releases/download/${VERSION}-stable"
+          curl --fail --location --retry 3 "$RELEASE/$ENGINE" --output /tmp/godot.zip
+          curl --fail --location --retry 3 "$RELEASE/$TEMPLATES" --output /tmp/templates.tpz
+          mkdir -p "$HOME/godot"
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          BIN="$(find "$HOME/godot" -maxdepth 1 -type f -name 'Godot_v*-stable_linux.x86_64' | head -n 1)"
+          chmod +x "$BIN"
+          ln -s "$BIN" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -q /tmp/templates.tpz -d /tmp/export-templates
+          cp -a /tmp/export-templates/templates/. "$TEMPLATE_DIR/"
+          test -f "$TEMPLATE_DIR/windows_release_x86_64.exe"
+
+      - name: Create exact death package metadata
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REVIEW_BRANCH: ${{ github.head_ref || github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${REVIEW_SHA:0:7}"
+          BUILT_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          PACKAGE_NAME="AbyssFall-Hollow-King-Death-${SHORT_SHA}"
+          echo "DEATH_PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
+          mkdir -p "dist/$PACKAGE_NAME"
+          cat > "dist/$PACKAGE_NAME/BUILD_INFO.txt" <<EOF
+          AbyssFall Hollow King Memorable Death Playtest
+          Commit: ${REVIEW_SHA}
+          Short commit: ${SHORT_SHA}
+          Branch: ${REVIEW_BRANCH}
+          Workflow run: ${RUN_ID}
+          Built UTC: ${BUILT_AT}
+          Owner checklist: README_HOLLOW_KING_DEATH.txt
+          EOF
+          cp Docs/HOLLOW_KING_DEATH_PLAYTEST.md "dist/$PACKAGE_NAME/README_HOLLOW_KING_DEATH.txt"
+
+      - name: Import project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --quit 2>&1 | tee hollow-king-death-import.log
+
+      - name: Run memorable death, Nova, and affected Voidbringer regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_test() {
+            local script="$1"
+            local marker="$2"
+            local log="$3"
+            godot --headless --path . --script "$script" 2>&1 | tee "$log"
+            if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ObjectDB|leaked|orphan|ERROR:' "$log"; then
+              echo "Godot reported an error in $script."
+              exit 1
+            fi
+            grep -Fxq "$marker" "$log"
+          }
+          run_test res://tests/test_hollow_king_memorable_death.gd 'PASS: Hollow King memorable death and reward handoff' hollow-king-death-test.log
+          run_test res://tests/test_hollow_king_nova_presentation.gd 'PASS: Hollow King readable Nova intent and payoff' hollow-king-death-nova.log
+          run_test res://tests/test_voidbringer_impact_feedback.gd 'PASS: Voidbringer impact and Corruption payoff' hollow-king-death-voidbringer-impact.log
+          run_test res://tests/test_voidbringer_skill_slice.gd 'PASS: Voidbringer Mass Brand and Null Shard skill slice' hollow-king-death-voidbringer-skill-slice.log
+
+      - name: Export Windows executable
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --export-release "Windows Desktop" "dist/$DEATH_PACKAGE_NAME/AbyssFall.exe" 2>&1 | tee hollow-king-death-export.log
+          test -s "dist/$DEATH_PACKAGE_NAME/AbyssFall.exe"
+          test -s "dist/$DEATH_PACKAGE_NAME/AbyssFall.pck"
+
+      - name: Reject hidden Godot errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat hollow-king-death-import.log hollow-king-death-test.log hollow-king-death-nova.log hollow-king-death-voidbringer-impact.log hollow-king-death-voidbringer-skill-slice.log hollow-king-death-export.log > hollow-king-death-combined.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ObjectDB|leaked|orphan|ERROR:' hollow-king-death-combined.log; then
+            echo "Godot emitted an import, test, export, parser, script, or runtime error."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Hollow King memorable death and reward handoff' hollow-king-death-test.log
+          grep -Fxq 'PASS: Hollow King readable Nova intent and payoff' hollow-king-death-nova.log
+          grep -Fxq 'PASS: Voidbringer impact and Corruption payoff' hollow-king-death-voidbringer-impact.log
+          grep -Fxq 'PASS: Voidbringer Mass Brand and Null Shard skill slice' hollow-king-death-voidbringer-skill-slice.log
+
+      - name: Audit extracted memorable death package contents
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          cd "dist/$DEATH_PACKAGE_NAME"
+          sha256sum AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README_HOLLOW_KING_DEATH.txt > SHA256SUMS.txt
+          grep -F "$REVIEW_SHA" BUILD_INFO.txt
+          sha256sum --check SHA256SUMS.txt
+          find . -maxdepth 1 -type f -printf '%f\n' | sort | tee ../hollow-king-death-package-contents.log
+          for required in AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README_HOLLOW_KING_DEATH.txt SHA256SUMS.txt; do
+            grep -Fx "$required" ../hollow-king-death-package-contents.log
+          done
+
+      - name: Upload exact-head Hollow King memorable death package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.DEATH_PACKAGE_NAME }}
+          path: dist/${{ env.DEATH_PACKAGE_NAME }}/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload memorable death package audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hollow-king-death-package-audit-logs
+          path: |
+            hollow-king-death-import.log
+            hollow-king-death-test.log
+            hollow-king-death-nova.log
+            hollow-king-death-voidbringer-impact.log
+            hollow-king-death-voidbringer-skill-slice.log
+            hollow-king-death-export.log
+            hollow-king-death-combined.log
+            dist/hollow-king-death-package-contents.log
           if-no-files-found: warn
           retention-days: 90

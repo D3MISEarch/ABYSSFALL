@@ -35,6 +35,8 @@
 - [ ] Projectile fans are readable and dodgeable
 - [ ] Summoned enemies do not exceed a reasonable count
 - [ ] Boss death ends the level and drops his Legendary crown
+- [ ] A kill during Nova clears its active readability presentation without a lingering boundary
+- [ ] The short chest-focused collapse, fragments, and aftermath remain readable without obscuring rewards or victory UI
 
 ## Progression
 
