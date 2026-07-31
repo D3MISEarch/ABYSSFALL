@@ -4,11 +4,13 @@ class_name VisualFoundationVFX
 const ROUTE_MARKER := "SunkenCryptsArtPass0"
 const ROOT_NAME := "VisualFoundationV01_VFX"
 const MAX_ACTIVE_EFFECTS := 18
+const MAX_DEBRIS_PER_BURST := 12
 const DEFAULT_LIFETIME := 1.35
 const INSTALL_INTERVAL_SECONDS := 0.45
 const PALE_VOID := Color(0.72, 0.70, 0.90, 0.72)
 const RESTRAINED_VIOLET := Color(0.43, 0.18, 0.68, 0.62)
 const DUST := Color(0.22, 0.19, 0.25, 0.62)
+const DEBRIS_STONE := Color(0.075, 0.065, 0.085, 1.0)
 
 var _install_timer: Timer
 var _installed_scene_id := 0
@@ -48,6 +50,7 @@ func _try_install_into_current_scene() -> void:
 		_effect_root.name = ROOT_NAME
 		_effect_root.set_meta("presentation_only", true)
 		_effect_root.set_meta("bounded_effect_budget", MAX_ACTIVE_EFFECTS)
+		_effect_root.set_meta("bounded_debris_per_burst", MAX_DEBRIS_PER_BURST)
 		scene.add_child(_effect_root)
 	_installed_scene_id = scene_id
 	_call_deferred_route_settle()
@@ -60,6 +63,7 @@ func _call_deferred_route_settle() -> void:
 	spawn_dust_burst(Vector3(0.0, 0.18, -20.0), 0.62, 14)
 	spawn_dust_burst(Vector3(0.0, 0.18, -73.0), 0.54, 12)
 	spawn_void_pulse(Vector3(0.0, 0.12, -103.0), 0.78)
+	spawn_debris_reaction(Vector3(0.0, 0.08, -103.0), 0.70, 8)
 
 
 func spawn_gravity_burst(world_position: Vector3, strength: float = 1.0) -> void:
@@ -68,6 +72,11 @@ func spawn_gravity_burst(world_position: Vector3, strength: float = 1.0) -> void
 	var clamped_strength := clampf(strength, 0.25, 1.6)
 	spawn_dust_burst(world_position, clamped_strength, clampi(int(16.0 * clamped_strength), 8, 24))
 	spawn_void_pulse(world_position, clamped_strength)
+	spawn_debris_reaction(
+		world_position,
+		clamped_strength,
+		clampi(int(8.0 * clamped_strength), 5, MAX_DEBRIS_PER_BURST)
+	)
 
 
 func spawn_dust_burst(world_position: Vector3, strength: float = 1.0, amount: int = 16) -> void:
@@ -127,6 +136,50 @@ func spawn_void_pulse(world_position: Vector3, strength: float = 1.0) -> void:
 	tween.tween_property(material, "albedo_color:a", 0.0, 0.68).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 
 
+func spawn_debris_reaction(world_position: Vector3, strength: float = 1.0, amount: int = 8) -> void:
+	if not _can_spawn():
+		return
+	var clamped_strength := clampf(strength, 0.35, 1.5)
+	var fragment_count := clampi(amount, 4, MAX_DEBRIS_PER_BURST)
+	var debris_root := Node3D.new()
+	debris_root.name = "BoundedReactiveDebris"
+	debris_root.global_position = world_position
+	debris_root.set_meta("presentation_only", true)
+	debris_root.set_meta("fragment_count", fragment_count)
+	debris_root.set_meta("collision_disabled", true)
+	_register_effect(debris_root, 1.22)
+
+	var shared_mesh := _make_debris_mesh()
+	var start_radius := 1.15 * clamped_strength
+	for index in fragment_count:
+		var angle := TAU * float(index) / float(fragment_count) + 0.21 * float(index % 3)
+		var radial := Vector3(cos(angle), 0.0, sin(angle))
+		var tangent := Vector3(-radial.z, 0.0, radial.x)
+		var fragment := MeshInstance3D.new()
+		fragment.name = "DecorativeFragment_%02d" % index
+		fragment.mesh = shared_mesh
+		fragment.position = radial * (start_radius * (0.72 + 0.08 * float(index % 4)))
+		fragment.position.y = 0.035 + 0.012 * float(index % 3)
+		fragment.rotation = Vector3(0.18 * float(index % 2), angle, 0.13 * float(index % 4))
+		fragment.scale = Vector3.ONE * (0.72 + 0.09 * float(index % 4))
+		fragment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		fragment.set_meta("presentation_only", true)
+		fragment.set_meta("non_colliding", true)
+		debris_root.add_child(fragment)
+
+		var inward_target := radial * (0.16 + 0.035 * float(index % 3))
+		inward_target.y = 0.12 + 0.025 * float(index % 2)
+		var settle_target := inward_target + tangent * (0.22 + 0.04 * float(index % 3))
+		settle_target.y = 0.025
+		var fragment_tween := fragment.create_tween()
+		fragment_tween.tween_property(fragment, "position", inward_target, 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		fragment_tween.parallel().tween_property(fragment, "rotation", fragment.rotation + Vector3(1.1, 1.8, 0.8), 0.30)
+		fragment_tween.tween_property(fragment, "position", settle_target, 0.48).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		fragment_tween.parallel().tween_property(fragment, "rotation", fragment.rotation + Vector3(2.0, 2.8, 1.5), 0.48)
+		fragment_tween.tween_interval(0.18)
+		fragment_tween.tween_property(fragment, "scale", Vector3.ZERO, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+
+
 func clear_presentation_effects() -> void:
 	_clear_effects(false)
 
@@ -182,6 +235,18 @@ func _make_dust_mesh() -> Mesh:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = DUST
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.disable_receive_shadows = true
+	mesh.material = material
+	return mesh
+
+
+func _make_debris_mesh() -> Mesh:
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.095, 0.045, 0.065)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = DEBRIS_STONE
+	material.roughness = 0.92
+	material.metallic = 0.02
 	material.disable_receive_shadows = true
 	mesh.material = material
 	return mesh
