@@ -63,12 +63,7 @@ func _run_tests() -> void:
 	await _test_cinematic_event_orchestration(fixture, cinematic, vfx)
 	_test_authority_boundaries()
 
-	if vfx != null:
-		vfx.call("clear_presentation_effects")
-	current_scene = previous_scene
-	fixture.queue_free()
-	await process_frame
-	await process_frame
+	await _teardown_fixture(fixture, previous_scene, vfx, cinematic)
 	if vfx != null:
 		_expect(int(vfx.call("get_active_effect_count")) == 0, "Route teardown must leave no active visual-foundation effects.")
 
@@ -79,6 +74,23 @@ func _run_tests() -> void:
 	for failure in failures:
 		push_error("ASSERTION FAILED: %s" % failure)
 	quit(1)
+
+
+func _teardown_fixture(fixture: FixtureHost, previous_scene: Node, vfx: Node, cinematic: Node) -> void:
+	current_scene = previous_scene
+	if cinematic != null:
+		cinematic.call("_clear_scene_bindings")
+	if vfx != null:
+		vfx.call("clear_presentation_effects")
+	for node in _descendants(fixture):
+		if node is CPUParticles3D:
+			(node as CPUParticles3D).emitting = false
+	for _frame in 4:
+		await process_frame
+	if is_instance_valid(fixture):
+		fixture.free()
+	for _frame in 8:
+		await process_frame
 
 
 func _build_fixture() -> FixtureHost:
