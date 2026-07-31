@@ -114,7 +114,9 @@ func _clear_route_binding(restart_discovery: bool = true) -> void:
 
 
 func _start_discovery() -> void:
-	if is_instance_valid(_install_timer) and _install_timer.is_stopped():
+	if not is_inside_tree() or not is_instance_valid(_install_timer) or not _install_timer.is_inside_tree():
+		return
+	if _install_timer.is_stopped():
 		_install_timer.start()
 
 

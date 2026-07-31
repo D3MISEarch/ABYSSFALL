@@ -45,7 +45,7 @@ var _reveal_boost := 0.0
 var _boss_death_boost := 0.0
 var _boss_death_reaction_emitted := false
 var _boss_death_reaction_count := 0
-var _property_list_invocation_count := 0
+var _dependency_resolution_count := 0
 var _room_transition_emissions: Array[Vector3] = []
 
 var _tracked_rifts: Dictionary = {}
@@ -114,7 +114,9 @@ func _watch_route_host(route_host: Node3D) -> void:
 
 
 func _start_discovery() -> void:
-	if is_instance_valid(_install_timer) and _install_timer.is_stopped():
+	if not is_inside_tree() or not is_instance_valid(_install_timer) or not _install_timer.is_inside_tree():
+		return
+	if _install_timer.is_stopped():
 		_install_timer.start()
 
 
@@ -126,6 +128,7 @@ func _stop_discovery() -> void:
 func _resolve_runtime_dependencies() -> void:
 	if not is_instance_valid(_host):
 		return
+	_dependency_resolution_count += 1
 	_lighting_rig = _host.get_node_or_null(LIGHTING_RIG_NAME) as Node3D
 	_world_environment = _find_world_environment(_host)
 	_camera_director = _host.get("camera_director") as Node
@@ -156,6 +159,7 @@ func _clear_scene_bindings(restart_discovery: bool = true) -> void:
 	_boss_death_boost = 0.0
 	_boss_death_reaction_emitted = false
 	_boss_death_reaction_count = 0
+	_dependency_resolution_count = 0
 	_room_transition_emissions.clear()
 	_tracked_rifts.clear()
 	_tracked_nova_presenters.clear()
@@ -168,7 +172,12 @@ func _clear_scene_bindings(restart_discovery: bool = true) -> void:
 func _on_tree_node_added(node: Node) -> void:
 	if not is_instance_valid(_host) or (node != _host and not _host.is_ancestor_of(node)):
 		return
-	if node is WorldEnvironment or node.name == LIGHTING_RIG_NAME or node.get_parent() == _host:
+	if (
+		node is WorldEnvironment
+		or node.name == LIGHTING_RIG_NAME
+		or node.name == "IntegratedCameraDirector"
+		or node.name == "TheHollowKing"
+	):
 		call_deferred("_resolve_runtime_dependencies")
 	call_deferred("_register_presentation_node", node)
 
@@ -375,13 +384,21 @@ func _emit_gravity_burst(position: Vector3, strength: float) -> void:
 
 func _cache_authored_lights() -> void:
 	_authored_lights.clear()
-	_base_light_energy.clear()
 	if not is_instance_valid(_lighting_rig):
+		_base_light_energy.clear()
 		return
 	_collect_lights_recursive(_lighting_rig, _authored_lights)
+	var live_ids := {}
 	for light in _authored_lights:
-		if is_instance_valid(light):
-			_base_light_energy[light.get_instance_id()] = light.light_energy
+		if not is_instance_valid(light):
+			continue
+		var id := light.get_instance_id()
+		live_ids[id] = true
+		if not _base_light_energy.has(id):
+			_base_light_energy[id] = light.light_energy
+	for id in _base_light_energy.keys():
+		if not live_ids.has(id):
+			_base_light_energy.erase(id)
 
 
 func _collect_lights_recursive(root: Node, result: Array[Light3D]) -> void:
@@ -425,7 +442,7 @@ func snapshot() -> Dictionary:
 		"lighting_bound": is_instance_valid(_lighting_rig),
 		"world_environment_bound": is_instance_valid(_world_environment),
 		"cached_authored_lights": _authored_lights.size(),
-		"property_list_invocation_count": _property_list_invocation_count,
+		"dependency_resolution_count": _dependency_resolution_count,
 		"room_transition_emissions": _room_transition_emissions.duplicate(),
 		"boss_death_reaction_emitted": _boss_death_reaction_emitted,
 		"boss_death_reaction_count": _boss_death_reaction_count,

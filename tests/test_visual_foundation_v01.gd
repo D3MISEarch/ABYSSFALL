@@ -83,7 +83,6 @@ func _run_tests() -> void:
 	await _teardown_fixture(fixture, previous_scene, vfx, cinematic)
 	if vfx != null:
 		_expect(int(vfx.call("get_active_effect_count")) == 0, "Route teardown must leave no active visual-foundation effects.")
-	await _shutdown_visual_services(lighting, vfx, cinematic)
 
 	if failures.is_empty():
 		print("PASS: AbyssFall Visual Foundation v0.1")
@@ -108,17 +107,6 @@ func _teardown_fixture(fixture: FixtureHost, previous_scene: Node, vfx: Node, ci
 	if is_instance_valid(fixture):
 		fixture.free()
 	for _frame in 8:
-		await process_frame
-
-
-func _shutdown_visual_services(lighting: Node, vfx: Node, cinematic: Node) -> void:
-	# These three nodes are production autoloads. The standalone focused test exits the
-	# entire engine immediately, so release their timers, particles, tweens, and resource
-	# references explicitly before quit. Runtime scenes never call this helper.
-	for service in [cinematic, vfx, lighting]:
-		if is_instance_valid(service):
-			service.free()
-	for _frame in 12:
 		await process_frame
 
 
@@ -239,10 +227,8 @@ func _test_no_per_frame_reflection(host: FixtureHost, cinematic: Node) -> void:
 	for _frame in 120:
 		cinematic.call("_process", 1.0 / 60.0)
 	var after := _property_list_invocation_total(host)
-	var snapshot: Dictionary = cinematic.call("snapshot")
 	var cinematic_source := FileAccess.get_file_as_string("res://scripts/presentation/visual_foundation_cinematic.gd")
 	_expect(after == before, "An instrumented route fixture must receive no get_property_list calls during 120 presentation frames.")
-	_expect(int(snapshot["property_list_invocation_count"]) == 0, "The cinematic service must expose zero normal-frame reflection calls.")
 	_expect(not cinematic_source.contains("get_property_list"), "The cinematic service must not reintroduce Object.get_property_list into presentation updates.")
 
 
@@ -343,6 +329,8 @@ func _test_authority_boundaries() -> void:
 		_expect(not source.contains("take_damage(") and not source.contains("move_and_slide(") and not source.contains("add_experience(") and not source.contains("_spawn_item_drop") and not source.contains("Persistence."), "Visual-foundation scripts must not own damage, movement, rewards, drops, or persistence.")
 	_expect(not cinematic_source.contains("Camera3D.new") and not cinematic_source.contains("camera.global_transform") and not cinematic_source.contains("camera.fov"), "Cinematic environment orchestration must observe the integrated camera director without creating or mutating a second camera.")
 	_expect(not lighting_source.contains("current_scene") and not material_source.contains("current_scene") and not vfx_source.contains("current_scene") and not cinematic_source.contains("current_scene"), "Visual Foundation discovery must bind only through the production route-host group, never SceneTree.current_scene.")
+	for source in [lighting_source, material_source, vfx_source, cinematic_source]:
+		_expect(source.contains("not is_inside_tree()") and source.contains("not _install_timer.is_inside_tree()"), "Each discovery timer must be guarded against engine-shutdown restart after its service or timer leaves the SceneTree.")
 	_expect(vfx_source.contains("MAX_ACTIVE_EFFECTS := 18") and vfx_source.contains("MAX_DEBRIS_PER_BURST := 12"), "The VFX pipeline must keep explicit effect and debris budgets.")
 
 
