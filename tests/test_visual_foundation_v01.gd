@@ -66,6 +66,7 @@ func _run_tests() -> void:
 	await _teardown_fixture(fixture, previous_scene, vfx, cinematic)
 	if vfx != null:
 		_expect(int(vfx.call("get_active_effect_count")) == 0, "Route teardown must leave no active visual-foundation effects.")
+	await _shutdown_visual_services(lighting, vfx, cinematic)
 
 	if failures.is_empty():
 		print("PASS: AbyssFall Visual Foundation v0.1")
@@ -90,6 +91,17 @@ func _teardown_fixture(fixture: FixtureHost, previous_scene: Node, vfx: Node, ci
 	if is_instance_valid(fixture):
 		fixture.free()
 	for _frame in 8:
+		await process_frame
+
+
+func _shutdown_visual_services(lighting: Node, vfx: Node, cinematic: Node) -> void:
+	# These three nodes are production autoloads. The standalone focused test exits the
+	# entire engine immediately, so release their timers, particles, tweens, and resource
+	# references explicitly before quit. Runtime scenes never call this helper.
+	for service in [cinematic, vfx, lighting]:
+		if is_instance_valid(service):
+			service.free()
+	for _frame in 12:
 		await process_frame
 
 
