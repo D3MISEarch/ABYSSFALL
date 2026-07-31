@@ -171,7 +171,7 @@ func _build_dust_emitter(
 	particles.scale_amount_max = 1.0
 	particles.color = DUST_COLOR
 	particles.draw_order = CPUParticles3D.DRAW_ORDER_LIFETIME
-	particles.draw_pass_1 = _build_dust_mesh()
+	particles.mesh = _build_dust_mesh()
 	particles.set_meta("presentation_only", true)
 	particles.set_meta("bounded_particle_amount", particle_amount)
 	return particles
