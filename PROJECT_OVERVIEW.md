@@ -17,13 +17,11 @@ The target experience is fast, readable, controller-friendly combat where player
 
 ## Current playable baseline
 
-The authoritative approved build is **`main` at `7b4bde25940d1941c54857471efdc581c6b9b150`**, running in Godot 4.4.1. It contains the consolidated owner-approved full-stack Sunken Crypts foundation.
+The authoritative approved full-stack baseline is **`main` at `7b4bde25940d1941c54857471efdc581c6b9b150`**, running in Godot 4.4.1. Later approved work may advance `main`; the exact active human gate and branch sequence belong in [`Docs/Roadmap/CURRENT_SLICE.md`](Docs/Roadmap/CURRENT_SLICE.md), not in this long-range overview.
 
-Draft PR #82 at frozen head `8d5958e51f499d966a790cc9feb479b339b29964` is a technically verified but unmerged Voidbringer impact/payoff candidate. It is waiting for the owner Windows playtest and is not an approved dependency base. After it passes and merges, Issue #83 completes the Grasping Rift micro-sprint from the exact resulting `main` SHA.
+The owner-authorized production sequence and exact current candidates are tracked in the active roadmap and GitHub issues. An unmerged candidate is never an approved dependency base; each dependent slice begins only from the exact resulting `main` SHA after its prerequisite passes owner playtest and merges.
 
-The owner-authorized roadmap is tracked by Issue #96. After Issue #83, Issue #97 must approve the transient combat-state/force/charge ownership ADR; Issues #89 through #95 then prove and migrate the foundational `Anchor → Load → Bend → Collapse` kit one slice at a time. Hollow King Issue #86 resumes only after Issue #95 unless the owner explicitly reprioritizes.
-
-Implemented and verified in the approved baseline:
+Implemented and verified in the approved full-stack foundation:
 
 - smooth fixed-camera 3D movement, controller aiming, retained facing, and camera follow;
 - Void Bolt, Shadow Step, and Grasping Rift with procedural Voidbringer VFX;
@@ -36,20 +34,35 @@ Implemented and verified in the approved baseline:
 - complete-route procedural Art Pass 0 with decorative-only collision boundaries;
 - automated regression coverage for runtime, persistence, progression, inventory, front end, controller behavior, art, VFX, and class gates.
 
-**Active production scope is Voidbringer only.** Penitent mechanics remain preserved and regression-tested, but further Penitent graphical, content, and balance work is deferred until the class roster milestone is intentionally reopened.
+**Active production scope is Voidbringer OP1 only.** Penitent mechanics remain preserved and regression-tested, but further Penitent graphical, content, balance, progression, and Codex production is deferred until OP1 passes and the owner explicitly opens a later operation.
+
+## Binding production model
+
+The binding scope doctrine lives in [`Docs/Design/GAMEPLAY_BIBLE.md`](Docs/Design/GAMEPLAY_BIBLE.md). This overview applies it as follows:
+
+- The complete AbyssFall vision is a long-term destination, not one simultaneous launch checklist.
+- Production advances one bounded, player-visible operation at a time.
+- OP1 is the first complete proof: one exceptional Voidbringer, one polished environment, one memorable boss, one deep progression/build foundation, meaningful loot, one focused repeatable loop, and high-end presentation supported by stable persistence, testing, performance, and packaging.
+- OP1 is not disposable scaffolding before the real game. It is the first finished proof of the real game and must be strong enough to communicate the vision without explanation.
+- OP2 does not open until OP1 passes owner acceptance. Its exact content is chosen from proven needs, capacity, opportunity, and player response rather than precommitted now.
+- Build the active use case specifically enough to make it excellent, cleanly enough to preserve extension seams, and generalize only after a real second consumer proves the shared contract.
+- Future collaborators, contractors, funding, or publishing support may accelerate later operations, but OP1 must not depend on them.
+- The eight-class destination is not a committed launch roster. Launch breadth will be set from proven capacity without lowering the quality bar.
 
 ## Playable class direction
 
-### Void Warlock
+### Void Warlock / Voidbringer compatibility path
 
-**Fantasy:** command the hungry void.
+**Current prototype fantasy:** command the hungry void.
 
 - Ranged control and burst
 - Gravity, portals, soul collection, and summoning
-- Resource: **Corruption**
+- Current prototype resource: **Corruption**
 - Corruption is living, parasitic, organic, wet, and hungry
 - Visual language: obsidian black, abyss purple, and sickly neon green
-- Core loop: group enemies, kill them, feed Corruption, and spend it on violent void effects
+- Current prototype loop: group enemies, kill them, feed Corruption, and spend it on violent void effects
+
+The approved future class identity is Voidbringer, with the canonical `Anchor → Load → Bend → Collapse` design documented in the character Codex. Existing `void_warlock` identity and saves remain compatibility concerns until a versioned migration is approved.
 
 ### The Penitent
 
@@ -62,117 +75,94 @@ Implemented and verified in the approved baseline:
 - Visual language: ritual black, blood crimson, bone ivory, black iron, and neon venom green
 - Core loop: mark enemies, place sigils, reposition targets, complete the pattern, and activate the ritual
 
-Penitent skill branches (preserved prototype; production deferred):
+Penitent skill branches preserved in the prototype:
 
 - **Brands** — spreading marks, echoed damage, and chain reactions
 - **Circles** — battlefield geometry, bindings, traps, and ritual networks
 - **Sacrifice** — health spending, lifesteal, mutation, and dangerous power spikes
 
+Penitent is long-term approved direction, not active production. Its next work requires OP1 acceptance and an explicit owner decision that Penitent belongs in the newly opened operation.
+
 ## Class selection and hidden paths
 
-The class-selection framework can present multiple durable builds and classes, but the current production milestone is intentionally centered on Voidbringer. Penitent remains available as preserved prototype coverage; it is not an active content target. Future classes and Unknown Path presentation are postponed until the Voidbringer vertical slice is fun, stable, and visually coherent.
+The class-selection framework can present multiple durable builds and classes, but the current production operation is intentionally centered on Voidbringer. Penitent remains available as preserved prototype coverage; it is not an active content target. Future classes and Unknown Path presentation are postponed until the Voidbringer OP1 slice is fun, stable, visually coherent, replayable, and owner-approved.
 
-## Roadmap
+## Operation roadmap
 
-### Phase 0 — Stable baseline
+### Foundation history — established and protected
 
-**Goal:** prove that the existing v0.4 Hotfix 3 project launches cleanly in Godot 4.4.1.
+Earlier work proved the baseline required to build a real slice:
 
-- Upload the complete Godot project to GitHub
-- Put `project.godot` at the repository root
-- Run headless parser/import validation
-- Run a bounded runtime smoke test
-- Fix all startup, scene-tree, resource, and runtime errors
-- Record final commands and outputs
-- Freeze this as the clean baseline
+- a clean Godot 4.4.1 project and automated runtime validation;
+- class-agnostic ownership seams for health, movement, resources, abilities, equipment, XP, HUD binding, and class definitions where already proven;
+- persistent character continuity, inventory, class points, controller navigation, front end, save/relaunch, and packaging workflows;
+- the connected Sunken Crypts route, Art Pass 0, enemies, generators, traps, hidden room, and Hollow King foundation;
+- a preserved Penitent prototype used to expose early class-separation requirements without committing Penitent to current production.
 
-### Phase 1 — Multi-class architecture
+Historical stage documents remain useful architectural evidence. They are not the current production queue and may not reopen broad work by implication.
 
-**Goal:** stop the project from being hard-coded around the Void Warlock.
+### OP1 — first polished Voidbringer proof
 
-- Reusable character controller foundation
-- Separate health, movement, resource, ability, equipment, XP, and HUD responsibilities
-- Resource interface with separate Corruption and Fervor implementations
-- Data-driven class definitions
-- Signal-driven HUD binding
-- Temporary class-selection screen
-- Preserve current Void Warlock gameplay
+**Goal:** manufacture the first complete, repeatable, presentation-ready AbyssFall unit.
 
-### Phase 2 — Penitent vertical slice
+OP1 contains several sequential passes, not one giant branch:
 
-**Goal:** prove the Penitent's mark-to-ritual combat loop using placeholder visuals.
+#### OP1-A — combat and build identity
 
-Prototype kit:
+- Prove `Anchor → Load → Bend → Collapse` through satisfying player-facing skills.
+- Establish clear ranged and close-range directions before broad build expansion.
+- Improve hit feel, reactions, deaths, resource payoff, movement, impact, readability, and supporting rotation.
+- Develop the persistent class tree, skill evolution, resource engines, tags, and equipment interactions through bounded slices.
 
-- Ritual Blade
-- Brand of Ruin
-- Seal of Binding
-- Martyr's Chain
-- Ashen Procession
-- Sacrament
+#### OP1-B — boss and environment quality
 
-Prototype systems:
+- Turn the Sunken Crypts foundation into one visually coherent, atmospheric environment.
+- Develop Hollow King into a memorable, readable, multi-phase boss that tests the proven Voidbringer loop.
+- Improve lighting, materials, set dressing, VFX, audio, telegraphs, reward presentation, and environmental storytelling.
 
-- Partial and completed Rite Marks
-- Ground sigils and active-sigil capacity
-- Fervor gain, spend, thresholds, and out-of-combat decay
-- Safe health substitution with clear preview
-- Six starter skill nodes
-- Temporary character selection
-- Penitent-specific HUD and playtest checklist
+#### OP1-C — meaningful progression and loot
 
-### Phase 3 — First polished vertical slice
+- Deliver several genuinely different Voidbringer build directions.
+- Add build-changing items and affixes that alter behavior rather than only magnitude.
+- Make class-tree, skill, equipment, defensive, movement, and resource decisions understandable and consequential.
+- Preserve durable build continuity and loadout safety.
 
-**Goal:** turn the prototype into a short section that looks and feels like a real game.
+#### OP1-D — one focused repeatable loop
 
-- Tune movement, hit feel, enemy density, resource economy, XP pacing, and drops
-- Improve Sunken Crypts room flow
-- Prove the foundational Voidbringer `Anchor → Load → Bend → Collapse` combat identity
-- Refine Hollow King mechanics and reward after that class loop is proven
-- Add class-specific sound language
-- Add stronger VFX and screen feedback
-- Replace the roughest placeholder geometry
-- Add pause, settings, accessibility, and save support
+- Build one Wound or equivalent repeatable endgame activity around the proven class, region, boss, loot, and progression foundation.
+- Favor depth, modifiers, mastery, rewards, and replay desire over multiple shallow modes.
 
-### Phase 4 — Progression and content expansion
+#### OP1-E — polished proof package
 
-- Expanded skill trees
-- Larger class-specific and neutral item pools
-- Legendary and Mythic build-changing gear
-- Persistent hub progression
-- Unlock requirements for hidden class paths
-- Additional enemies, elites, generators, traps, and minibosses
-- Second realm and boss
-- Difficulty modifiers and replay systems
+- Complete the strongest feasible lighting, atmosphere, materials, VFX, audio, camera, animation, UI, and cinematic presentation pass for the bounded slice.
+- Meet controller, persistence, performance, packaging, accessibility, regression, and owner-playtest gates.
+- Produce documentation and handoff workflows that make the next operation cheaper and safer.
+- Create a slice credible enough to show players, collaborators, contractors, publishers, or funding partners.
 
-### Phase 5 — Final characters and additional classes
+OP1 passes only when the experience feels like a coherent game worth replaying, not when every planned data structure exists.
 
-- Production-quality Warlock and Penitent models
-- Animation sets and ability-specific casting/attack animation
-- Character skins and visual progression
-- Third playable class revealed from an Unknown Path slot
-- Class-specific story moments and unlock quests
+### OP2 — first expansion operation, gated
 
-### Phase 6 — Co-op and platform work
+OP2 is intentionally undefined until OP1 passes.
 
-- Local controller co-op first
-- Shared camera and encounter scaling
-- Revive and drop-sharing rules
-- Online networking after local co-op is stable
-- Lobby, reconnect, authority, synchronization, and latency handling
-- PC optimization and controller certification pass
-- Android controls, UI scaling, performance, and packaging
+After acceptance, the owner may choose a bounded next unit such as:
 
-### Phase 7 — Release candidate
+- a second class using the proven campaign and content foundation;
+- a second environment and boss using the proven Voidbringer systems;
+- deeper content for the successful OP1 slice;
+- or another strategically valuable proof based on player response, production bottlenecks, collaborator interest, funding, and available capacity.
 
-- Multiple complete realms
-- Full boss roster for launch scope
-- Balanced class trees and item economy
-- Save migration and settings stability
-- Tutorials and onboarding
-- Accessibility pass
-- Performance targets met on PC and supported Android devices
-- Closed testing, bug triage, store assets, and release preparation
+OP2 should reuse what OP1 genuinely proved. It is also the first legitimate point to generalize systems when a second real consumer demonstrates the common contract. It must not become a wholesale rewrite of OP1 into a speculative universal engine.
+
+### Later operations and commercial scope
+
+Later operations repeat the same discipline: one bounded unit, explicit acceptance, measured reuse, and no dependency on hypothetical future resources.
+
+The long-term class roster, additional realms, regional factions, bosses, build systems, and endgame depth remain valid franchise direction. They enter production only through explicit later operations.
+
+The first commercial release may contain OP1 plus additional proven operations, but its exact class count, realm count, boss count, endgame breadth, co-op support, and platforms are not precommitted. Release scope is chosen when proven capacity can support it at the required quality.
+
+Local co-op comes only after the single-player core is fun and stable. Online networking comes only after local/co-located rules and encounter scaling are proven. Any Godot-to-Unreal decision remains gated behind the structured playtest of the polished OP1 slice.
 
 ## Agent workflow
 
@@ -184,7 +174,7 @@ Agents are narrow specialists operating on one authoritative `main` baseline.
 - **Codex / repository lane:** mechanical repository work, migrations, CI, integration, and consistency audits.
 - **Claude / independent verifier:** read-only verification of frozen exact commits; never co-authors the implementation being reviewed.
 
-Only one implementation agent edits an owning system at a time. Additional agents are added only for a genuinely separate specialty, such as Blender rigging and Godot technical-art import.
+Only one implementation agent edits an owning system at a time. Additional agents are added only for a genuinely separate specialty, such as Blender rigging, animation, audio, environment art, or Godot technical-art import. Adding agents does not authorize simultaneous scope expansion.
 
 ## Branch and review policy
 
@@ -194,20 +184,24 @@ Only one implementation agent edits an owning system at a time. Additional agent
 - Every branch must have explicit acceptance criteria
 - Every pull request must show tests and limitations
 - No feature branch may silently change another class
-- Placeholder art is allowed until mechanics are fun and stable
-- Final character art, bosses, networking, and mobile polish wait until the relevant foundation is proven
+- Placeholder art is allowed while mechanics are being proven, but OP1 cannot pass with presentation that fails its owner-approved quality bar
+- Final character art, broad networking, additional classes, and platform expansion wait until the relevant operation is proven and opened
 - The user and assistant remain creative directors; agents implement and test approved designs
 
 ## Immediate next actions
 
-1. Owner Windows-playtest the exact PR #82 package and record PASS or actionable findings; merge only after explicit approval.
-2. Implement Issue #83 from the exact `main` SHA produced after PR #82 merges, then complete its verification and owner playtest.
-3. Write, independently review, owner-approve, and merge Issue #97's architecture ADR without overlapping the active PR #88 documentation lane.
-4. Build Issues #89 through #95 sequentially from the exact `main` produced by each prior merge, proving the foundational ranged-geometry and close-range Worldshear loops.
-5. Resume Hollow King Issue #86 after Issue #95 unless the owner explicitly reprioritizes.
-6. Expand meaningful loot and one focused repeatable endgame loop after the class combat foundation is proven.
-7. Keep co-op, additional classes, Dead Star, engine migration, and broad content expansion postponed.
+The exact issue and PR sequence belongs in [`Docs/Roadmap/CURRENT_SLICE.md`](Docs/Roadmap/CURRENT_SLICE.md). Inside OP1, the standing priority is:
 
-## Definition of success for the current major milestone
+1. Complete and owner-approve the active Voidbringer combat slices from exact merged `main` baselines.
+2. Prove the foundational ranged-geometry and close-range Worldshear loops one bounded, tested slice at a time.
+3. Advance Hollow King boss quality after the relevant Voidbringer mechanics can test and exploit it.
+4. Improve art direction, lighting, materials, atmosphere, VFX, audio, and cinematic presentation alongside proven gameplay rather than as an unrelated final pass.
+5. Expand meaningful loot and the persistent class tree only where each addition creates a visible build decision.
+6. Build one focused repeatable endgame loop after the class, boss, environment, and reward foundation is credible.
+7. Keep Penitent production, additional classes, second realms, co-op, platform expansion, Dead Star, and engine migration postponed until their explicit gates open.
 
-A player can launch AbyssFall, continue a durable Voidbringer build, enter a visually coherent Sunken Crypts slice, immediately feel the difference between basic casting and intentional spatial setup, build and Collapse anchors through a credible ranged or close-range direction, make meaningful class-tree and gear choices, defeat a polished Hollow King encounter, save safely, and want to repeat the run.
+## Definition of success for OP1
+
+A player can launch AbyssFall, continue a durable Voidbringer build, enter a visually coherent Sunken Crypts slice, immediately feel the difference between basic casting and intentional spatial setup, build and Collapse anchors through credible distinct build directions, make meaningful class-tree and gear choices, defeat a polished Hollow King encounter, enter a focused repeatable loop, save safely, relaunch, and want to play again.
+
+The slice must also leave behind a stable, documented production process. Another person should be able to play it and understand what AbyssFall is becoming without being asked to imagine six future operations first.
