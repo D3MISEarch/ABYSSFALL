@@ -84,7 +84,7 @@ func spawn_dust_burst(world_position: Vector3, strength: float = 1.0, amount: in
 		return
 	var particles := CPUParticles3D.new()
 	particles.name = "BoundedDustBurst"
-	particles.global_position = world_position
+	particles.position = world_position
 	particles.one_shot = true
 	particles.amount = clampi(amount, 6, 28)
 	particles.lifetime = DEFAULT_LIFETIME
@@ -100,7 +100,7 @@ func spawn_dust_burst(world_position: Vector3, strength: float = 1.0, amount: in
 	particles.scale_amount_min = 0.55
 	particles.scale_amount_max = 1.15
 	particles.color = DUST
-	particles.draw_pass_1 = _make_dust_mesh()
+	particles.mesh = _make_dust_mesh()
 	particles.set_meta("presentation_only", true)
 	_register_effect(particles, particles.lifetime + 0.25)
 	particles.restart()
@@ -111,7 +111,7 @@ func spawn_void_pulse(world_position: Vector3, strength: float = 1.0) -> void:
 		return
 	var pulse := MeshInstance3D.new()
 	pulse.name = "BoundedVoidPulse"
-	pulse.global_position = world_position
+	pulse.position = world_position
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = 0.42
 	mesh.bottom_radius = 0.42
@@ -143,7 +143,7 @@ func spawn_debris_reaction(world_position: Vector3, strength: float = 1.0, amoun
 	var fragment_count := clampi(amount, 4, MAX_DEBRIS_PER_BURST)
 	var debris_root := Node3D.new()
 	debris_root.name = "BoundedReactiveDebris"
-	debris_root.global_position = world_position
+	debris_root.position = world_position
 	debris_root.set_meta("presentation_only", true)
 	debris_root.set_meta("fragment_count", fragment_count)
 	debris_root.set_meta("collision_disabled", true)
