@@ -27,8 +27,12 @@ on:
       - "tests/test_grasping_rift_readability_payoff.gd"
       - "tests/test_hollow_king_nova_presentation.gd"
       - "tests/test_hollow_king_memorable_death.gd"
+      - "tests/test_integrated_camera_director.gd"
       - "Docs/HOLLOW_KING_NOVA_PLAYTEST.md"
       - "Docs/HOLLOW_KING_DEATH_PLAYTEST.md"
+      - "Docs/CAMERA_DIRECTOR_PLAYTEST.md"
+      - "Docs/Architecture/ARCHITECTURE.md"
+      - "Docs/README.md"
       - "Docs/v0.4-hotfix3/PLAYTEST_CHECKLIST.md"
       - ".github/workflows/godot-hotfix3-validation.yml"
       - ".github/workflows/full-stack-windows-package.yml"
@@ -488,5 +492,159 @@ jobs:
             hollow-king-death-export.log
             hollow-king-death-combined.log
             dist/hollow-king-death-package-contents.log
+          if-no-files-found: warn
+          retention-days: 90
+
+  integrated-camera-director-package:
+    name: Exact-head integrated camera director package
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+
+    steps:
+      - name: Check out exact review commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot 4.4.1 and Windows export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="4.4.1"
+          ENGINE="Godot_v${VERSION}-stable_linux.x86_64.zip"
+          TEMPLATES="Godot_v${VERSION}-stable_export_templates.tpz"
+          RELEASE="https://github.com/godotengine/godot/releases/download/${VERSION}-stable"
+          curl --fail --location --retry 3 "$RELEASE/$ENGINE" --output /tmp/godot.zip
+          curl --fail --location --retry 3 "$RELEASE/$TEMPLATES" --output /tmp/templates.tpz
+          mkdir -p "$HOME/godot"
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          BIN="$(find "$HOME/godot" -maxdepth 1 -type f -name 'Godot_v*-stable_linux.x86_64' | head -n 1)"
+          chmod +x "$BIN"
+          ln -s "$BIN" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -q /tmp/templates.tpz -d /tmp/export-templates
+          cp -a /tmp/export-templates/templates/. "$TEMPLATE_DIR/"
+          test -f "$TEMPLATE_DIR/windows_release_x86_64.exe"
+
+      - name: Create exact camera director package metadata
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REVIEW_BRANCH: ${{ github.head_ref || github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${REVIEW_SHA:0:7}"
+          BUILT_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          PACKAGE_NAME="AbyssFall-Integrated-Camera-Director-${SHORT_SHA}"
+          echo "CAMERA_DIRECTOR_PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
+          mkdir -p "dist/$PACKAGE_NAME"
+          cat > "dist/$PACKAGE_NAME/BUILD_INFO.txt" <<EOF
+          AbyssFall Integrated Camera Director Playtest
+          Commit: ${REVIEW_SHA}
+          Short commit: ${SHORT_SHA}
+          Branch: ${REVIEW_BRANCH}
+          Workflow run: ${RUN_ID}
+          Built UTC: ${BUILT_AT}
+          Launch: PLAY_CAMERA_DIRECTOR.cmd
+          Owner checklist: README_CAMERA_DIRECTOR.txt
+          EOF
+          cat > "dist/$PACKAGE_NAME/PLAY_CAMERA_DIRECTOR.cmd" <<'EOF'
+          @echo off
+          setlocal
+          start "" "%~dp0AbyssFall.exe" -- --class=void_warlock
+          EOF
+          cp Docs/CAMERA_DIRECTOR_PLAYTEST.md "dist/$PACKAGE_NAME/README_CAMERA_DIRECTOR.txt"
+
+      - name: Import project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --quit 2>&1 | tee integrated-camera-director-import.log
+
+      - name: Run camera director and inherited route regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_test() {
+            local script="$1"
+            local marker="$2"
+            local log="$3"
+            godot --headless --path . --script "$script" 2>&1 | tee "$log"
+            if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ObjectDB|leaked|orphan|ERROR:' "$log"; then
+              echo "Godot reported an error in $script."
+              exit 1
+            fi
+            grep -Fxq "$marker" "$log"
+          }
+          run_test res://tests/test_integrated_camera_director.gd 'PASS: Integrated production camera director' integrated-camera-director-test.log
+          run_test res://tests/test_full_stack_controller_reconciliation.gd 'PASS: Full-stack controller reconciliation' integrated-camera-director-full-stack.log
+          run_test res://tests/test_hollow_king_nova_presentation.gd 'PASS: Hollow King readable Nova intent and payoff' integrated-camera-director-nova.log
+          run_test res://tests/test_hollow_king_memorable_death.gd 'PASS: Hollow King memorable death and reward handoff' integrated-camera-director-death.log
+          run_test res://tests/test_voidbringer_skill_slice.gd 'PASS: Voidbringer Mass Brand and Null Shard skill slice' integrated-camera-director-voidbringer.log
+
+      - name: Export Windows executable
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --export-release "Windows Desktop" "dist/$CAMERA_DIRECTOR_PACKAGE_NAME/AbyssFall.exe" 2>&1 | tee integrated-camera-director-export.log
+          test -s "dist/$CAMERA_DIRECTOR_PACKAGE_NAME/AbyssFall.exe"
+          test -s "dist/$CAMERA_DIRECTOR_PACKAGE_NAME/AbyssFall.pck"
+
+      - name: Reject hidden Godot errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat integrated-camera-director-import.log integrated-camera-director-test.log integrated-camera-director-full-stack.log integrated-camera-director-nova.log integrated-camera-director-death.log integrated-camera-director-voidbringer.log integrated-camera-director-export.log > integrated-camera-director-combined.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ObjectDB|leaked|orphan|ERROR:' integrated-camera-director-combined.log; then
+            echo "Godot emitted an import, test, export, parser, script, or runtime error."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Integrated production camera director' integrated-camera-director-test.log
+          grep -Fxq 'PASS: Full-stack controller reconciliation' integrated-camera-director-full-stack.log
+          grep -Fxq 'PASS: Hollow King readable Nova intent and payoff' integrated-camera-director-nova.log
+          grep -Fxq 'PASS: Hollow King memorable death and reward handoff' integrated-camera-director-death.log
+          grep -Fxq 'PASS: Voidbringer Mass Brand and Null Shard skill slice' integrated-camera-director-voidbringer.log
+
+      - name: Audit extracted camera director package contents
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          cd "dist/$CAMERA_DIRECTOR_PACKAGE_NAME"
+          sha256sum AbyssFall.exe AbyssFall.pck BUILD_INFO.txt PLAY_CAMERA_DIRECTOR.cmd README_CAMERA_DIRECTOR.txt > SHA256SUMS.txt
+          grep -F "$REVIEW_SHA" BUILD_INFO.txt
+          sha256sum --check SHA256SUMS.txt
+          find . -maxdepth 1 -type f -printf '%f\n' | sort | tee ../integrated-camera-director-package-contents.log
+          for required in AbyssFall.exe AbyssFall.pck BUILD_INFO.txt PLAY_CAMERA_DIRECTOR.cmd README_CAMERA_DIRECTOR.txt SHA256SUMS.txt; do
+            grep -Fx "$required" ../integrated-camera-director-package-contents.log
+          done
+
+      - name: Upload exact-head integrated camera director package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CAMERA_DIRECTOR_PACKAGE_NAME }}
+          path: dist/${{ env.CAMERA_DIRECTOR_PACKAGE_NAME }}/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload integrated camera director package audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrated-camera-director-package-audit-logs
+          path: |
+            integrated-camera-director-import.log
+            integrated-camera-director-test.log
+            integrated-camera-director-full-stack.log
+            integrated-camera-director-nova.log
+            integrated-camera-director-death.log
+            integrated-camera-director-voidbringer.log
+            integrated-camera-director-export.log
+            integrated-camera-director-combined.log
+            dist/integrated-camera-director-package-contents.log
           if-no-files-found: warn
           retention-days: 90

@@ -29,6 +29,7 @@
 
 ## Hollow King
 
+- [ ] The one-time Hollow King reveal frames both the player and boss at intimidating scale, then returns smoothly to the exact gameplay frame.
 - [ ] Boss health bar appears
 - [ ] Phase 2 starts near 66% health
 - [ ] Phase 3 starts near 33% health
@@ -47,6 +48,10 @@
 - [ ] Corruption Meter grows and retracts correctly
 
 ## Feel notes
+
+- [ ] Default camera feels moodier and closer while aiming, nearby enemies, and telegraphs remain readable.
+- [ ] Sustained authored swarms pull back smoothly; a brief low-count dip does not cause camera snapping.
+- [ ] Keyboard/mouse and controller aiming remain unchanged; death, reset, menu return, and boss defeat leave no camera drift.
 
 Record anything that feels too fast, slow, weak, unfair, confusing, or boring:
 

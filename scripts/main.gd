@@ -13,6 +13,7 @@ const BOUND_WRETCH_SCRIPT = preload("res://scripts/bound_wretch.gd")
 const CORRUPTION_METER_SCRIPT = preload("res://scripts/corruption_meter.gd")
 const PLAYABLE_ITEM_CATALOG = preload("res://scripts/core/playable_item_catalog.gd")
 const SUNKEN_CRYPTS_ART_PASS0_SCRIPT = preload("res://scripts/art/sunken_crypts_art_pass0.gd")
+const INTEGRATED_CAMERA_DIRECTOR_SCRIPT = preload("res://scripts/integrated_camera_director.gd")
 
 const EQUIPMENT_SLOTS := ["Weapon", "Hood", "Chest", "Gloves", "Boots", "Relic"]
 const ITEM_POOL := PLAYABLE_ITEM_CATALOG.ITEM_POOL
@@ -21,6 +22,7 @@ const HOLLOW_KING_REWARD := PLAYABLE_ITEM_CATALOG.HOLLOW_KING_REWARD
 
 var player
 var camera: Camera3D
+var camera_director: IntegratedCameraDirector
 var health_bar: ProgressBar
 var health_label: Label
 var xp_bar: ProgressBar
@@ -80,6 +82,7 @@ func _ready() -> void:
 	_install_sunken_crypts_art_pass0()
 	_build_hud()
 	_spawn_player()
+	_install_camera_director()
 	_start_courtyard()
 	_show_message("THE SUNKEN CRYPTS\nBreak the courtyard seals", 2.6)
 	await get_tree().create_timer(0.65).timeout
@@ -89,13 +92,17 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if is_instance_valid(player) and is_instance_valid(camera):
-		var target_position: Vector3 = player.global_position + Vector3(0.0, 17.8, 16.2)
-		camera.global_position = camera.global_position.lerp(
-			target_position, clampf(delta * 5.0, 0.0, 1.0)
-		)
-		camera.look_at(player.global_position + Vector3(0.0, 0.45, 0.0), Vector3.UP)
+		if is_instance_valid(camera_director):
+			camera_director.update(delta, player, enemies_alive, game_state, boss)
+		else:
+			var target_position: Vector3 = player.global_position + Vector3(0.0, 17.8, 16.2)
+			camera.global_position = camera.global_position.lerp(
+				target_position, clampf(delta * 5.0, 0.0, 1.0)
+			)
+			camera.look_at(player.global_position + Vector3(0.0, 0.45, 0.0), Vector3.UP)
 
 	if Input.is_action_just_pressed("restart"):
+		_restore_camera_presentation()
 		get_tree().paused = false
 		get_tree().reload_current_scene()
 		return
@@ -119,6 +126,10 @@ func _process(delta: float) -> void:
 		_toggle_skill_tree()
 	elif Input.is_action_just_pressed("menu_close"):
 		_close_side_menus()
+
+
+func _exit_tree() -> void:
+	_restore_camera_presentation()
 
 
 func _install_input_map() -> void:
@@ -236,6 +247,20 @@ func _build_environment() -> void:
 	camera.position = Vector3(0.0, 16.8, 15.2)
 	add_child(camera)
 	camera.look_at(Vector3(0.0, 0.45, 0.0), Vector3.UP)
+
+
+func _install_camera_director() -> void:
+	if is_instance_valid(camera_director) or not is_instance_valid(camera):
+		return
+	camera_director = INTEGRATED_CAMERA_DIRECTOR_SCRIPT.new()
+	camera_director.name = "IntegratedCameraDirector"
+	add_child(camera_director)
+	camera_director.configure(camera)
+
+
+func _restore_camera_presentation() -> void:
+	if is_instance_valid(camera_director):
+		camera_director.restore_immediately()
 
 
 func _build_arena() -> void:
@@ -756,6 +781,8 @@ func _start_boss_encounter() -> void:
 	boss.died.connect(_on_boss_died)
 	add_child(boss)
 	boss.global_position = BOSS_POSITION + Vector3(0.0, 1.55, 0.0)
+	if is_instance_valid(camera_director):
+		camera_director.request_hollow_king_reveal(player, boss)
 	gates["boss_lock"] = _create_gate("ThroneCombatSeal", Vector3(0.0, 1.1, -86.0))
 	boss_health_bar.visible = true
 	boss_health_label.visible = true
@@ -861,6 +888,7 @@ func _on_boss_summon_requested(position_value: Vector3, enemy_type: String) -> v
 
 
 func _on_boss_died(dead_boss) -> void:
+	_restore_camera_presentation()
 	var drop_position := BOSS_POSITION
 	if is_instance_valid(dead_boss):
 		drop_position = dead_boss.global_position
@@ -923,6 +951,7 @@ func _on_loot_message(text: String) -> void:
 
 
 func _on_player_died() -> void:
+	_restore_camera_presentation()
 	game_finished = true
 	game_state = "defeat"
 	objective_label.text = "THE CRYPTS CLAIMED YOU"
