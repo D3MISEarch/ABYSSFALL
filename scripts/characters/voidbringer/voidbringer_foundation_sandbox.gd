@@ -3,6 +3,7 @@ extends Node3D
 
 const CONTROLLER_SCRIPT = preload("res://scripts/characters/voidbringer/voidbringer_controller.gd")
 const CATALOG_SCRIPT = preload("res://scripts/characters/voidbringer/voidbringer_ability_catalog.gd")
+const POLISHED_IMPACT_PRESENTATION_SCRIPT = preload("res://scripts/characters/voidbringer/voidbringer_polished_impact_presentation.gd")
 
 var controller: VoidbringerController = CONTROLLER_SCRIPT.new()
 var ability_catalog: VoidbringerAbilityCatalog = CATALOG_SCRIPT.new()
@@ -20,11 +21,13 @@ var fold_line_visual_root: Node3D
 var projectile_visual_root: Node3D
 var contact_visual_root: Node3D
 var hud_label: Label
+var sandbox_camera: Camera3D
+var player_marker: Node3D
 var enemy_fixture: VoidbringerSandboxTarget
 var terrain_fixture: Node3D
 var corpse_fixture: Node3D
 var projectile_visuals: Dictionary = {}
-var contact_flashes: Array[Dictionary] = []
+var impact_presentation: VoidbringerPolishedImpactPresentation
 var last_skill_result: Dictionary = {}
 var last_impact_result: Dictionary = {}
 var last_status := "READY"
@@ -43,7 +46,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_advance_simulation(delta)
-	_update_contact_flashes(delta)
+	_tick_impact_presentation(delta)
 	_hud_refresh_remaining -= delta
 	if _hud_refresh_remaining <= 0.0:
 		_hud_refresh_remaining = 0.1
@@ -78,6 +81,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			simulate_command(&"toggle_level")
 		KEY_C:
 			simulate_command(&"clear")
+		KEY_R:
+			simulate_command(&"replay_impact")
 
 
 func simulate_command(command: StringName) -> bool:
@@ -113,6 +118,9 @@ func simulate_command(command: StringName) -> bool:
 			last_status = "LEVEL %d" % debug_level
 		&"clear", &"reset":
 			_reset_sandbox()
+		&"replay_impact":
+			_reset_sandbox()
+			success = _fire_null_shard()
 		_:
 			return false
 	_refresh_presentation()
@@ -125,7 +133,7 @@ func simulate_seconds(seconds: float, step: float = 0.02) -> void:
 	while remaining > 0.0:
 		var current_step := minf(remaining, bounded_step)
 		_advance_simulation(current_step)
-		_update_contact_flashes(current_step)
+		_tick_impact_presentation(current_step)
 		remaining -= current_step
 	_refresh_presentation()
 
@@ -146,6 +154,7 @@ func debug_snapshot() -> Dictionary:
 	snapshot["last_skill"] = last_skill_result.duplicate(true)
 	snapshot["last_impact"] = last_impact_result.duplicate(true)
 	snapshot["projectile_visual_count"] = projectile_visuals.size()
+	snapshot["impact_presentation"] = {} if impact_presentation == null else impact_presentation.snapshot()
 	snapshot["status"] = last_status
 	return snapshot
 
@@ -198,10 +207,10 @@ func _build_world() -> void:
 	light.shadow_enabled = true
 	add_child(light)
 
-	var camera := Camera3D.new()
-	camera.position = Vector3(0.0, 10.8, 12.8)
-	add_child(camera)
-	camera.look_at(Vector3(0.0, 0.0, -0.5), Vector3.UP)
+	sandbox_camera = Camera3D.new()
+	sandbox_camera.position = Vector3(0.0, 10.8, 12.8)
+	add_child(sandbox_camera)
+	sandbox_camera.look_at(Vector3(0.0, 0.0, -0.5), Vector3.UP)
 
 	var floor := MeshInstance3D.new()
 	var floor_mesh := BoxMesh.new()
@@ -221,7 +230,7 @@ func _build_world() -> void:
 	center_disc.material_override = _material(Color(0.11, 0.025, 0.22), 1.2)
 	add_child(center_disc)
 
-	_build_player_marker()
+	player_marker = _build_player_marker()
 	enemy_fixture = VoidbringerSandboxTarget.new()
 	enemy_fixture.name = "EnemyFixture"
 	enemy_fixture.position = Vector3(0.0, 0.52, -4.0)
@@ -245,6 +254,10 @@ func _build_world() -> void:
 	contact_visual_root = Node3D.new()
 	contact_visual_root.name = "ContactVisuals"
 	add_child(contact_visual_root)
+	impact_presentation = POLISHED_IMPACT_PRESENTATION_SCRIPT.new()
+	impact_presentation.name = "VoidbringerPolishedImpactPresentation"
+	contact_visual_root.add_child(impact_presentation)
+	impact_presentation.configure(contact_visual_root, sandbox_camera)
 
 	var canvas := CanvasLayer.new()
 	add_child(canvas)
@@ -259,7 +272,7 @@ func _build_world() -> void:
 	canvas.add_child(hud_label)
 
 
-func _build_player_marker() -> void:
+func _build_player_marker() -> Node3D:
 	var root := Node3D.new()
 	root.name = "VoidbringerCastOrigin"
 	root.position = player_origin
@@ -284,6 +297,7 @@ func _build_player_marker() -> void:
 	label.position.y = 1.25
 	label.font_size = 28
 	root.add_child(label)
+	return root
 
 
 func _build_fixture(fixture_name: String, position: Vector3, color: Color, carrier_type: StringName) -> Node3D:
@@ -424,6 +438,8 @@ func _on_skill_rejected(commit: VoidbringerSkillCommit) -> void:
 
 func _on_null_shard_spawned(projectile: VoidbringerNullShardProjectile) -> void:
 	_create_projectile_visual(projectile)
+	if impact_presentation != null:
+		impact_presentation.begin_null_shard_cast(projectile)
 
 
 func _on_null_shard_ended(projectile_id: StringName, reason: StringName) -> void:
@@ -437,7 +453,8 @@ func _on_null_shard_ended(projectile_id: StringName, reason: StringName) -> void
 
 func _on_impact_committed(result: VoidbringerImpactResult) -> void:
 	last_impact_result = result.snapshot()
-	_create_contact_flash(last_impact_result)
+	if impact_presentation != null:
+		impact_presentation.present_accepted_null_shard(result, enemy_fixture)
 	var ability_id := String(last_impact_result.get("ability_id", &""))
 	last_status = "%s HIT %d%s" % [
 		ability_id.get_slice(".", ability_id.get_slice_count(".") - 1).to_upper(),
@@ -492,41 +509,9 @@ func _update_one_projectile_visual(projectile: VoidbringerNullShardProjectile, v
 	visual.scale = Vector3.ONE * bonus_scale
 
 
-func _create_contact_flash(impact: Dictionary) -> void:
-	if contact_flashes.size() >= 4:
-		var oldest: Dictionary = contact_flashes.pop_front()
-		var old_node := oldest.get("node") as Node3D
-		if is_instance_valid(old_node):
-			old_node.queue_free()
-	var root := Node3D.new()
-	root.position = impact.get("impact_point", Vector3.ZERO)
-	contact_visual_root.add_child(root)
-	var sphere := MeshInstance3D.new()
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.24
-	mesh.height = 0.48
-	sphere.mesh = mesh
-	sphere.material_override = _material(Color(0.92, 0.88, 1.0), 6.0)
-	root.add_child(sphere)
-	contact_flashes.append({"node": root, "remaining": 0.20, "duration": 0.20})
-
-
-func _update_contact_flashes(delta: float) -> void:
-	for index in range(contact_flashes.size() - 1, -1, -1):
-		var entry: Dictionary = contact_flashes[index]
-		var remaining := maxf(float(entry.get("remaining", 0.0)) - delta, 0.0)
-		var duration := maxf(float(entry.get("duration", 0.20)), 0.001)
-		var node := entry.get("node") as Node3D
-		if is_instance_valid(node):
-			var progress := 1.0 - remaining / duration
-			node.scale = Vector3.ONE * lerpf(0.55, 2.0, progress)
-		if remaining <= 0.0:
-			contact_flashes.remove_at(index)
-			if is_instance_valid(node):
-				node.queue_free()
-		else:
-			entry["remaining"] = remaining
-			contact_flashes[index] = entry
+func _tick_impact_presentation(delta: float) -> void:
+	if impact_presentation != null:
+		impact_presentation.tick(delta)
 
 
 func _refresh_presentation(force_rebuild: bool = false) -> void:
@@ -629,9 +614,9 @@ func _refresh_hud() -> void:
 	var charge_state := _mass_brand_charge_snapshot()
 	var lines := PackedStringArray([
 		"VOIDBRINGER MASS BRAND + NULL SHARD SANDBOX",
-		"[Q] Brand Enemy   [W] Brand Terrain   [E] Brand Corpse   [SPACE] Fire Null Shard",
+		"[Q] Brand Enemy   [W] Brand Terrain   [E] Brand Corpse   [SPACE] Fire Null Shard   [R] Reset + Replay",
 		"[1/2/3] Direct Anchor Debug   [M] +20 Mass   [I] +20 Instability   [T] Advance 1s",
-		"[L] Toggle Level 1/5   [C] Clear + Reset",
+		"[L] Toggle Level 1/5   [C] Clear + Reset   Null Shard presentation: cast brace → contact → reset",
 		"",
 		"Level %d | Anchor Capacity %d | Active %d | Fold Lines %d | Projectiles %d" % [
 			debug_level,
@@ -698,6 +683,8 @@ func _mass_brand_charge_snapshot() -> Dictionary:
 
 
 func _reset_sandbox() -> void:
+	if impact_presentation != null:
+		impact_presentation.clear()
 	controller.clear()
 	if runtime_session != null and runtime_character != null:
 		runtime_session.ability_executor.clear_build(runtime_character.build_id)
@@ -709,10 +696,13 @@ func _reset_sandbox() -> void:
 	last_impact_result.clear()
 	last_status = "RESET COMPLETE"
 	projectile_visuals.clear()
-	contact_flashes.clear()
 	_clear_children(projectile_visual_root)
-	_clear_children(contact_visual_root)
 	_refresh_presentation(true)
+
+
+func set_impact_presentation_mode(presentation_mode: StringName) -> void:
+	if impact_presentation != null:
+		impact_presentation.set_mode(presentation_mode)
 
 
 func _clear_children(root: Node) -> void:
