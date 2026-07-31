@@ -150,6 +150,8 @@ Responsibility is intentionally split at this boundary:
 
 This preserves the existing damage values and keeps one resolved result, one critical-meter mutation, and one target application per accepted hit. It adds no persistence state, class-ID change, or save-schema change.
 
+The owner-playtestable Null Shard impact route in `VoidbringerFoundationSandbox` adds a scene-local `VoidbringerPolishedImpactPresentation` observer. It receives `null_shard_spawned` for the cast cue and the controller's committed `VoidbringerImpactResult` only after target application. It accepts only a positive `damage_applied` result, propagates its already-resolved critical flag, and owns temporary contact flash, decorative target recoil, one bounded sandbox-camera impulse, presentation audio, optional guarded haptics, and deterministic cleanup. It does not own a gameplay event bus, damage calculation, hit validation, target health/death, rewards, cooldowns, or persistent state.
+
 ### ItemCatalog / AffixCatalog
 
 Immutable registries of `ItemDefinition`/`AffixDefinition`, keyed by stable IDs and returned as defensive copies. `AffixCatalog.eligible_definitions(tags, item_level, kind)` supplies candidate pools to item generation. ([ADR-014](../ADR/ADR-014-INVENTORY-EQUIPMENT-OWNERSHIP.md), [ADR-018](../ADR/ADR-018-PROCEDURAL-ITEM-GENERATION.md))

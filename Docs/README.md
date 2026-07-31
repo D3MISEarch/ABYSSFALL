@@ -45,6 +45,10 @@ This structure organizes governance, architecture, design and standards material
 - `design/` contains detailed existing design specs such as Penitent systems and item pools.
 - `Docs/` contains playtest, verification and handoff documentation, and the detailed character Codex.
 
+## Owner playtests
+
+- [`VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md`](VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md) — isolated Null Shard polished-impact loop, Windows launch route, and owner checklist.
+
 ## Canonical documentation root
 
 `Docs/` is the repository's only documentation root. Issue #113 moved every previously lowercase documentation path through a temporary Git path to preserve history on case-insensitive filesystems. The repository-health check rejects lowercase paths, case-insensitive duplicate paths, and stale lowercase references.
