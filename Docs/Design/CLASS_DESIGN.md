@@ -11,7 +11,7 @@
 
 Sources: `PROJECT_OVERVIEW.md`, current runtime implementation and existing playtest documentation.
 
-### Voidbringer — approved future replacement design
+### Voidbringer — approved future replacement design and active OP1 class
 
 - Canonical design identity: `voidbringer`.
 - Compatibility during migration: existing saves and class selection continue using `void_warlock` until a versioned migration is approved.
@@ -23,16 +23,19 @@ Sources: `PROJECT_OVERVIEW.md`, current runtime implementation and existing play
 
 The detailed Codex is canonical for Voidbringer's player-facing design. Engineering implementation remains subordinate to the Engineering Constitution, ADRs and current architecture.
 
-### The Penitent — active construction, second playable class
+### The Penitent — preserved prototype and future-operation candidate
 
 - Fantasy: carve laws into flesh and force reality to obey them. Close-to-mid-range ritual combat; melee carves and completes magic rather than replacing it.
 - Current implemented/prototype resource: **Fervor**.
 - Existing detailed sources: `design/FERVOR_SYSTEM_V1.md`, `Docs/PENITENT_CLASS.md`, `design/PENITENT_ITEM_POOL_V1.md`.
+- Penitent mechanics remain preserved and regression-tested, but further graphical, content, balance, progression, and Codex production is deferred until OP1 passes and the owner explicitly opens a later operation.
 - The eventual full Penitent Codex must use the shared character-bible template and reconcile existing implementation before replacing it as authority.
 
 ### Shared architecture constraint
 
-Shared systems must not assume every class casts projectiles, uses Corruption, uses Fervor or shares one HUD. Resource interfaces, ability execution, event delivery, stat calculation and persistence must remain class-agnostic. See [`../Architecture/ARCHITECTURE.md`](../Architecture/ARCHITECTURE.md) and the relevant ADRs.
+Shared systems must not assume every class casts projectiles, uses Corruption, uses Fervor or shares one HUD. Resource interfaces, ability execution, event delivery, stat calculation and persistence must remain class-agnostic where a proven shared contract exists. See [`../Architecture/ARCHITECTURE.md`](../Architecture/ARCHITECTURE.md) and the relevant ADRs.
+
+This requirement prevents known hard-coding traps; it does not authorize speculative full-roster infrastructure. Build specifically enough to make the active class excellent, preserve clean ownership and extension seams, and generalize only when a real second class proves the shared requirement.
 
 ### Shared campaign and character-arc constraint
 
@@ -51,9 +54,9 @@ Class stories do not become mutually incompatible replacement campaigns. Class a
 
 Binding narrative doctrine: [`../../Docs/codex/SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md`](../../Docs/codex/SHARED_CAMPAIGN_AND_CHARACTER_ARCS.md).
 
-### Approved full launch roster direction
+### Long-term roster destination — not committed launch scope
 
-The character Codex program will develop one class at a time to the Voidbringer depth standard:
+The character Codex program may develop the following owner-approved roster direction one class at a time to the Voidbringer depth standard:
 
 1. Voidbringer
 2. Penitent
@@ -70,7 +73,20 @@ Reserved for expansions or later specialization work:
 - Echo Thief
 - Plaguebringer
 
-Only Voidbringer currently has a complete approved Codex. Other roster entries remain design direction until their own folders are completed and approved.
+This list preserves the long-term class vision. It does **not** commit eight classes to the first commercial release, authorize simultaneous class production, establish a calendar, or make any future class a dependency of OP1.
+
+Only Voidbringer currently has a complete approved Codex and active production authority. Other roster entries remain design direction until OP1 passes and the owner explicitly opens the relevant later operation. Launch class count will be chosen from proven quality, production capacity, player response, resources, and maintainability rather than from the size of the destination roster.
+
+### Binding production-sequence constraint
+
+The project-wide production and scope doctrine in [`GAMEPLAY_BIBLE.md`](GAMEPLAY_BIBLE.md) controls class sequencing.
+
+- OP1 concentrates on one exceptional Voidbringer slice.
+- No second class enters production merely because its long-term design exists.
+- Penitent and all later classes remain preserved direction, not active obligations.
+- The next class is selected only after OP1 acceptance and explicit owner approval.
+- A later class should reuse proven contracts and expose the first real places where generalization is necessary.
+- A hypothetical future team, publisher, or funding event may accelerate class production but is never assumed by the active plan.
 
 ## Character-bible standard
 
@@ -102,6 +118,7 @@ Template: [`../../Docs/codex/characters/CHARACTER_BIBLE_TEMPLATE.md`](../../Docs
 - **Decision date:** 2026-07-31
 - **Human owner:** D3MISEarch
 - **Scope:** every playable AbyssFall class and every production build system
+- **Relationship to production scope:** this section defines the mature build-depth destination and the bounded OP1 proof. It does not require every long-term class, skill, item, node, or build family to enter production simultaneously.
 - **Relationship to ADR-020:** this doctrine defines buildcraft outcomes and class-design requirements; ADR-020 remains authoritative for persistent class-point progression, board interaction, shared node grammar and progression UI architecture.
 - **Change control:** this doctrine may be replaced only by an explicit owner-approved design revision. A prototype shortcut, temporary implementation limitation or isolated balance patch does not silently weaken it.
 
@@ -271,9 +288,11 @@ A dangerous low-resource or negative-resource build. Skills become stronger whil
 
 These families must not resolve into six versions of purple damage scaling. They require different rhythms, positioning, equipment priorities, defenses, animations, VFX, strengths, weaknesses and mastery demands.
 
-### Solo-development production proof
+### OP1 build-depth proof
 
-The complete architecture should be designed for the full roster, but production proof begins with Voidbringer. The first polished build-depth proof should target:
+The mature design preserves room for the full class destination, but OP1 must not prebuild a speculative eight-class architecture. Production proof begins and remains concentrated on Voidbringer until the project-wide OP1 acceptance gate passes.
+
+The first polished build-depth proof should target:
 
 - six combat-ready active skills;
 - two movement or defensive skills;
@@ -287,9 +306,9 @@ The complete architecture should be designed for the full roster, but production
 - build-loadout saving;
 - a readable combat-stat and interaction breakdown.
 
-This is a production target, not permission to implement the entire system in one pull request. Each slice remains subject to architecture, persistence, testing, graphical-playtest and owner-approval gates.
+These values define the intended complete OP1 proof, not one pull request or one sprint. Each capability should arrive through bounded, owner-gated slices that improve the playable game. A temporary implementation may prove a smaller subset when its production packet states what it proves, what remains, and how it advances the complete OP1 target.
 
-The proof succeeds only when the four builds feel different during play—not merely when data definitions exist or automated tests pass.
+The proof succeeds only when the builds feel different during play—not merely when data definitions exist or automated tests pass—and when the resulting contracts are clean enough for a future second class to expose what should actually become shared.
 
 ### Build-depth acceptance tests
 
@@ -318,14 +337,17 @@ Those references establish an experiential benchmark. AbyssFall will not copy an
 
 - Exact schedule for replacing the current Void Warlock prototype with the approved Voidbringer implementation.
 - Versioned migration from compatibility ID `void_warlock` to canonical ID `voidbringer`.
-- Which class receives the next full Codex after the Voidbringer foundation enters implementation.
+- Which class or content unit, if any, becomes OP2 after OP1 passes its owner acceptance gate.
 - Final universal campaign act structure, central antagonist and finale; these belong in a future shared campaign bible rather than any single class Codex.
 - Exact production values, node counts, affix ranges, item counts and balance thresholds beyond the bounded Voidbringer proof target remain prototype and milestone outputs.
 
 ## Deprecated
 
 - Treating “Voidbringer” as an undecided working label or separate class from Void Warlock. It is now the approved future replacement design, while `void_warlock` remains only the compatibility/prototype identity during migration.
+- Treating Penitent as active production before OP1 passes and its later operation is explicitly opened.
+- Treating the long-term eight-class direction as a committed first-launch roster.
 - Treating any class-specific journey as a replacement for the shared AbyssFall campaign.
 - Treating build depth as a large passive-node count, a pile of flat percentage bonuses or a mandatory equipment set.
 - Treating a class resource as generic mana with a renamed presentation layer.
 - Advertising multiple builds that share the same rotation, positioning, defense and movement while differing only in damage type or color.
+- Building speculative shared class infrastructure before a second production class demonstrates the real common contract.
