@@ -1,6 +1,7 @@
 extends Node
 class_name VisualFoundationLighting
 
+const MATERIAL_PASS_SCRIPT = preload("res://scripts/presentation/visual_foundation_materials.gd")
 const RIG_NAME := "VisualFoundationV01_LightingRig"
 const ROUTE_MARKER := "SunkenCryptsArtPass0"
 const INSTALL_INTERVAL_SECONDS := 0.40
@@ -26,6 +27,9 @@ var _installed_scene_id := 0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	var material_pass := MATERIAL_PASS_SCRIPT.new()
+	material_pass.name = "VisualFoundationMaterials"
+	add_child(material_pass)
 	_install_timer = Timer.new()
 	_install_timer.name = "VisualFoundationLightingInstallTimer"
 	_install_timer.wait_time = INSTALL_INTERVAL_SECONDS
