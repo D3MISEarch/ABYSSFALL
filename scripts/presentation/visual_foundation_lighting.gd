@@ -3,7 +3,6 @@ class_name VisualFoundationLighting
 
 const MATERIAL_PASS_SCRIPT = preload("res://scripts/presentation/visual_foundation_materials.gd")
 const RIG_NAME := "VisualFoundationV01_LightingRig"
-const ROUTE_MARKER := "SunkenCryptsArtPass0"
 const INSTALL_INTERVAL_SECONDS := 0.40
 
 const COLD_KEY := Color(0.43, 0.50, 0.72)
@@ -22,6 +21,7 @@ const ATMOSPHERE_ROOMS := [
 ]
 
 var _install_timer: Timer
+var _route_host: Node3D
 var _installed_scene_id := 0
 
 
@@ -35,27 +35,59 @@ func _ready() -> void:
 	_install_timer.wait_time = INSTALL_INTERVAL_SECONDS
 	_install_timer.one_shot = false
 	_install_timer.autostart = true
-	_install_timer.timeout.connect(_try_install_into_current_scene)
+	_install_timer.timeout.connect(_try_bind_route)
 	add_child(_install_timer)
-	call_deferred("_try_install_into_current_scene")
+	call_deferred("_try_bind_route")
 
 
-func _try_install_into_current_scene() -> void:
-	var scene := get_tree().current_scene as Node3D
-	if scene == null:
+func _try_bind_route() -> void:
+	if is_instance_valid(_route_host) and _route_host.is_inside_tree():
 		return
-	var scene_id := scene.get_instance_id()
-	if _installed_scene_id == scene_id and scene.has_node(RIG_NAME):
+	_clear_route_binding(false)
+	var route_host := get_tree().get_first_node_in_group("visual_foundation_route_host") as Node3D
+	if route_host == null:
+		_start_discovery()
 		return
-	if scene.get_node_or_null(ROUTE_MARKER) == null:
-		return
-	var existing := scene.get_node_or_null(RIG_NAME)
+	var scene_id := route_host.get_instance_id()
+	var existing := route_host.get_node_or_null(RIG_NAME)
 	if existing != null:
+		_route_host = route_host
 		_installed_scene_id = scene_id
+		_watch_route_host(route_host)
+		_stop_discovery()
 		return
-	var rig := _build_visual_foundation_rig(scene)
-	scene.add_child(rig)
+	var rig := _build_visual_foundation_rig(route_host)
+	route_host.add_child(rig)
+	_route_host = route_host
 	_installed_scene_id = scene_id
+	_watch_route_host(route_host)
+	_stop_discovery()
+
+
+func _on_route_host_tree_exited() -> void:
+	_clear_route_binding()
+
+
+func _watch_route_host(route_host: Node3D) -> void:
+	if not route_host.tree_exited.is_connected(_on_route_host_tree_exited):
+		route_host.tree_exited.connect(_on_route_host_tree_exited, CONNECT_ONE_SHOT)
+
+
+func _clear_route_binding(restart_discovery: bool = true) -> void:
+	_route_host = null
+	_installed_scene_id = 0
+	if restart_discovery:
+		_start_discovery()
+
+
+func _start_discovery() -> void:
+	if is_instance_valid(_install_timer) and _install_timer.is_stopped():
+		_install_timer.start()
+
+
+func _stop_discovery() -> void:
+	if is_instance_valid(_install_timer):
+		_install_timer.stop()
 
 
 func _build_visual_foundation_rig(scene: Node3D) -> Node3D:
@@ -102,22 +134,22 @@ func _tune_world_environment(scene: Node3D) -> void:
 	if world_environment == null or world_environment.environment == null:
 		return
 	var environment := world_environment.environment
-	_set_if_property(environment, &"background_energy_multiplier", 0.72)
-	_set_if_property(environment, &"ambient_light_color", Color(0.15, 0.11, 0.20))
-	_set_if_property(environment, &"ambient_light_energy", 0.54)
-	_set_if_property(environment, &"reflected_light_source", Environment.REFLECTION_SOURCE_DISABLED)
-	_set_if_property(environment, &"tonemap_exposure", 1.06)
-	_set_if_property(environment, &"tonemap_white", 1.22)
-	_set_if_property(environment, &"glow_enabled", true)
-	_set_if_property(environment, &"glow_intensity", 0.72)
-	_set_if_property(environment, &"glow_strength", 0.82)
-	_set_if_property(environment, &"fog_enabled", true)
-	_set_if_property(environment, &"fog_light_color", FOG_COLOR)
-	_set_if_property(environment, &"fog_light_energy", 0.42)
-	_set_if_property(environment, &"fog_density", 0.012)
-	_set_if_property(environment, &"fog_height", 0.35)
-	_set_if_property(environment, &"fog_height_density", 0.20)
-	_set_if_property(environment, &"fog_aerial_perspective", 0.34)
+	environment.background_energy_multiplier = 0.72
+	environment.ambient_light_color = Color(0.15, 0.11, 0.20)
+	environment.ambient_light_energy = 0.54
+	environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+	environment.tonemap_exposure = 1.06
+	environment.tonemap_white = 1.22
+	environment.glow_enabled = true
+	environment.glow_intensity = 0.72
+	environment.glow_strength = 0.82
+	environment.fog_enabled = true
+	environment.fog_light_color = FOG_COLOR
+	environment.fog_light_energy = 0.42
+	environment.fog_density = 0.012
+	environment.fog_height = 0.35
+	environment.fog_height_density = 0.20
+	environment.fog_aerial_perspective = 0.34
 	world_environment.set_meta("visual_foundation_tuned", true)
 
 
@@ -126,13 +158,6 @@ func _find_world_environment(scene: Node) -> WorldEnvironment:
 		if child is WorldEnvironment:
 			return child as WorldEnvironment
 	return null
-
-
-func _set_if_property(object: Object, property_name: StringName, value: Variant) -> void:
-	for property_data in object.get_property_list():
-		if StringName(property_data.get("name", "")) == property_name:
-			object.set(property_name, value)
-			return
 
 
 func _install_bounded_atmosphere(rig: Node3D) -> void:

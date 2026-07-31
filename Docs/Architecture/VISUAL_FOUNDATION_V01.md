@@ -28,7 +28,7 @@ It must not be merged independently ahead of the camera dependency. The stacked 
 - Five ambient dust emitters with a combined amount no greater than 138.
 - Five authored shadowed spot keys and two non-shadowed fills.
 - No new `CollisionObject3D`, `CollisionShape3D`, navigation, damage, reward, movement, persistence, or encounter authority.
-- No per-frame scene-tree scans; event nodes are registered once and tracked through weak references.
+- Route discovery binds the production `visual_foundation_route_host` gameplay child, then stops its polling timer until that host exits. Normal presentation frames use cached route, camera, boss, `WorldEnvironment`, and authored-light references: they perform neither `Object.get_property_list()` nor recursive scene-tree walks. Event nodes are registered once and tracked through weak references.
 - All temporary effects clean up through bounded timers, reset clearing, invalid-reference pruning, and scene teardown.
 
 ## Material and imported-asset workflow

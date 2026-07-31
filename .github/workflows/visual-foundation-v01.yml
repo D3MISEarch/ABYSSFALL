@@ -8,6 +8,8 @@ on:
       - "scripts/presentation/visual_foundation_*.gd.uid"
       - "tests/test_visual_foundation_v01.gd"
       - "tests/test_visual_foundation_v01.gd.uid"
+      - "tests/test_visual_foundation_v01_production_topology.gd"
+      - "tests/test_visual_foundation_v01_production_topology.gd.uid"
       - "tests/test_integrated_camera_director.gd"
       - "Docs/VISUAL_FOUNDATION_V01_PLAYTEST.md"
       - ".github/workflows/visual-foundation-v01.yml"
@@ -126,6 +128,7 @@ jobs:
             grep -Fxq "$marker" "$log"
           }
           run_test res://tests/test_visual_foundation_v01.gd 'PASS: AbyssFall Visual Foundation v0.1' visual-foundation-test.log true
+          run_test res://tests/test_visual_foundation_v01_production_topology.gd 'PASS: Visual Foundation production topology' visual-foundation-production-topology.log true
           run_test res://tests/test_integrated_camera_director.gd 'PASS: Integrated production camera director' visual-foundation-camera.log
           run_test res://tests/test_full_stack_controller_reconciliation.gd 'PASS: Full-stack controller reconciliation' visual-foundation-full-stack.log
           run_test res://tests/test_hollow_king_nova_presentation.gd 'PASS: Hollow King readable Nova intent and payoff' visual-foundation-nova.log
@@ -153,6 +156,7 @@ jobs:
             exit 1
           fi
           grep -Fxq 'PASS: AbyssFall Visual Foundation v0.1' visual-foundation-test.log
+          grep -Fxq 'PASS: Visual Foundation production topology' visual-foundation-production-topology.log
           grep -Fxq 'PASS: Integrated production camera director' visual-foundation-camera.log
           grep -Fxq 'PASS: Full-stack controller reconciliation' visual-foundation-full-stack.log
           grep -Fxq 'PASS: Hollow King readable Nova intent and payoff' visual-foundation-nova.log

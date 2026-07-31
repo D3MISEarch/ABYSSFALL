@@ -1,7 +1,6 @@
 extends Node
 class_name VisualFoundationMaterials
 
-const ROUTE_MARKER := "SunkenCryptsArtPass0"
 const INSTALL_INTERVAL_SECONDS := 0.55
 const MATERIAL_PASS_VERSION := "0.1"
 
@@ -15,6 +14,7 @@ const GRAVITATIONAL_WHITE := Color(0.76, 0.80, 0.96, 1.0)
 const CORRUPTION_GREEN := Color(0.18, 0.39, 0.055, 1.0)
 
 var _install_timer: Timer
+var _route_host: Node3D
 var _installed_scene_id := 0
 var _materials: Dictionary = {}
 
@@ -27,25 +27,62 @@ func _ready() -> void:
 	_install_timer.wait_time = INSTALL_INTERVAL_SECONDS
 	_install_timer.one_shot = false
 	_install_timer.autostart = true
-	_install_timer.timeout.connect(_try_apply_to_current_scene)
+	_install_timer.timeout.connect(_try_bind_route)
 	add_child(_install_timer)
-	call_deferred("_try_apply_to_current_scene")
+	call_deferred("_try_bind_route")
 
 
-func _try_apply_to_current_scene() -> void:
-	var scene := get_tree().current_scene as Node3D
-	if scene == null:
+func _try_bind_route() -> void:
+	if is_instance_valid(_route_host) and _route_host.is_inside_tree():
 		return
-	var scene_id := scene.get_instance_id()
+	_clear_route_binding(false)
+	var route_host := get_tree().get_first_node_in_group("visual_foundation_route_host") as Node3D
+	if route_host == null:
+		_start_discovery()
+		return
+	var scene_id := route_host.get_instance_id()
 	if _installed_scene_id == scene_id:
+		_route_host = route_host
+		_watch_route_host(route_host)
+		_stop_discovery()
 		return
-	var route_root := scene.get_node_or_null(ROUTE_MARKER)
+	var route_root := route_host.get_node_or_null("SunkenCryptsArtPass0")
 	if route_root == null:
+		_start_discovery()
 		return
 	_apply_materials_recursive(route_root)
-	_apply_base_route_surfaces(scene)
+	_apply_base_route_surfaces(route_host)
 	route_root.set_meta("visual_foundation_material_pass", MATERIAL_PASS_VERSION)
+	_route_host = route_host
 	_installed_scene_id = scene_id
+	_watch_route_host(route_host)
+	_stop_discovery()
+
+
+func _on_route_host_tree_exited() -> void:
+	_clear_route_binding()
+
+
+func _watch_route_host(route_host: Node3D) -> void:
+	if not route_host.tree_exited.is_connected(_on_route_host_tree_exited):
+		route_host.tree_exited.connect(_on_route_host_tree_exited, CONNECT_ONE_SHOT)
+
+
+func _clear_route_binding(restart_discovery: bool = true) -> void:
+	_route_host = null
+	_installed_scene_id = 0
+	if restart_discovery:
+		_start_discovery()
+
+
+func _start_discovery() -> void:
+	if is_instance_valid(_install_timer) and _install_timer.is_stopped():
+		_install_timer.start()
+
+
+func _stop_discovery() -> void:
+	if is_instance_valid(_install_timer):
+		_install_timer.stop()
 
 
 func _build_shared_materials() -> void:
@@ -91,10 +128,10 @@ func _apply_named_material(mesh_instance: MeshInstance3D) -> void:
 	var material_key := ""
 	if _contains_any(lower_name, ["fracture", "void", "rift", "ritualring", "ritual_ring"]):
 		material_key = "violet_emissive"
-	elif _contains_any(lower_name, ["pale", "gravity", "gravitational", "core"]):
-		material_key = "pale_emissive"
 	elif _contains_any(lower_name, ["corruption", "residue", "sickness"]):
 		material_key = "corruption_trace"
+	elif _contains_any(lower_name, ["pale", "gravity", "gravitational", "core"]):
+		material_key = "pale_emissive"
 	elif _contains_any(lower_name, ["cage", "chain", "clamp", "machine", "iron", "anchor", "restraint"]):
 		material_key = "rusted_iron"
 	elif _contains_any(lower_name, ["wet", "puddle", "channel", "drain"]):

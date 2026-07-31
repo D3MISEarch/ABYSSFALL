@@ -2,10 +2,8 @@ extends Node
 class_name VisualFoundationCinematic
 
 ## Presentation-only orchestration for AbyssFall Visual Foundation v0.1.
-## This observer composes existing camera, encounter, boss, lighting, fog, and VFX facts.
-## It never owns or delays damage, health, death, rewards, movement, collision, AI, or progression.
+## It observes the live route's known presentation facts and only composes environment/VFX responses.
 
-const ROUTE_MARKER := "SunkenCryptsArtPass0"
 const LIGHTING_RIG_NAME := "VisualFoundationV01_LightingRig"
 const VFX_SERVICE_PATH := "/root/VisualFoundationVFXService"
 const INSTALL_INTERVAL_SECONDS := 0.35
@@ -31,9 +29,13 @@ const ROOM_CENTERS := {
 
 var _install_timer: Timer
 var _host: Node3D
+var _camera_director: Node
+var _boss: Node3D
 var _lighting_rig: Node3D
 var _world_environment: WorldEnvironment
+var _vfx_service: Node
 var _installed_scene_id := 0
+var _authored_lights: Array[Light3D] = []
 var _base_light_energy: Dictionary = {}
 var _last_game_state := ""
 var _last_camera_state: StringName = &""
@@ -41,6 +43,10 @@ var _last_boss_alive := false
 var _room_transition_boost := 0.0
 var _reveal_boost := 0.0
 var _boss_death_boost := 0.0
+var _boss_death_reaction_emitted := false
+var _boss_death_reaction_count := 0
+var _property_list_invocation_count := 0
+var _room_transition_emissions: Array[Vector3] = []
 
 var _tracked_rifts: Dictionary = {}
 var _tracked_nova_presenters: Dictionary = {}
@@ -55,43 +61,66 @@ func _ready() -> void:
 	_install_timer.wait_time = INSTALL_INTERVAL_SECONDS
 	_install_timer.one_shot = false
 	_install_timer.autostart = true
-	_install_timer.timeout.connect(_try_install_into_current_scene)
+	_install_timer.timeout.connect(_try_bind_route)
 	add_child(_install_timer)
 	if not get_tree().node_added.is_connected(_on_tree_node_added):
 		get_tree().node_added.connect(_on_tree_node_added)
-	call_deferred("_try_install_into_current_scene")
+	call_deferred("_try_bind_route")
 
 
 func _exit_tree() -> void:
 	if get_tree() != null and get_tree().node_added.is_connected(_on_tree_node_added):
 		get_tree().node_added.disconnect(_on_tree_node_added)
-	_clear_scene_bindings()
+	_clear_scene_bindings(false)
 
 
 func _process(delta: float) -> void:
-	if not is_instance_valid(_host):
+	if not is_instance_valid(_host) or not _host.is_inside_tree():
+		_clear_scene_bindings()
 		return
 	_update_event_observers()
 	_update_route_presentation(maxf(delta, 0.0))
 
 
-func _try_install_into_current_scene() -> void:
-	var scene := get_tree().current_scene as Node3D
-	if scene == null or scene.get_node_or_null(ROUTE_MARKER) == null:
+func _try_bind_route() -> void:
+	if is_instance_valid(_host) and _host.is_inside_tree():
 		return
-	var scene_id := scene.get_instance_id()
-	if _installed_scene_id == scene_id and is_instance_valid(_host):
-		_resolve_runtime_dependencies()
+	_clear_scene_bindings(false)
+	var route_host := get_tree().get_first_node_in_group("visual_foundation_route_host") as Node3D
+	if route_host == null:
+		_start_discovery()
 		return
-	_clear_scene_bindings()
-	_host = scene
-	_installed_scene_id = scene_id
+	_host = route_host
+	_installed_scene_id = route_host.get_instance_id()
+	set_process(true)
+	_watch_route_host(route_host)
 	_resolve_runtime_dependencies()
-	_scan_existing_nodes(scene)
-	_last_game_state = _read_string_property(scene, &"game_state", "")
-	_last_camera_state = _read_camera_state()
-	_last_boss_alive = _is_living_actor(_read_object_property(scene, &"boss"))
-	scene.set_meta("visual_foundation_cinematic_version", "0.1")
+	_scan_existing_nodes(route_host)
+	var facts := _read_route_facts()
+	_last_game_state = str(facts["game_state"])
+	_last_camera_state = facts["camera_state"] as StringName
+	_last_boss_alive = bool(facts["boss_alive"])
+	route_host.set_meta("visual_foundation_cinematic_version", "0.1")
+	_stop_discovery()
+
+
+func _on_route_host_tree_exited() -> void:
+	_clear_scene_bindings()
+
+
+func _watch_route_host(route_host: Node3D) -> void:
+	if not route_host.tree_exited.is_connected(_on_route_host_tree_exited):
+		route_host.tree_exited.connect(_on_route_host_tree_exited, CONNECT_ONE_SHOT)
+
+
+func _start_discovery() -> void:
+	if is_instance_valid(_install_timer) and _install_timer.is_stopped():
+		_install_timer.start()
+
+
+func _stop_discovery() -> void:
+	if is_instance_valid(_install_timer):
+		_install_timer.stop()
 
 
 func _resolve_runtime_dependencies() -> void:
@@ -99,15 +128,25 @@ func _resolve_runtime_dependencies() -> void:
 		return
 	_lighting_rig = _host.get_node_or_null(LIGHTING_RIG_NAME) as Node3D
 	_world_environment = _find_world_environment(_host)
-	if is_instance_valid(_lighting_rig) and _base_light_energy.is_empty():
-		_capture_light_baselines(_lighting_rig)
+	_camera_director = _host.get("camera_director") as Node
+	var resolved_boss := _host.get("boss") as Node3D
+	if resolved_boss != _boss:
+		_boss = resolved_boss
+		_boss_death_reaction_emitted = false
+		_boss_death_reaction_count = 0
+	_vfx_service = get_node_or_null(VFX_SERVICE_PATH)
+	_cache_authored_lights()
 
 
-func _clear_scene_bindings() -> void:
+func _clear_scene_bindings(restart_discovery: bool = true) -> void:
 	_host = null
+	_camera_director = null
+	_boss = null
 	_lighting_rig = null
 	_world_environment = null
+	_vfx_service = null
 	_installed_scene_id = 0
+	_authored_lights.clear()
 	_base_light_energy.clear()
 	_last_game_state = ""
 	_last_camera_state = &""
@@ -115,14 +154,22 @@ func _clear_scene_bindings() -> void:
 	_room_transition_boost = 0.0
 	_reveal_boost = 0.0
 	_boss_death_boost = 0.0
+	_boss_death_reaction_emitted = false
+	_boss_death_reaction_count = 0
+	_room_transition_emissions.clear()
 	_tracked_rifts.clear()
 	_tracked_nova_presenters.clear()
 	_tracked_death_presenters.clear()
+	set_process(false)
+	if restart_discovery:
+		_start_discovery()
 
 
 func _on_tree_node_added(node: Node) -> void:
-	if not is_instance_valid(_host):
+	if not is_instance_valid(_host) or (node != _host and not _host.is_ancestor_of(node)):
 		return
+	if node is WorldEnvironment or node.name == LIGHTING_RIG_NAME or node.get_parent() == _host:
+		call_deferred("_resolve_runtime_dependencies")
 	call_deferred("_register_presentation_node", node)
 
 
@@ -144,12 +191,12 @@ func _register_presentation_node(node: Node) -> void:
 	elif script_path == HOLLOW_KING_NOVA_PATH:
 		_tracked_nova_presenters[instance_id] = {
 			"reference": weakref(node),
-			"release_count": _read_int_property(node, &"release_count", 0),
+			"release_count": int(node.get("release_count")),
 		}
 	elif script_path == HOLLOW_KING_DEATH_PATH:
 		_tracked_death_presenters[instance_id] = {
 			"reference": weakref(node),
-			"transaction_count": _read_int_property(node, &"transaction_count", 0),
+			"transaction_count": int(node.get("transaction_count")),
 		}
 
 
@@ -168,7 +215,7 @@ func _update_rift_observers() -> void:
 			continue
 		if bool(entry["reacted"]):
 			continue
-		if _read_bool_property(node, &"collapsed", false):
+		if bool(node.get("collapsed")):
 			entry["reacted"] = true
 			_tracked_rifts[instance_id] = entry
 			_emit_gravity_burst(node.global_position, 1.15)
@@ -181,9 +228,8 @@ func _update_nova_observers() -> void:
 		if not is_instance_valid(presenter):
 			_tracked_nova_presenters.erase(instance_id)
 			continue
-		var release_count := _read_int_property(presenter, &"release_count", 0)
-		var prior_count := int(entry["release_count"])
-		if release_count > prior_count:
+		var release_count := int(presenter.get("release_count"))
+		if release_count > int(entry["release_count"]):
 			entry["release_count"] = release_count
 			_tracked_nova_presenters[instance_id] = entry
 			_emit_gravity_burst(_node_world_position(presenter, Vector3(0.0, 0.1, -103.0)), 1.28)
@@ -196,24 +242,19 @@ func _update_death_observers() -> void:
 		if not is_instance_valid(presenter):
 			_tracked_death_presenters.erase(instance_id)
 			continue
-		var transaction_count := _read_int_property(presenter, &"transaction_count", 0)
-		var prior_count := int(entry["transaction_count"])
-		if transaction_count > prior_count:
+		var transaction_count := int(presenter.get("transaction_count"))
+		if transaction_count > int(entry["transaction_count"]):
 			entry["transaction_count"] = transaction_count
 			_tracked_death_presenters[instance_id] = entry
-			_boss_death_boost = 1.0
-			_emit_gravity_burst(_node_world_position(presenter, Vector3(0.0, 0.1, -103.0)), 1.48)
+			_react_to_confirmed_boss_death(_node_world_position(presenter, Vector3(0.0, 0.1, -103.0)), 1.48)
 
 
 func _update_route_presentation(delta: float) -> void:
-	_resolve_runtime_dependencies()
-	if not is_instance_valid(_host):
-		return
-	var game_state := _read_string_property(_host, &"game_state", "")
-	var camera_state := _read_camera_state()
-	var enemies_alive := _read_int_property(_host, &"enemies_alive", 0)
-	var boss := _read_object_property(_host, &"boss")
-	var boss_alive := _is_living_actor(boss)
+	var facts := _read_route_facts()
+	var game_state := str(facts["game_state"])
+	var camera_state := facts["camera_state"] as StringName
+	var enemies_alive := int(facts["enemies_alive"])
+	var boss_alive := bool(facts["boss_alive"])
 
 	if not _last_game_state.is_empty() and game_state != _last_game_state:
 		_room_transition_boost = 1.0
@@ -222,8 +263,7 @@ func _update_route_presentation(delta: float) -> void:
 		_reveal_boost = 1.0
 		_emit_cinematic_reveal()
 	if _last_boss_alive and not boss_alive:
-		_boss_death_boost = 1.0
-		_emit_gravity_burst(_object_world_position(boss, Vector3(0.0, 0.1, -103.0)), 1.42)
+		_react_to_confirmed_boss_death(_object_world_position(_boss, Vector3(0.0, 0.1, -103.0)), 1.42)
 
 	_room_transition_boost = maxf(_room_transition_boost - delta * 1.6, 0.0)
 	_reveal_boost = maxf(_reveal_boost - delta * 0.72, 0.0)
@@ -238,6 +278,27 @@ func _update_route_presentation(delta: float) -> void:
 	_last_game_state = game_state
 	_last_camera_state = camera_state
 	_last_boss_alive = boss_alive
+
+
+func _read_route_facts() -> Dictionary:
+	if not is_instance_valid(_host):
+		return {"game_state": "", "camera_state": &"", "enemies_alive": 0, "boss_alive": false}
+	var camera_state: StringName = _camera_director.get("state") if is_instance_valid(_camera_director) else &""
+	return {
+		"game_state": str(_host.get("game_state")),
+		"camera_state": camera_state,
+		"enemies_alive": int(_host.get("enemies_alive")),
+		"boss_alive": _is_living_actor(_boss),
+	}
+
+
+func _react_to_confirmed_boss_death(position: Vector3, strength: float) -> void:
+	if _boss_death_reaction_emitted:
+		return
+	_boss_death_reaction_emitted = true
+	_boss_death_reaction_count += 1
+	_boss_death_boost = 1.0
+	_emit_gravity_burst(position, strength)
 
 
 func _apply_environment_profile(delta: float, is_swarm: bool, is_reveal: bool, is_boss_route: bool) -> void:
@@ -263,21 +324,20 @@ func _apply_environment_profile(delta: float, is_swarm: bool, is_reveal: bool, i
 	fog_target += _reveal_boost * 0.004 + _boss_death_boost * 0.005
 	glow_target += _reveal_boost * 0.12 + _boss_death_boost * 0.16
 
-	_blend_environment_float(environment, &"ambient_light_energy", ambient_target, delta)
-	_blend_environment_float(environment, &"fog_density", fog_target, delta)
-	_blend_environment_float(environment, &"glow_intensity", glow_target, delta)
+	environment.ambient_light_energy = move_toward(environment.ambient_light_energy, ambient_target, delta * ENVIRONMENT_BLEND_SPEED)
+	environment.fog_density = move_toward(environment.fog_density, fog_target, delta * ENVIRONMENT_BLEND_SPEED)
+	environment.glow_intensity = move_toward(environment.glow_intensity, glow_target, delta * ENVIRONMENT_BLEND_SPEED)
 
 
 func _apply_light_profile(delta: float, is_swarm: bool, is_reveal: bool, is_boss_route: bool) -> void:
-	if not is_instance_valid(_lighting_rig):
-		return
-	for light in _collect_lights(_lighting_rig):
+	for index in range(_authored_lights.size() - 1, -1, -1):
+		var light := _authored_lights[index]
+		if not is_instance_valid(light):
+			_authored_lights.remove_at(index)
+			continue
 		var id := light.get_instance_id()
-		if not _base_light_energy.has(id):
-			_base_light_energy[id] = light.light_energy
 		var multiplier := 1.0
-		var lower_name := light.name.to_lower()
-		var throne_light := lower_name.contains("throne")
+		var throne_light := light.name.to_lower().contains("throne")
 		if is_swarm:
 			multiplier *= 1.08
 		if is_boss_route:
@@ -291,50 +351,37 @@ func _apply_light_profile(delta: float, is_swarm: bool, is_reveal: bool, is_boss
 
 
 func _emit_room_transition(game_state: String) -> void:
-	var position := ROOM_CENTERS.get(game_state, Vector3.ZERO) as Vector3
-	var service := _vfx_service()
-	if service != null and service.has_method("spawn_dust_burst"):
-		service.call("spawn_dust_burst", position, 0.52, 12)
+	if not ROOM_CENTERS.has(game_state):
+		return
+	var position := ROOM_CENTERS[game_state] as Vector3
+	_room_transition_emissions.append(position)
+	if _room_transition_emissions.size() > ROOM_CENTERS.size():
+		_room_transition_emissions.pop_front()
+	if is_instance_valid(_vfx_service):
+		_vfx_service.call("spawn_dust_burst", position, 0.52, 12)
 
 
 func _emit_cinematic_reveal() -> void:
-	var service := _vfx_service()
-	if service == null:
+	if not is_instance_valid(_vfx_service):
 		return
-	if service.has_method("spawn_void_pulse"):
-		service.call("spawn_void_pulse", Vector3(0.0, 0.12, -103.0), 1.10)
-	if service.has_method("spawn_debris_reaction"):
-		service.call("spawn_debris_reaction", Vector3(0.0, 0.08, -103.0), 0.92, 10)
+	_vfx_service.call("spawn_void_pulse", Vector3(0.0, 0.12, -103.0), 1.10)
+	_vfx_service.call("spawn_debris_reaction", Vector3(0.0, 0.08, -103.0), 0.92, 10)
 
 
 func _emit_gravity_burst(position: Vector3, strength: float) -> void:
-	var service := _vfx_service()
-	if service != null and service.has_method("spawn_gravity_burst"):
-		service.call("spawn_gravity_burst", position, strength)
+	if is_instance_valid(_vfx_service):
+		_vfx_service.call("spawn_gravity_burst", position, strength)
 
 
-func _vfx_service() -> Node:
-	return get_node_or_null(VFX_SERVICE_PATH)
-
-
-func _read_camera_state() -> StringName:
-	if not is_instance_valid(_host):
-		return &""
-	var director := _read_object_property(_host, &"camera_director")
-	if director == null:
-		return &""
-	return StringName(_read_string_property(director, &"state", ""))
-
-
-func _capture_light_baselines(root: Node) -> void:
-	for light in _collect_lights(root):
-		_base_light_energy[light.get_instance_id()] = light.light_energy
-
-
-func _collect_lights(root: Node) -> Array[Light3D]:
-	var result: Array[Light3D] = []
-	_collect_lights_recursive(root, result)
-	return result
+func _cache_authored_lights() -> void:
+	_authored_lights.clear()
+	_base_light_energy.clear()
+	if not is_instance_valid(_lighting_rig):
+		return
+	_collect_lights_recursive(_lighting_rig, _authored_lights)
+	for light in _authored_lights:
+		if is_instance_valid(light):
+			_base_light_energy[light.get_instance_id()] = light.light_energy
 
 
 func _collect_lights_recursive(root: Node, result: Array[Light3D]) -> void:
@@ -345,17 +392,10 @@ func _collect_lights_recursive(root: Node, result: Array[Light3D]) -> void:
 
 
 func _find_world_environment(scene: Node) -> WorldEnvironment:
-	for child: Node in scene.get_children():
+	for child in scene.get_children():
 		if child is WorldEnvironment:
 			return child as WorldEnvironment
 	return null
-
-
-func _blend_environment_float(environment: Environment, property_name: StringName, target: float, delta: float) -> void:
-	if not _has_property(environment, property_name):
-		return
-	var current := float(environment.get(property_name))
-	environment.set(property_name, move_toward(current, target, delta * ENVIRONMENT_BLEND_SPEED))
 
 
 func _script_path(node: Node) -> String:
@@ -363,45 +403,8 @@ func _script_path(node: Node) -> String:
 	return script.resource_path if script != null else ""
 
 
-func _has_property(object: Object, property_name: StringName) -> bool:
-	for property_data in object.get_property_list():
-		if StringName(property_data.get("name", "")) == property_name:
-			return true
-	return false
-
-
-func _read_string_property(object: Object, property_name: StringName, fallback: String) -> String:
-	if object == null or not _has_property(object, property_name):
-		return fallback
-	return str(object.get(property_name))
-
-
-func _read_int_property(object: Object, property_name: StringName, fallback: int) -> int:
-	if object == null or not _has_property(object, property_name):
-		return fallback
-	return int(object.get(property_name))
-
-
-func _read_bool_property(object: Object, property_name: StringName, fallback: bool) -> bool:
-	if object == null or not _has_property(object, property_name):
-		return fallback
-	return bool(object.get(property_name))
-
-
-func _read_object_property(object: Object, property_name: StringName) -> Object:
-	if object == null or not _has_property(object, property_name):
-		return null
-	return object.get(property_name) as Object
-
-
-func _is_living_actor(actor: Object) -> bool:
-	if not is_instance_valid(actor):
-		return false
-	if _has_property(actor, &"alive") and not bool(actor.get("alive")):
-		return false
-	if _has_property(actor, &"health") and float(actor.get("health")) <= 0.0:
-		return false
-	return true
+func _is_living_actor(actor: Node3D) -> bool:
+	return is_instance_valid(actor) and bool(actor.get("alive")) and float(actor.get("health")) > 0.0
 
 
 func _node_world_position(node: Node, fallback: Vector3) -> Vector3:
@@ -411,8 +414,8 @@ func _node_world_position(node: Node, fallback: Vector3) -> Vector3:
 	return (parent as Node3D).global_position if parent is Node3D else fallback
 
 
-func _object_world_position(object: Object, fallback: Vector3) -> Vector3:
-	return (object as Node3D).global_position if object is Node3D and is_instance_valid(object) else fallback
+func _object_world_position(object: Node3D, fallback: Vector3) -> Vector3:
+	return object.global_position if is_instance_valid(object) else fallback
 
 
 func snapshot() -> Dictionary:
@@ -421,6 +424,11 @@ func snapshot() -> Dictionary:
 		"route_bound": is_instance_valid(_host),
 		"lighting_bound": is_instance_valid(_lighting_rig),
 		"world_environment_bound": is_instance_valid(_world_environment),
+		"cached_authored_lights": _authored_lights.size(),
+		"property_list_invocation_count": _property_list_invocation_count,
+		"room_transition_emissions": _room_transition_emissions.duplicate(),
+		"boss_death_reaction_emitted": _boss_death_reaction_emitted,
+		"boss_death_reaction_count": _boss_death_reaction_count,
 		"tracked_rifts": _tracked_rifts.size(),
 		"tracked_nova_presenters": _tracked_nova_presenters.size(),
 		"tracked_death_presenters": _tracked_death_presenters.size(),

@@ -12,10 +12,20 @@ class FixtureActor extends Node3D:
 	var health := 500
 	var damage_events := 0
 	var reward_events := 0
+	var property_list_invocation_count := 0
+
+	func _get_property_list() -> Array[Dictionary]:
+		property_list_invocation_count += 1
+		return []
 
 
 class FixtureCameraDirector extends Node:
 	var state: StringName = &"default_gameplay"
+	var property_list_invocation_count := 0
+
+	func _get_property_list() -> Array[Dictionary]:
+		property_list_invocation_count += 1
+		return []
 
 
 class FixtureHost extends Node3D:
@@ -26,6 +36,11 @@ class FixtureHost extends Node3D:
 	var camera_director: Node
 	var reward_total := 17
 	var damage_total := 23
+	var property_list_invocation_count := 0
+
+	func _get_property_list() -> Array[Dictionary]:
+		property_list_invocation_count += 1
+		return []
 
 
 func _init() -> void:
@@ -47,18 +62,20 @@ func _run_tests() -> void:
 	_expect(vfx != null, "The VFX service must be available through the production autoload path.")
 	_expect(cinematic != null, "The cinematic service must be available through the production autoload path.")
 	if lighting != null:
-		lighting.call("_try_install_into_current_scene")
+		lighting.call("_try_bind_route")
 		var materials := lighting.get_node_or_null("VisualFoundationMaterials")
 		if materials != null:
-			materials.call("_try_apply_to_current_scene")
+			materials.call("_try_bind_route")
 	if vfx != null:
-		vfx.call("_try_install_into_current_scene")
+		vfx.call("_try_bind_route")
 	if cinematic != null:
-		cinematic.call("_try_install_into_current_scene")
+		cinematic.call("_try_bind_route")
 	await process_frame
 
 	_test_lighting_and_post_processing(fixture)
 	_test_material_workflow(fixture)
+	_test_no_per_frame_reflection(fixture, cinematic)
+	_test_room_transition_mapping(cinematic)
 	await _test_bounded_vfx_and_reactive_debris(fixture, vfx)
 	await _test_cinematic_event_orchestration(fixture, cinematic, vfx)
 	_test_authority_boundaries()
@@ -108,6 +125,7 @@ func _shutdown_visual_services(lighting: Node, vfx: Node, cinematic: Node) -> vo
 func _build_fixture() -> FixtureHost:
 	var host := FixtureHost.new()
 	host.name = "VisualFoundationFixture"
+	host.add_to_group("visual_foundation_route_host")
 
 	var world_environment := WorldEnvironment.new()
 	world_environment.name = "WorldEnvironment"
@@ -131,6 +149,7 @@ func _build_fixture() -> FixtureHost:
 	_add_fixture_mesh(route, "CryptTile_Fixture")
 	_add_fixture_mesh(route, "RestraintMachine_Fixture")
 	_add_fixture_mesh(route, "VoidFracture_Fixture")
+	_add_fixture_mesh(route, "ContainedCorruptionCore_Fixture")
 	_add_fixture_mesh(route, "WetDrain_Fixture")
 
 	var floor := StaticBody3D.new()
@@ -201,6 +220,7 @@ func _test_material_workflow(host: FixtureHost) -> void:
 		"CryptTile_Fixture": "stone",
 		"RestraintMachine_Fixture": "rusted_iron",
 		"VoidFracture_Fixture": "violet_emissive",
+		"ContainedCorruptionCore_Fixture": "corruption_trace",
 		"WetDrain_Fixture": "wet_stone",
 	}
 	for mesh_name in expected.keys():
@@ -210,6 +230,38 @@ func _test_material_workflow(host: FixtureHost) -> void:
 			_expect(str(mesh.get_meta("visual_foundation_material_key", "")) == str(expected[mesh_name]), "%s must map to the intended Meshy-ready material slot." % mesh_name)
 	var floor_mesh := host.get_node_or_null("CryptFloor/CryptFloorMesh") as MeshInstance3D
 	_expect(floor_mesh != null and str(floor_mesh.get_meta("visual_foundation_material_key", "")) == "wet_stone", "The route floor must receive the selective wet-stone treatment without collision changes.")
+
+
+func _test_no_per_frame_reflection(host: FixtureHost, cinematic: Node) -> void:
+	if cinematic == null:
+		return
+	var before := _property_list_invocation_total(host)
+	for _frame in 120:
+		cinematic.call("_process", 1.0 / 60.0)
+	var after := _property_list_invocation_total(host)
+	var snapshot: Dictionary = cinematic.call("snapshot")
+	var cinematic_source := FileAccess.get_file_as_string("res://scripts/presentation/visual_foundation_cinematic.gd")
+	_expect(after == before, "An instrumented route fixture must receive no get_property_list calls during 120 presentation frames.")
+	_expect(int(snapshot["property_list_invocation_count"]) == 0, "The cinematic service must expose zero normal-frame reflection calls.")
+	_expect(not cinematic_source.contains("get_property_list"), "The cinematic service must not reintroduce Object.get_property_list into presentation updates.")
+
+
+func _test_room_transition_mapping(cinematic: Node) -> void:
+	if cinematic == null:
+		return
+	var real_states := [
+		"courtyard", "courtyard_clear", "generator_room", "generator_room_clear",
+		"catacombs_wave_1", "catacombs_transition", "catacombs_wave_2", "catacombs_clear",
+		"trap_hall", "trap_clear", "boss", "victory", "defeat",
+	]
+	var mapped_states := ["courtyard", "generator_room", "catacombs_wave_1", "catacombs_wave_2", "trap_hall", "boss"]
+	for game_state in real_states:
+		cinematic.call("_emit_room_transition", game_state)
+	var snapshot: Dictionary = cinematic.call("snapshot")
+	var emissions: Array = snapshot["room_transition_emissions"]
+	_expect(emissions.size() == mapped_states.size(), "Only explicitly authored game states may emit room-transition effects.")
+	for emission in emissions:
+		_expect(emission is Vector3 and emission != Vector3.ZERO, "No room-transition effect may use Vector3.ZERO as an implicit fallback.")
 
 
 func _test_bounded_vfx_and_reactive_debris(host: FixtureHost, vfx: Node) -> void:
@@ -268,6 +320,14 @@ func _test_cinematic_event_orchestration(host: FixtureHost, cinematic: Node, vfx
 	death.set("transaction_count", 1)
 	cinematic.call("_update_event_observers")
 	await process_frame
+	host.boss.alive = false
+	cinematic.call("_process", 1.0 / 60.0)
+	death.set("transaction_count", 2)
+	cinematic.call("_update_event_observers")
+	cinematic.call("_process", 1.0 / 60.0)
+	var death_snapshot: Dictionary = cinematic.call("snapshot")
+	_expect(int(death_snapshot["boss_death_reaction_count"]) == 1, "A death-presenter transaction and the boss-alive edge must share one confirmed gravity reaction.")
+	host.boss.alive = true
 	_expect(int(vfx.call("get_active_effect_count")) <= 18, "Rift, Nova, reveal, and death reactions must share one hard active-effect budget.")
 	_expect(_gameplay_snapshot(host) == gameplay_before, "Cinematic lighting and environmental event observation must not mutate gameplay facts.")
 
@@ -282,6 +342,7 @@ func _test_authority_boundaries() -> void:
 	for source in [lighting_source, material_source, vfx_source, cinematic_source]:
 		_expect(not source.contains("take_damage(") and not source.contains("move_and_slide(") and not source.contains("add_experience(") and not source.contains("_spawn_item_drop") and not source.contains("Persistence."), "Visual-foundation scripts must not own damage, movement, rewards, drops, or persistence.")
 	_expect(not cinematic_source.contains("Camera3D.new") and not cinematic_source.contains("camera.global_transform") and not cinematic_source.contains("camera.fov"), "Cinematic environment orchestration must observe the integrated camera director without creating or mutating a second camera.")
+	_expect(not lighting_source.contains("current_scene") and not material_source.contains("current_scene") and not vfx_source.contains("current_scene") and not cinematic_source.contains("current_scene"), "Visual Foundation discovery must bind only through the production route-host group, never SceneTree.current_scene.")
 	_expect(vfx_source.contains("MAX_ACTIVE_EFFECTS := 18") and vfx_source.contains("MAX_DEBRIS_PER_BURST := 12"), "The VFX pipeline must keep explicit effect and debris budgets.")
 
 
@@ -306,6 +367,17 @@ func _gameplay_snapshot(host: FixtureHost) -> Dictionary:
 		"boss_alive": bool(host.boss.get("alive")),
 		"boss_health": int(host.boss.get("health")),
 	}
+
+
+func _property_list_invocation_total(host: FixtureHost) -> int:
+	var total := host.property_list_invocation_count
+	if host.player is FixtureActor:
+		total += (host.player as FixtureActor).property_list_invocation_count
+	if host.boss is FixtureActor:
+		total += (host.boss as FixtureActor).property_list_invocation_count
+	if host.camera_director is FixtureCameraDirector:
+		total += (host.camera_director as FixtureCameraDirector).property_list_invocation_count
+	return total
 
 
 func _expect(condition: bool, message: String) -> void:

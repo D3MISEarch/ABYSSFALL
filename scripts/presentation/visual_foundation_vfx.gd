@@ -1,7 +1,6 @@
 extends Node
 class_name VisualFoundationVFX
 
-const ROUTE_MARKER := "SunkenCryptsArtPass0"
 const ROOT_NAME := "VisualFoundationV01_VFX"
 const MAX_ACTIVE_EFFECTS := 18
 const MAX_DEBRIS_PER_BURST := 12
@@ -15,6 +14,7 @@ const DEBRIS_STONE := Color(0.075, 0.065, 0.085, 1.0)
 
 var _install_timer: Timer
 var _route_settle_timer: Timer
+var _route_host: Node3D
 var _pending_settle_scene_id := 0
 var _installed_scene_id := 0
 var _effect_root: Node3D
@@ -28,7 +28,7 @@ func _ready() -> void:
 	_install_timer.wait_time = INSTALL_INTERVAL_SECONDS
 	_install_timer.one_shot = false
 	_install_timer.autostart = true
-	_install_timer.timeout.connect(_try_install_into_current_scene)
+	_install_timer.timeout.connect(_try_bind_route)
 	add_child(_install_timer)
 
 	_route_settle_timer = Timer.new()
@@ -37,24 +37,29 @@ func _ready() -> void:
 	_route_settle_timer.one_shot = true
 	_route_settle_timer.timeout.connect(_on_route_settle_timeout)
 	add_child(_route_settle_timer)
-	call_deferred("_try_install_into_current_scene")
+	call_deferred("_try_bind_route")
 
 
 func _exit_tree() -> void:
 	_clear_effects()
 
 
-func _try_install_into_current_scene() -> void:
-	var scene := get_tree().current_scene as Node3D
-	if scene == null or scene.get_node_or_null(ROUTE_MARKER) == null:
-		if _installed_scene_id != 0:
-			_clear_effects()
+func _try_bind_route() -> void:
+	if is_instance_valid(_route_host) and _route_host.is_inside_tree() and is_instance_valid(_effect_root):
 		return
-	var scene_id := scene.get_instance_id()
+	_clear_route_binding(false)
+	var route_host := get_tree().get_first_node_in_group("visual_foundation_route_host") as Node3D
+	if route_host == null:
+		_start_discovery()
+		return
+	var scene_id := route_host.get_instance_id()
 	if _installed_scene_id == scene_id and is_instance_valid(_effect_root):
+		_route_host = route_host
+		_watch_route_host(route_host)
+		_stop_discovery()
 		return
 	_clear_effects()
-	var existing := scene.get_node_or_null(ROOT_NAME) as Node3D
+	var existing := route_host.get_node_or_null(ROOT_NAME) as Node3D
 	if existing != null:
 		_effect_root = existing
 	else:
@@ -63,8 +68,11 @@ func _try_install_into_current_scene() -> void:
 		_effect_root.set_meta("presentation_only", true)
 		_effect_root.set_meta("bounded_effect_budget", MAX_ACTIVE_EFFECTS)
 		_effect_root.set_meta("bounded_debris_per_burst", MAX_DEBRIS_PER_BURST)
-		scene.add_child(_effect_root)
+		route_host.add_child(_effect_root)
+	_route_host = route_host
 	_installed_scene_id = scene_id
+	_watch_route_host(route_host)
+	_stop_discovery()
 	_schedule_route_settle(scene_id)
 
 
@@ -79,8 +87,7 @@ func _schedule_route_settle(expected_scene_id: int) -> void:
 func _on_route_settle_timeout() -> void:
 	var expected_scene_id := _pending_settle_scene_id
 	_pending_settle_scene_id = 0
-	var scene := get_tree().current_scene
-	if scene == null or scene.get_instance_id() != expected_scene_id:
+	if not is_instance_valid(_route_host) or _route_host.get_instance_id() != expected_scene_id:
 		return
 	if _installed_scene_id != expected_scene_id or not is_instance_valid(_effect_root):
 		return
@@ -88,6 +95,32 @@ func _on_route_settle_timeout() -> void:
 	spawn_dust_burst(Vector3(0.0, 0.18, -73.0), 0.54, 12)
 	spawn_void_pulse(Vector3(0.0, 0.12, -103.0), 0.78)
 	spawn_debris_reaction(Vector3(0.0, 0.08, -103.0), 0.70, 8)
+
+
+func _on_route_host_tree_exited() -> void:
+	_clear_route_binding()
+
+
+func _watch_route_host(route_host: Node3D) -> void:
+	if not route_host.tree_exited.is_connected(_on_route_host_tree_exited):
+		route_host.tree_exited.connect(_on_route_host_tree_exited, CONNECT_ONE_SHOT)
+
+
+func _clear_route_binding(restart_discovery: bool = true) -> void:
+	_clear_effects()
+	_route_host = null
+	if restart_discovery:
+		_start_discovery()
+
+
+func _start_discovery() -> void:
+	if is_instance_valid(_install_timer) and _install_timer.is_stopped():
+		_install_timer.start()
+
+
+func _stop_discovery() -> void:
+	if is_instance_valid(_install_timer):
+		_install_timer.stop()
 
 
 func spawn_gravity_burst(world_position: Vector3, strength: float = 1.0) -> void:
