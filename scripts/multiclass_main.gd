@@ -177,6 +177,7 @@ func set_penitent_sigil_capacity(active_count: int, maximum_count: int = 3) -> v
 
 
 func _on_player_died() -> void:
+	_restore_camera_presentation()
 	game_finished = true
 	game_state = "defeat"
 	objective_label.text = "THE CRYPTS CLAIMED YOU"
