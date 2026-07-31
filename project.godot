@@ -14,6 +14,7 @@ ControllerUiBootstrap="*res://scripts/controller_ui_bootstrap.gd"
 Persistence="*res://scripts/persistence/persistence_service.gd"
 VisualFoundationLightingService="*res://scripts/presentation/visual_foundation_lighting.gd"
 VisualFoundationVFXService="*res://scripts/presentation/visual_foundation_vfx.gd"
+VisualFoundationCinematicService="*res://scripts/presentation/visual_foundation_cinematic.gd"
 
 [debug]
 
