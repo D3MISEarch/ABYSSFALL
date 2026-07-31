@@ -45,14 +45,16 @@ func _test_default_and_swarm_hysteresis(host: Node3D) -> void:
 	var camera: Camera3D = fixture["camera"]
 	var player: FixtureActor = fixture["player"]
 	var director: IntegratedCameraDirector = fixture["director"]
+	director.update(1.0, player, IntegratedCameraDirector.SWARM_ENTER_ENEMY_COUNT + 4, "boss", null)
+	_expect(director.state == IntegratedCameraDirector.STATE_DEFAULT_GAMEPLAY, "A room/encounter label without authored swarm eligibility must not create an overview state by itself.")
 	director.update(1.0, player, 0, "courtyard", null)
 	_expect(director.state == IntegratedCameraDirector.STATE_DEFAULT_GAMEPLAY, "The live route must begin in the default gameplay camera state.")
-	_expect(camera.global_position.is_equal_approx(Vector3(0.0, IntegratedCameraDirector.DEFAULT_CAMERA_HEIGHT, IntegratedCameraDirector.DEFAULT_CAMERA_DISTANCE)), "Default framing must settle at the documented lower and closer gameplay pose.")
+	_expect(camera.global_position.is_equal_approx(Vector3(0.0, IntegratedCameraDirector.DEFAULT_CAMERA_HEIGHT, IntegratedCameraDirector.DEFAULT_CAMERA_DISTANCE)), "Default framing must settle at the documented low, close, oblique gameplay pose.")
 	_expect(is_equal_approx(camera.fov, IntegratedCameraDirector.DEFAULT_FOV), "Default framing must retain its documented field of view.")
 	director.update(0.02, player, IntegratedCameraDirector.SWARM_ENTER_ENEMY_COUNT, "courtyard", null)
 	_expect(director.state == IntegratedCameraDirector.STATE_SWARM_COMBAT, "Authored encounter pressure at the enter threshold must expand into swarm combat.")
 	director.update(1.0, player, IntegratedCameraDirector.SWARM_ENTER_ENEMY_COUNT, "courtyard", null)
-	_expect(camera.global_position.is_equal_approx(Vector3(0.0, IntegratedCameraDirector.SWARM_CAMERA_HEIGHT, IntegratedCameraDirector.SWARM_CAMERA_DISTANCE)), "Swarm combat must smoothly settle into the documented raised, pulled-back pose.")
+	_expect(camera.global_position.is_equal_approx(Vector3(0.0, IntegratedCameraDirector.SWARM_CAMERA_HEIGHT, IntegratedCameraDirector.SWARM_CAMERA_DISTANCE)), "Swarm combat must smoothly settle into the documented modestly raised, still-cinematic pose.")
 	_expect(is_equal_approx(camera.fov, IntegratedCameraDirector.SWARM_FOV), "Swarm combat must use its documented field of view.")
 	director.update(0.60, player, IntegratedCameraDirector.SWARM_EXIT_ENEMY_COUNT, "courtyard", null)
 	_expect(director.state == IntegratedCameraDirector.STATE_SWARM_COMBAT, "The exit hold must prevent a low-pressure frame from snapping the swarm camera back.")

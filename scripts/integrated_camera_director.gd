@@ -8,30 +8,30 @@ const STATE_DEFAULT_GAMEPLAY: StringName = &"default_gameplay"
 const STATE_SWARM_COMBAT: StringName = &"swarm_combat"
 const STATE_BOSS_REVEAL: StringName = &"boss_reveal"
 
-## Default gameplay is intentionally lower and closer than the legacy 17.8 / 16.2 frame.
-const DEFAULT_CAMERA_HEIGHT := 15.4
-const DEFAULT_CAMERA_DISTANCE := 13.8
-const DEFAULT_LOOK_HEIGHT := 0.55
-const DEFAULT_FOV := 50.0
-const DEFAULT_TRANSITION_SECONDS := 0.34
+## Default gameplay is a low, oblique cinematic frame rather than the legacy 17.8 / 16.2 overview.
+const DEFAULT_CAMERA_HEIGHT := 9.4
+const DEFAULT_CAMERA_DISTANCE := 11.8
+const DEFAULT_LOOK_HEIGHT := 1.10
+const DEFAULT_FOV := 48.0
+const DEFAULT_TRANSITION_SECONDS := 0.40
 
 ## Swarm pressure uses the existing encounter count with explicit hysteresis.
-const SWARM_CAMERA_HEIGHT := 20.6
-const SWARM_CAMERA_DISTANCE := 21.0
-const SWARM_FOV := 53.0
-const SWARM_TRANSITION_SECONDS := 0.62
+const SWARM_CAMERA_HEIGHT := 12.5
+const SWARM_CAMERA_DISTANCE := 15.5
+const SWARM_FOV := 50.0
+const SWARM_TRANSITION_SECONDS := 0.56
 const SWARM_ENTER_ENEMY_COUNT := 5
 const SWARM_EXIT_ENEMY_COUNT := 2
 const SWARM_EXIT_HOLD_SECONDS := 1.20
 
 ## One authored, temporary Hollow King introduction.
-const BOSS_REVEAL_CAMERA_HEIGHT := 9.2
-const BOSS_REVEAL_CAMERA_DISTANCE := 19.5
+const BOSS_REVEAL_CAMERA_HEIGHT := 6.8
+const BOSS_REVEAL_CAMERA_DISTANCE := 25.0
 const BOSS_REVEAL_LOOK_HEIGHT := 1.25
-const BOSS_REVEAL_FOV := 42.0
-const BOSS_REVEAL_APPROACH_SECONDS := 0.58
-const BOSS_REVEAL_HOLD_SECONDS := 0.78
-const BOSS_REVEAL_RETURN_SECONDS := 0.58
+const BOSS_REVEAL_FOV := 39.0
+const BOSS_REVEAL_APPROACH_SECONDS := 0.50
+const BOSS_REVEAL_HOLD_SECONDS := 0.72
+const BOSS_REVEAL_RETURN_SECONDS := 0.52
 
 const SWARM_ENCOUNTER_STATES: Array[StringName] = [
 	&"courtyard",
@@ -208,7 +208,7 @@ func _boss_reveal_pose() -> Dictionary:
 	var player_to_boss := boss_position - player_position
 	player_to_boss.y = 0.0
 	var retreat_direction := -player_to_boss.normalized() if player_to_boss.length_squared() > 0.001 else Vector3.BACK
-	var focus := player_position.lerp(boss_position, 0.58) + Vector3(0.0, BOSS_REVEAL_LOOK_HEIGHT, 0.0)
+	var focus := player_position.lerp(boss_position, 0.55) + Vector3(0.0, BOSS_REVEAL_LOOK_HEIGHT, 0.0)
 	return {
 		"position": player_position + retreat_direction * BOSS_REVEAL_CAMERA_DISTANCE + Vector3(0.0, BOSS_REVEAL_CAMERA_HEIGHT, 0.0),
 		"target": focus,

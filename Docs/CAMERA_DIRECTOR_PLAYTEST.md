@@ -25,4 +25,9 @@ This is not a camera sandbox. It retains the normal player, aiming, encounters, 
 
 ## Tuning values
 
-The small, named tuning surface is in [`../scripts/integrated_camera_director.gd`](../scripts/integrated_camera_director.gd): default/swarm/reveal height and distance, transition durations, field of view, and swarm enter/exit/hysteresis thresholds. Review these values in the package build before requesting any gameplay-facing changes.
+The small, named tuning surface is in [`../scripts/integrated_camera_director.gd`](../scripts/integrated_camera_director.gd). The production direction is intentionally low and oblique:
+
+- **Default Gameplay:** height `9.4`, distance `11.8`, FOV `48`, and a `0.40` second transition. This is the normal dark-cinematic ARPG frame; it is not an overview state.
+- **Swarm Combat:** height `12.5`, distance `15.5`, FOV `50`, and a `0.56` second transition. It expands only enough for real combat pressure while remaining lower and closer than the legacy room overview.
+- **Boss Reveal:** height `6.8`, distance `25.0`, FOV `39`; approach, hold, and restore are `0.50`, `0.72`, and `0.52` seconds. It stays temporary and restores the exact pre-reveal frame.
+- **State rules:** Swarm requires at least five live enemies in an authored combat route. It returns only after the count is at most two for `1.20` seconds. Entering or clearing an ordinary room alone never changes the frame.
