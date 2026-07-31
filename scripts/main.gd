@@ -327,6 +327,8 @@ func _build_arena() -> void:
 
 
 func _install_sunken_crypts_art_pass0() -> void:
+	if not is_in_group("visual_foundation_route_host"):
+		add_to_group("visual_foundation_route_host")
 	if sunken_crypts_art_pass0 != null:
 		return
 	sunken_crypts_art_pass0 = SUNKEN_CRYPTS_ART_PASS0_SCRIPT.new() as SunkenCryptsArtPass0

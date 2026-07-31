@@ -1,0 +1,205 @@
+name: Visual Foundation v0.1
+
+on:
+  pull_request:
+    paths:
+      - "project.godot"
+      - "scripts/presentation/visual_foundation_*.gd"
+      - "scripts/presentation/visual_foundation_*.gd.uid"
+      - "tests/test_visual_foundation_v01.gd"
+      - "tests/test_visual_foundation_v01.gd.uid"
+      - "tests/test_visual_foundation_v01_production_topology.gd"
+      - "tests/test_visual_foundation_v01_production_topology.gd.uid"
+      - "tests/test_visual_foundation_light_baseline_stability.gd"
+      - "tests/test_visual_foundation_light_baseline_stability.gd.uid"
+      - "tests/test_integrated_camera_director.gd"
+      - "Docs/VISUAL_FOUNDATION_V01_PLAYTEST.md"
+      - ".github/workflows/visual-foundation-v01.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-foundation-package:
+    name: Combined Visual Foundation Windows package
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+
+    steps:
+      - name: Check out exact review commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Run repository and documentation audits
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/audit/check_documentation_paths.py | tee visual-foundation-doc-audit.log
+          pwsh ./tools/repository_health_check.ps1 | tee visual-foundation-repository-audit.log
+          python3 -m pip install --quiet pyyaml
+          python3 - <<'PY' | tee visual-foundation-workflow-yaml.log
+          from pathlib import Path
+          import yaml
+          workflows = sorted(Path('.github/workflows').glob('*.yml')) + sorted(Path('.github/workflows').glob('*.yaml'))
+          for path in workflows:
+              with path.open('r', encoding='utf-8') as handle:
+                  yaml.safe_load(handle)
+          print(f'PASS: parsed {len(workflows)} workflow YAML files')
+          PY
+
+      - name: Install Godot 4.4.1 and Windows export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="4.4.1"
+          ENGINE="Godot_v${VERSION}-stable_linux.x86_64.zip"
+          TEMPLATES="Godot_v${VERSION}-stable_export_templates.tpz"
+          RELEASE="https://github.com/godotengine/godot/releases/download/${VERSION}-stable"
+          curl --fail --location --retry 3 "$RELEASE/$ENGINE" --output /tmp/godot.zip
+          curl --fail --location --retry 3 "$RELEASE/$TEMPLATES" --output /tmp/templates.tpz
+          mkdir -p "$HOME/godot"
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          BIN="$(find "$HOME/godot" -maxdepth 1 -type f -name 'Godot_v*-stable_linux.x86_64' | head -n 1)"
+          chmod +x "$BIN"
+          ln -s "$BIN" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -q /tmp/templates.tpz -d /tmp/export-templates
+          cp -a /tmp/export-templates/templates/. "$TEMPLATE_DIR/"
+          test -f "$TEMPLATE_DIR/windows_release_x86_64.exe"
+
+      - name: Create exact-head package metadata
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REVIEW_BRANCH: ${{ github.head_ref || github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${REVIEW_SHA:0:7}"
+          BUILT_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          PACKAGE_NAME="AbyssFall-Visual-Foundation-v01-${SHORT_SHA}"
+          echo "VISUAL_FOUNDATION_PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
+          mkdir -p "dist/$PACKAGE_NAME"
+          cat > "dist/$PACKAGE_NAME/BUILD_INFO.txt" <<EOF
+          AbyssFall Visual Foundation v0.1 Combined Playtest
+          Commit: ${REVIEW_SHA}
+          Short commit: ${SHORT_SHA}
+          Branch: ${REVIEW_BRANCH}
+          Workflow run: ${RUN_ID}
+          Built UTC: ${BUILT_AT}
+          Camera baseline: PR #130 revised low/close/oblique camera
+          Launch: PLAY_VISUAL_FOUNDATION.cmd
+          Owner checklist: README_VISUAL_FOUNDATION.txt
+          EOF
+          cat > "dist/$PACKAGE_NAME/PLAY_VISUAL_FOUNDATION.cmd" <<'EOF'
+          @echo off
+          setlocal
+          start "" "%~dp0AbyssFall.exe" -- --class=void_warlock
+          EOF
+          cp Docs/VISUAL_FOUNDATION_V01_PLAYTEST.md "dist/$PACKAGE_NAME/README_VISUAL_FOUNDATION.txt"
+
+      - name: Clean import project
+        shell: bash
+        run: |
+          set -o pipefail
+          rm -rf .godot
+          godot --headless --path . --editor --quit 2>&1 | tee visual-foundation-import.log
+
+      - name: Run visual foundation and inherited regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_test() {
+            local script="$1"
+            local marker="$2"
+            local log="$3"
+            local verbose="${4:-false}"
+            if [[ "$verbose" == "true" ]]; then
+              godot --verbose --headless --path . --script "$script" 2>&1 | tee "$log"
+            else
+              godot --headless --path . --script "$script" 2>&1 | tee "$log"
+            fi
+            if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ObjectDB|leaked|orphan|ERROR:' "$log"; then
+              echo "Godot reported an error in $script."
+              exit 1
+            fi
+            grep -Fxq "$marker" "$log"
+          }
+          run_test res://tests/test_visual_foundation_v01.gd 'PASS: AbyssFall Visual Foundation v0.1' visual-foundation-test.log true
+          run_test res://tests/test_visual_foundation_v01_production_topology.gd 'PASS: Visual Foundation production topology' visual-foundation-production-topology.log true
+          run_test res://tests/test_visual_foundation_light_baseline_stability.gd 'PASS: Visual Foundation authored light baseline stability' visual-foundation-light-baseline.log true
+          run_test res://tests/test_integrated_camera_director.gd 'PASS: Integrated production camera director' visual-foundation-camera.log
+          run_test res://tests/test_full_stack_controller_reconciliation.gd 'PASS: Full-stack controller reconciliation' visual-foundation-full-stack.log
+          run_test res://tests/test_hollow_king_nova_presentation.gd 'PASS: Hollow King readable Nova intent and payoff' visual-foundation-nova.log
+          run_test res://tests/test_hollow_king_memorable_death.gd 'PASS: Hollow King memorable death and reward handoff' visual-foundation-death.log
+          run_test res://tests/test_voidbringer_impact_feedback.gd 'PASS: Voidbringer impact and Corruption payoff' visual-foundation-impact.log
+          run_test res://tests/test_grasping_rift_readability_payoff.gd 'PASS: Grasping Rift readability and grouping payoff' visual-foundation-rift.log
+          run_test res://tests/test_voidbringer_skill_slice.gd 'PASS: Voidbringer Mass Brand and Null Shard skill slice' visual-foundation-skill-slice.log
+          run_test res://scripts/runtime/tests/test_runtime_foundation.gd 'PASS: Stage 2 runtime foundation' visual-foundation-runtime.log
+
+      - name: Export combined Windows executable
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --export-release "Windows Desktop" "dist/$VISUAL_FOUNDATION_PACKAGE_NAME/AbyssFall.exe" 2>&1 | tee visual-foundation-export.log
+          test -s "dist/$VISUAL_FOUNDATION_PACKAGE_NAME/AbyssFall.exe"
+          test -s "dist/$VISUAL_FOUNDATION_PACKAGE_NAME/AbyssFall.pck"
+
+      - name: Reject hidden errors and lifecycle leaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat visual-foundation-*.log > visual-foundation-combined.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ObjectDB|leaked|orphan|ERROR:' visual-foundation-combined.log; then
+            echo "Godot emitted an import, test, export, parser, script, lifecycle, or runtime error."
+            exit 1
+          fi
+          grep -Fxq 'PASS: AbyssFall Visual Foundation v0.1' visual-foundation-test.log
+          grep -Fxq 'PASS: Visual Foundation production topology' visual-foundation-production-topology.log
+          grep -Fxq 'PASS: Visual Foundation authored light baseline stability' visual-foundation-light-baseline.log
+          grep -Fxq 'PASS: Integrated production camera director' visual-foundation-camera.log
+          grep -Fxq 'PASS: Full-stack controller reconciliation' visual-foundation-full-stack.log
+          grep -Fxq 'PASS: Hollow King readable Nova intent and payoff' visual-foundation-nova.log
+          grep -Fxq 'PASS: Hollow King memorable death and reward handoff' visual-foundation-death.log
+          grep -Fxq 'PASS: Voidbringer impact and Corruption payoff' visual-foundation-impact.log
+          grep -Fxq 'PASS: Grasping Rift readability and grouping payoff' visual-foundation-rift.log
+          grep -Fxq 'PASS: Voidbringer Mass Brand and Null Shard skill slice' visual-foundation-skill-slice.log
+          grep -Fxq 'PASS: Stage 2 runtime foundation' visual-foundation-runtime.log
+
+      - name: Audit combined package contents
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          cd "dist/$VISUAL_FOUNDATION_PACKAGE_NAME"
+          sha256sum AbyssFall.exe AbyssFall.pck BUILD_INFO.txt PLAY_VISUAL_FOUNDATION.cmd README_VISUAL_FOUNDATION.txt > SHA256SUMS.txt
+          grep -F "$REVIEW_SHA" BUILD_INFO.txt
+          sha256sum --check SHA256SUMS.txt
+          find . -maxdepth 1 -type f -printf '%f\n' | sort | tee ../visual-foundation-package-contents.log
+          for required in AbyssFall.exe AbyssFall.pck BUILD_INFO.txt PLAY_VISUAL_FOUNDATION.cmd README_VISUAL_FOUNDATION.txt SHA256SUMS.txt; do
+            grep -Fx "$required" ../visual-foundation-package-contents.log
+          done
+
+      - name: Upload combined Visual Foundation playtest
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VISUAL_FOUNDATION_PACKAGE_NAME }}
+          path: dist/${{ env.VISUAL_FOUNDATION_PACKAGE_NAME }}/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Visual Foundation audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-foundation-v01-audit-logs
+          path: |
+            visual-foundation-*.log
+            dist/visual-foundation-package-contents.log
+          if-no-files-found: warn
+          retention-days: 90
