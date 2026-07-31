@@ -6,6 +6,8 @@ signal summon_requested(position_value: Vector3, enemy_type: String)
 signal phase_changed(phase: int)
 
 const ENEMY_BOLT_SCRIPT = preload("res://scripts/enemy_bolt.gd")
+const HOLLOW_KING_NOVA_PRESENTATION_SCRIPT = preload("res://scripts/hollow_king_nova_presentation.gd")
+const NOVA_PROXIMITY_RADIUS := 4.4
 
 var target: Node3D
 var max_health := 1050
@@ -27,6 +29,7 @@ var corruption_material: StandardMaterial3D
 var rift_pull_velocity := Vector3.ZERO
 var rift_pull_time := 0.0
 var phase_lock := false
+var nova_presentation: HollowKingNovaPresentation
 
 
 func _ready() -> void:
@@ -36,11 +39,16 @@ func _ready() -> void:
 	collision_layer = 4
 	collision_mask = 3
 	_build_visual()
+	nova_presentation = HOLLOW_KING_NOVA_PRESENTATION_SCRIPT.new()
+	nova_presentation.name = "HollowKingNovaPresentation"
+	add_child(nova_presentation)
+	nova_presentation.configure(self)
 	health_changed.emit(health, max_health, phase)
 
 
 func _physics_process(delta: float) -> void:
 	if not alive or not is_instance_valid(target) or phase_lock:
+		_clear_nova_presentation()
 		velocity = Vector3.ZERO
 		return
 
@@ -50,6 +58,8 @@ func _physics_process(delta: float) -> void:
 	nova_timer = maxf(nova_timer - delta, 0.0)
 	teleport_timer = maxf(teleport_timer - delta, 0.0)
 	rift_pull_time = maxf(rift_pull_time - delta, 0.0)
+	if phase >= 2 and is_instance_valid(nova_presentation):
+		nova_presentation.observe_nova_countdown(nova_timer, NOVA_PROXIMITY_RADIUS, phase)
 
 	var offset := target.global_position - global_position
 	offset.y = 0.0
@@ -126,10 +136,12 @@ func _cast_nova() -> void:
 	if (
 		is_instance_valid(target)
 		and target.has_method("take_damage")
-		and global_position.distance_to(target.global_position) <= 4.4
+		and global_position.distance_to(target.global_position) <= NOVA_PROXIMITY_RADIUS
 	):
 		target.take_damage(10 + phase * 3)
 	_cast_pulse(Color(0.28, 0.82, 0.05))
+	if is_instance_valid(nova_presentation):
+		nova_presentation.observe_confirmed_nova_release(NOVA_PROXIMITY_RADIUS, phase)
 
 
 func _spawn_bolt(direction: Vector3, speed: float, damage_value: int, bolt_color: Color) -> void:
@@ -200,6 +212,7 @@ func _update_phase() -> void:
 
 
 func _begin_phase_transition() -> void:
+	_clear_nova_presentation()
 	phase_lock = true
 	velocity = Vector3.ZERO
 	move_speed = 2.35 + float(phase - 1) * 0.42
@@ -220,6 +233,7 @@ func _finish_phase_transition() -> void:
 
 
 func _die() -> void:
+	_clear_nova_presentation()
 	alive = false
 	collision_layer = 0
 	collision_mask = 0
@@ -254,6 +268,11 @@ func _cast_pulse(color: Color) -> void:
 	var tween := create_tween()
 	tween.tween_property(light, "light_energy", 0.0, 0.32)
 	tween.tween_callback(light.queue_free)
+
+
+func _clear_nova_presentation() -> void:
+	if is_instance_valid(nova_presentation):
+		nova_presentation.clear()
 
 
 func _build_visual() -> void:

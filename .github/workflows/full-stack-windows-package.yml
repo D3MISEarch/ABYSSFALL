@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/*.gd"
+      - "scripts/hollow_king_nova_presentation.gd"
       - "project.godot"
       - "main.tscn"
       - "gameplay.tscn"
@@ -23,6 +24,8 @@ on:
       - "tests/test_input_prompt_profile.gd"
       - "tests/test_voidbringer_impact_feedback.gd"
       - "tests/test_grasping_rift_readability_payoff.gd"
+      - "tests/test_hollow_king_nova_presentation.gd"
+      - "Docs/HOLLOW_KING_NOVA_PLAYTEST.md"
       - ".github/workflows/godot-hotfix3-validation.yml"
       - ".github/workflows/full-stack-windows-package.yml"
   workflow_dispatch:
@@ -194,5 +197,147 @@ jobs:
             windows-export.log
             windows-combined.log
             dist/package-contents.log
+          if-no-files-found: warn
+          retention-days: 90
+
+  hollow-king-nova-package:
+    name: Exact-head Hollow King Nova readability package
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+
+    steps:
+      - name: Check out exact review commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Godot 4.4.1 and Windows export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="4.4.1"
+          ENGINE="Godot_v${VERSION}-stable_linux.x86_64.zip"
+          TEMPLATES="Godot_v${VERSION}-stable_export_templates.tpz"
+          RELEASE="https://github.com/godotengine/godot/releases/download/${VERSION}-stable"
+          curl --fail --location --retry 3 "$RELEASE/$ENGINE" --output /tmp/godot.zip
+          curl --fail --location --retry 3 "$RELEASE/$TEMPLATES" --output /tmp/templates.tpz
+          mkdir -p "$HOME/godot"
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          BIN="$(find "$HOME/godot" -maxdepth 1 -type f -name 'Godot_v*-stable_linux.x86_64' | head -n 1)"
+          chmod +x "$BIN"
+          ln -s "$BIN" "$HOME/godot/godot"
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -q /tmp/templates.tpz -d /tmp/export-templates
+          cp -a /tmp/export-templates/templates/. "$TEMPLATE_DIR/"
+          test -f "$TEMPLATE_DIR/windows_release_x86_64.exe"
+
+      - name: Create exact Nova package metadata
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REVIEW_BRANCH: ${{ github.head_ref || github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${REVIEW_SHA:0:7}"
+          BUILT_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          PACKAGE_NAME="AbyssFall-Hollow-King-Nova-${SHORT_SHA}"
+          echo "NOVA_PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
+          mkdir -p "dist/$PACKAGE_NAME"
+          cat > "dist/$PACKAGE_NAME/BUILD_INFO.txt" <<EOF
+          AbyssFall Hollow King Nova Readability Playtest
+          Commit: ${REVIEW_SHA}
+          Short commit: ${SHORT_SHA}
+          Branch: ${REVIEW_BRANCH}
+          Workflow run: ${RUN_ID}
+          Built UTC: ${BUILT_AT}
+          Owner checklist: README_HOLLOW_KING_NOVA.txt
+          EOF
+          cp Docs/HOLLOW_KING_NOVA_PLAYTEST.md "dist/$PACKAGE_NAME/README_HOLLOW_KING_NOVA.txt"
+
+      - name: Import project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --quit 2>&1 | tee hollow-king-nova-import.log
+
+      - name: Run focused Nova and affected Voidbringer regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_test() {
+            local script="$1"
+            local marker="$2"
+            local log="$3"
+            godot --headless --path . --script "$script" 2>&1 | tee "$log"
+            if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ObjectDB|leaked|orphan|ERROR:' "$log"; then
+              echo "Godot reported an error in $script."
+              exit 1
+            fi
+            grep -Fxq "$marker" "$log"
+          }
+          run_test res://tests/test_hollow_king_nova_presentation.gd 'PASS: Hollow King readable Nova intent and payoff' hollow-king-nova-test.log
+          run_test res://tests/test_voidbringer_impact_feedback.gd 'PASS: Voidbringer impact and Corruption payoff' hollow-king-nova-voidbringer-impact.log
+          run_test res://tests/test_voidbringer_skill_slice.gd 'PASS: Voidbringer Mass Brand and Null Shard skill slice' hollow-king-nova-voidbringer-skill-slice.log
+
+      - name: Export Windows executable
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --export-release "Windows Desktop" "dist/$NOVA_PACKAGE_NAME/AbyssFall.exe" 2>&1 | tee hollow-king-nova-export.log
+          test -s "dist/$NOVA_PACKAGE_NAME/AbyssFall.exe"
+          test -s "dist/$NOVA_PACKAGE_NAME/AbyssFall.pck"
+
+      - name: Reject hidden Godot errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat hollow-king-nova-import.log hollow-king-nova-test.log hollow-king-nova-voidbringer-impact.log hollow-king-nova-voidbringer-skill-slice.log hollow-king-nova-export.log > hollow-king-nova-combined.log
+          if grep -Eiq 'SCRIPT ERROR|PARSER ERROR|Parse Error|Compile Error|Failed to load script|Invalid call|ASSERTION FAILED|^FAIL:|ObjectDB|leaked|orphan|ERROR:' hollow-king-nova-combined.log; then
+            echo "Godot emitted an import, test, export, parser, script, or runtime error."
+            exit 1
+          fi
+          grep -Fxq 'PASS: Hollow King readable Nova intent and payoff' hollow-king-nova-test.log
+          grep -Fxq 'PASS: Voidbringer impact and Corruption payoff' hollow-king-nova-voidbringer-impact.log
+          grep -Fxq 'PASS: Voidbringer Mass Brand and Null Shard skill slice' hollow-king-nova-voidbringer-skill-slice.log
+
+      - name: Audit extracted Nova package contents
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          cd "dist/$NOVA_PACKAGE_NAME"
+          sha256sum AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README_HOLLOW_KING_NOVA.txt > SHA256SUMS.txt
+          grep -F "$REVIEW_SHA" BUILD_INFO.txt
+          sha256sum --check SHA256SUMS.txt
+          find . -maxdepth 1 -type f -printf '%f\n' | sort | tee ../hollow-king-nova-package-contents.log
+          for required in AbyssFall.exe AbyssFall.pck BUILD_INFO.txt README_HOLLOW_KING_NOVA.txt SHA256SUMS.txt; do
+            grep -Fx "$required" ../hollow-king-nova-package-contents.log
+          done
+
+      - name: Upload exact-head Hollow King Nova package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NOVA_PACKAGE_NAME }}
+          path: dist/${{ env.NOVA_PACKAGE_NAME }}/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Nova package audit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hollow-king-nova-package-audit-logs
+          path: |
+            hollow-king-nova-import.log
+            hollow-king-nova-test.log
+            hollow-king-nova-voidbringer-impact.log
+            hollow-king-nova-voidbringer-skill-slice.log
+            hollow-king-nova-export.log
+            hollow-king-nova-combined.log
+            dist/hollow-king-nova-package-contents.log
           if-no-files-found: warn
           retention-days: 90

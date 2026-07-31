@@ -48,6 +48,7 @@ This structure organizes governance, architecture, design and standards material
 ## Owner playtests
 
 - [`VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md`](VOIDBRINGER_POLISHED_IMPACT_PLAYTEST.md) — isolated Null Shard spectacle-impact loop, Windows launch route, and owner checklist.
+- [`HOLLOW_KING_NOVA_PLAYTEST.md`](HOLLOW_KING_NOVA_PLAYTEST.md) — existing Nova readability pass, exact gameplay contract, Windows package route, and owner checklist.
 
 ## Canonical documentation root
 
