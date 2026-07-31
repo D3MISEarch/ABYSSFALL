@@ -68,6 +68,7 @@ func _run_tests() -> void:
 	current_scene = previous_scene
 	fixture.queue_free()
 	await process_frame
+	await process_frame
 	if vfx != null:
 		_expect(int(vfx.call("get_active_effect_count")) == 0, "Route teardown must leave no active visual-foundation effects.")
 
@@ -206,10 +207,10 @@ func _test_bounded_vfx_and_reactive_debris(host: FixtureHost, vfx: Node) -> void
 func _test_cinematic_event_orchestration(host: FixtureHost, cinematic: Node, vfx: Node) -> void:
 	if cinematic == null or vfx == null:
 		return
-	var gameplay_before := _gameplay_snapshot(host)
 	var director := host.camera_director as FixtureCameraDirector
 	director.state = &"boss_reveal"
 	host.game_state = "boss"
+	var gameplay_before := _gameplay_snapshot(host)
 	cinematic.call("_process", 0.5)
 	await process_frame
 	var snapshot: Dictionary = cinematic.call("snapshot")
